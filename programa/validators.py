@@ -3,6 +3,7 @@ from config import DOMINIO_KEYWORDS, MAX_INPUT_CHARS, PATRONES_SOSPECHOSOS
 
 
 def validate_input(texto: str) -> list[str]:
+        
     """Devuelve lista de errores (vacía = OK). Ver README Fase 2, Tarea 1."""
     errores: list[str] = []
     t = (texto or "").strip()

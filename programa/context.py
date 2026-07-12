@@ -3,7 +3,8 @@ import json
 from pathlib import Path
 
 
-def cargar_faq(ruta: Path) -> list[dict]:
+def cargar_JSON(ruta: Path) -> list[dict]:
+    #TO_DO: Adecuar función
     """Carga faq.json desde disco."""
     with ruta.open(encoding="utf-8") as f:
         data = json.load(f)

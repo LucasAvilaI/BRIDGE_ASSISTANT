@@ -42,7 +42,7 @@ def _metricas_a_dict(m: MetricasLlamada) -> dict:
         "total_tokens": m.total_tokens,
     }
 
-
+#TO_DO: Crear función de selección de rol.
 def procesar_turno(
     state: dict,
     user_message: str,
@@ -52,7 +52,8 @@ def procesar_turno(
     """Pipeline Fase 1: validar vacío → prompt → Gemini → actualizar estado."""
     if not user_message.strip():
         return respuesta_error("Mensaje vacío", ["El mensaje no puede estar vacío."])
-
+    
+    #TO_DO: Adecuación de perfil, dependiendo del input
     config = assistant_config or ASSISTANT_CONFIG_DEFAULT.copy()
     ventana = config.get("max_turnos_historial", 6)
 
@@ -108,6 +109,8 @@ def demo_seleccion_faq(faq_path: Path, consulta: str) -> dict:
         {"topic_id": seleccion[0].get("topic_id"), "entry": seleccion[0]},
     )
 
+#TO_DO: Def seleccion_onboarding_document(faq_path: Path, consulta: str) -> dict:
+    #Carga del documento mas relevante para el trabajador y consulta actual.
 
 def parsear_respuesta_tutor(raw: str) -> dict:
     """Parsea y valida el JSON devuelto por Gemini en modo seguro."""
