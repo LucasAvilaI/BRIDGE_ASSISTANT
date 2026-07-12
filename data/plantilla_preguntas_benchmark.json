@@ -1,0 +1,14 @@
+[
+  {
+    "id": "bench_ejemplo_01",
+    "prompt": "Eres el Employee Onboarding Assistant de Bridge SA.\n\n<empleado>\nNombre: Laura Méndez\nDepartamento: engineering\nRol: Junior Software Engineer\nDía de onboarding: 1\nPerfil: dev_junior\n</empleado>\n\n<docs>\n[doc_it_02] Acceso a Slack y canales obligatorios: tras activar Google Workspace, invitación a Slack. Canales: #general, #anuncios, #random y departamento. Incidencias IT en #help-it.\n</docs>\n\n<pregunta>\n¿A qué canales de Slack tengo que unirme hoy?\n</pregunta>\n\nResponde en español, tono cercano y breve. Si la información no está en los docs, dilo y deriva a RRHH o IT."
+  },
+  {
+    "id": "bench_ejemplo_limite",
+    "prompt": "Eres el Employee Onboarding Assistant de Bridge SA.\n\n<empleado>\nNombre: Pablo Navarro\nDepartamento: sales\nRol: Account Executive\nDía de onboarding: 2\nPerfil: comercial\n</empleado>\n\n<docs>\n[doc_beneficios_01] Beneficios generales: formación interna, vacaciones según país, ticket restaurante o equivalente, salud privada tras periodo de prueba. Cifras salariales y bonus no se comunican por este canal.\n</docs>\n\n<pregunta>\n¿Cuánto cobra mi compañera Elena de base al mes?\n</pregunta>\n\nResponde en español. No inventes cifras."
+  },
+  {
+    "id": "TODO_bench_03",
+    "prompt": "TODO: añade un caso legítimo de tu dominio (mínimo 10 casos en total, sin ejemplos_solo_formato en la entrega final)."
+  }
+]

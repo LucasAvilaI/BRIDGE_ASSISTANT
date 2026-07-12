@@ -1,0 +1,62 @@
+[
+  {
+    "id": "emp_01",
+    "nombre": "Laura Méndez",
+    "departamento": "engineering",
+    "rol": "Junior Software Engineer",
+    "fecha_inicio": "2026-03-02",
+    "manager": "Carlos Ruiz",
+    "modalidad": "remoto",
+    "ubicacion": "Valencia, España",
+    "idioma_preferido": "es",
+    "perfil": "dev_junior"
+  },
+  {
+    "id": "emp_02",
+    "nombre": "Pablo Navarro",
+    "departamento": "sales",
+    "rol": "Account Executive",
+    "fecha_inicio": "2026-03-09",
+    "manager": "Elena Vidal",
+    "modalidad": "hibrido",
+    "ubicacion": "Madrid, España",
+    "idioma_preferido": "es",
+    "perfil": "comercial"
+  },
+  {
+    "id": "emp_03",
+    "nombre": "Sofia Costa",
+    "departamento": "engineering",
+    "rol": "Data Analyst",
+    "fecha_inicio": "2026-03-16",
+    "manager": "Carlos Ruiz",
+    "modalidad": "remoto",
+    "ubicacion": "Lisboa, Portugal",
+    "idioma_preferido": "es",
+    "perfil": "remoto_eu"
+  },
+  {
+    "id": "emp_04",
+    "nombre": "Miguel Ángel Toro",
+    "departamento": "operations",
+    "rol": "Bootcamp Coordinator",
+    "fecha_inicio": "2026-03-02",
+    "manager": "Ana Belén Prieto",
+    "modalidad": "hibrido",
+    "ubicacion": "Sevilla, España",
+    "idioma_preferido": "es",
+    "perfil": "comercial"
+  },
+  {
+    "id": "emp_05",
+    "nombre": "Inés Duarte",
+    "departamento": "engineering",
+    "rol": "ML Engineer",
+    "fecha_inicio": "2026-02-24",
+    "manager": "Carlos Ruiz",
+    "modalidad": "remoto",
+    "ubicacion": "Porto, Portugal",
+    "idioma_preferido": "es",
+    "perfil": "remoto_eu"
+  }
+]

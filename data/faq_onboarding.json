@@ -1,0 +1,114 @@
+[
+  {
+    "id": "faq_01",
+    "pregunta": "¿A qué hora empiezo el primer día?",
+    "respuesta_corta": "La reunión de bienvenida es a las 9:30. Debes tener Slack y correo activos antes de las 9:00.",
+    "doc_id": "doc_bienvenida_01",
+    "tags": ["primer_dia", "horario"]
+  },
+  {
+    "id": "faq_02",
+    "pregunta": "¿Qué hago si no me ha llegado el portátil?",
+    "respuesta_corta": "Escribe a it@bridgesa.example con tu ID de empleado. IT envía equipos 3-5 días laborables antes del inicio en España y Portugal peninsular.",
+    "doc_id": "doc_it_01",
+    "tags": ["it", "hardware"]
+  },
+  {
+    "id": "faq_03",
+    "pregunta": "¿Qué canales de Slack debo unirme?",
+    "respuesta_corta": "#general, #anuncios, #random y el canal de tu departamento. Incidencias IT en #help-it.",
+    "doc_id": "doc_it_02",
+    "tags": ["slack"]
+  },
+  {
+    "id": "faq_04",
+    "pregunta": "¿Cómo pido vacaciones?",
+    "respuesta_corta": "En Factorial, con al menos 5 días laborables de antelación salvo urgencia justificada.",
+    "doc_id": "doc_rrhh_01",
+    "tags": ["vacaciones", "factorial"]
+  },
+  {
+    "id": "faq_05",
+    "pregunta": "¿Puedo trabajar desde otro país temporalmente?",
+    "respuesta_corta": "Más de 14 días consecutivos fuera de tu país de contratación requiere aprobación previa de RRHH.",
+    "doc_id": "doc_rrhh_02",
+    "tags": ["remoto", "internacional"]
+  },
+  {
+    "id": "faq_06",
+    "pregunta": "¿Cómo notifico una baja médica?",
+    "respuesta_corta": "Avisa el mismo día a tu manager y rrhh@bridgesa.example; sube el parte en Factorial en 48 h.",
+    "doc_id": "doc_rrhh_03",
+    "tags": ["baja", "medica"]
+  },
+  {
+    "id": "faq_07",
+    "pregunta": "¿Cómo pido una excedencia o baja no médica?",
+    "respuesta_corta": "No uses el flujo de baja médica. Abre ticket con People para baja laboral o excedencia.",
+    "doc_id": "doc_rrhh_03",
+    "tags": ["baja", "laboral"]
+  },
+  {
+    "id": "faq_08",
+    "pregunta": "¿Cómo obtengo acceso a GitHub?",
+    "respuesta_corta": "Engineering recibe acceso día 1 en la org bridge-sa-tech. Activa 2FA antes de clonar repos.",
+    "doc_id": "doc_it_03",
+    "tags": ["github", "engineering"]
+  },
+  {
+    "id": "faq_09",
+    "pregunta": "¿Qué hago mi primera semana si soy de Engineering?",
+    "respuesta_corta": "Sigue el plan de 5 días: bienvenida, setup, pair programming, primera issue y retro con tu manager.",
+    "doc_id": "doc_eng_01",
+    "tags": ["engineering", "checklist"]
+  },
+  {
+    "id": "faq_10",
+    "pregunta": "¿Qué hago mi primera semana si soy de Sales?",
+    "respuesta_corta": "HubSpot día 1-2, catálogo, shadowing, pitch interno y revisión de pipeline día 5.",
+    "doc_id": "doc_sales_01",
+    "tags": ["sales", "checklist"]
+  },
+  {
+    "id": "faq_11",
+    "pregunta": "¿Dónde reporto acoso o un problema de conducta?",
+    "respuesta_corta": "A people@bridgesa.example o a tu manager. Política de tolerancia cero.",
+    "doc_id": "doc_cultura_01",
+    "tags": ["conducta", "compliance"]
+  },
+  {
+    "id": "faq_12",
+    "pregunta": "¿Cuántos días de vacaciones tengo?",
+    "respuesta_corta": "En España: 26 días laborables salvo convenio local distinto documentado en Factorial.",
+    "doc_id": "doc_rrhh_01",
+    "tags": ["vacaciones"]
+  },
+  {
+    "id": "faq_13",
+    "pregunta": "¿Tenéis ticket restaurante o seguro médico?",
+    "respuesta_corta": "Sí, según país: ticket o equivalente y salud privada tras periodo de prueba donde aplica la ley.",
+    "doc_id": "doc_beneficios_01",
+    "tags": ["beneficios"]
+  },
+  {
+    "id": "faq_14",
+    "pregunta": "¿Cuál es mi sueldo o el bonus anual?",
+    "respuesta_corta": "Las cifras salariales y bonus no se gestionan por este canal. Consulta en tu 1:1 con manager o People.",
+    "doc_id": "doc_beneficios_01",
+    "tags": ["salario", "sensible"]
+  },
+  {
+    "id": "faq_15",
+    "pregunta": "¿Quién coordina el lanzamiento de una cohorte de un programa formativo?",
+    "respuesta_corta": "Operations, con checklist en Notion e incidencias en #ops-cohortes.",
+    "doc_id": "doc_ops_01",
+    "tags": ["operations", "cohortes"]
+  },
+  {
+    "id": "faq_16",
+    "pregunta": "¿Quién es mi buddy y qué debo esperar de esa relación?",
+    "respuesta_corta": "Un compañero de tu departamento durante 2 semanas; dos videollamadas de 30 min. Si no responde en 24 h laborables: onboarding@bridgesa.example.",
+    "doc_id": "doc_people_01",
+    "tags": ["buddy", "onboarding"]
+  }
+]

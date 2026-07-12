@@ -1,0 +1,93 @@
+[
+  {
+    "id": "doc_bienvenida_01",
+    "titulo": "Bienvenida a Bridge SA",
+    "departamento": "people",
+    "tags": ["bienvenida", "cultura", "primer_dia"],
+    "cuerpo": "Bienvenido/a a Bridge SA. Tu primer día empieza a las 9:30 con una reunión de bienvenida por videollamada (enlace en Google Calendar). Antes de las 9:00 debes tener activos Slack, correo @bridgesa.example y acceso de lectura a Notion. Tu buddy de onboarding te escribirá en Slack el día laborable anterior. Dress code: informal. Valores: feedback directo, aprendizaje continuo y documentar antes de escalar dudas."
+  },
+  {
+    "id": "doc_it_01",
+    "titulo": "Equipo y portátil",
+    "departamento": "it",
+    "tags": ["hardware", "portatil", "it", "primer_dia"],
+    "cuerpo": "IT envía el portátil 3-5 días laborables antes de tu fecha de inicio (solo España y Portugal peninsular; otros países: consultar con it@bridgesa.example). Al encenderlo, sigue el asistente de configuración. Si no llega a tiempo, escribe a it@bridgesa.example con tu ID de empleado. No instales software de administración de dispositivos sin guía de IT."
+  },
+  {
+    "id": "doc_it_02",
+    "titulo": "Acceso a Slack y canales obligatorios",
+    "departamento": "it",
+    "tags": ["slack", "comunicacion", "canales"],
+    "cuerpo": "Tras activar tu cuenta Google Workspace, recibirás invitación a Slack. Canales obligatorios: #general, #anuncios, #random y el canal de tu departamento (#engineering, #sales u #operations). No compartas capturas con datos de clientes o participantes en canales públicos. Para incidencias IT usa #help-it."
+  },
+  {
+    "id": "doc_it_03",
+    "titulo": "GitHub y permisos de repositorio",
+    "departamento": "it",
+    "tags": ["github", "engineering", "accesos"],
+    "cuerpo": "Engineering y perfiles técnicos reciben acceso a la organización GitHub bridge-sa-tech en el día 1. Solicita membresía al equipo correcto a través de tu manager. Activa 2FA en GitHub antes de clonar repos internos. No subas secretos ni .env a ningún repositorio."
+  },
+  {
+    "id": "doc_rrhh_01",
+    "titulo": "Vacaciones y días personales",
+    "departamento": "people",
+    "tags": ["vacaciones", "factorial", "rrhh"],
+    "cuerpo": "Las vacaciones se solicitan en Factorial con al menos 5 días laborables de antelación (salvo urgencia justificada). El calendario laboral de Bridge SA sigue festivos de Madrid para empleados en España; empleados en otros países UE aplican convenio local documentado en Factorial. No está permitido acumular más de 5 días sin consumir al cierre del año natural sin aprobación de People."
+  },
+  {
+    "id": "doc_rrhh_02",
+    "titulo": "Trabajo remoto e internacional",
+    "departamento": "people",
+    "tags": ["remoto", "hibrido", "ubicacion"],
+    "cuerpo": "Bridge SA es remoto-first. Puedes trabajar desde tu país de contratación sin avisar diariamente. Trabajar más de 14 días consecutivos desde otro país requiere aprobación previa de RRHH (implicaciones fiscales). Híbridos en Madrid: se espera presencia 2 días/semana en coworking de referencia (Martes y Jueves recomendados)."
+  },
+  {
+    "id": "doc_rrhh_03",
+    "titulo": "Bajas médicas y absentismo",
+    "departamento": "people",
+    "tags": ["baja", "medica", "absentismo", "rrhh"],
+    "cuerpo": "Baja médica: notifica a tu manager y a rrhh@bridgesa.example el mismo día. Aporta parte de baja según tu país en Factorial en un plazo máximo de 48 h. Baja laboral o excedencia: proceso distinto; abre ticket en People, no uses el flujo de baja médica."
+  },
+  {
+    "id": "doc_cultura_01",
+    "titulo": "Código de conducta",
+    "departamento": "people",
+    "tags": ["conducta", "compliance", "acoso"],
+    "cuerpo": "Bridge SA tolera cero acoso o discriminación. Reporta incidentes a people@bridgesa.example o a tu manager. No compartas información confidencial de participantes, clientes o compañeros fuera de canales autorizados. Conflictos de interés deben declararse a People en el primer mes."
+  },
+  {
+    "id": "doc_eng_01",
+    "titulo": "Primeros cinco días — Engineering",
+    "departamento": "engineering",
+    "tags": ["engineering", "onboarding", "checklist"],
+    "cuerpo": "Día 1: bienvenida, Slack, GitHub 2FA, lectura de arquitectura en Notion. Día 2: setup local (Python 3.10+, Docker opcional), acceso a staging. Día 3: pair programming con buddy. Día 4: primera issue asignada en Jira. Día 5: retrospectiva de onboarding con tu manager."
+  },
+  {
+    "id": "doc_sales_01",
+    "titulo": "Primeros cinco días — Sales",
+    "departamento": "sales",
+    "tags": ["sales", "crm", "onboarding"],
+    "cuerpo": "Día 1: bienvenida y acceso a HubSpot. Día 2: formación en catálogo de programas (abiertos y corporates). Día 3: shadowing de llamada comercial. Día 4: práctica de pitch interno. Día 5: revisión de pipeline con tu manager. No envíes propuestas a clientes sin plantilla aprobada en Notion."
+  },
+  {
+    "id": "doc_ops_01",
+    "titulo": "Coordinación de programas formativos — Operations",
+    "departamento": "operations",
+    "tags": ["operations", "cohortes", "coordinacion"],
+    "cuerpo": "Operations coordina logística de cohortes: aulas virtuales, accesos de participantes, cronograma. Usa la checklist de lanzamiento de cohorte en Notion. Incidencias en horario lectivo: canal #ops-cohortes. No modifiques materiales del syllabus sin ticket a Curriculum."
+  },
+  {
+    "id": "doc_beneficios_01",
+    "titulo": "Beneficios generales (sin detalle salarial)",
+    "departamento": "people",
+    "tags": ["beneficios", "formacion", "salud"],
+    "cuerpo": "Bridge SA ofrece: formación interna continua, 26 días laborables de vacaciones (España, salvo convenio local), ticket restaurante o equivalente según país, y cobertura de salud privada tras periodo de prueba donde aplica la ley local. Cifras salariales, bonus e equity no se comunican por este canal; consulta con tu manager o People en reunión 1:1."
+  },
+  {
+    "id": "doc_people_01",
+    "titulo": "Programa buddy y primeras dos semanas",
+    "departamento": "people",
+    "tags": ["buddy", "onboarding", "primeras_semanas"],
+    "cuerpo": "Durante las dos primeras semanas tendrás un buddy del mismo departamento. El buddy no es tu manager: resuelve dudas prácticas (canales Slack, convenciones, dónde está la documentación). Agendad al menos dos videollamadas de 30 minutos. Si el buddy no responde en 24 h laborables, escribe a onboarding@bridgesa.example."
+  }
+]

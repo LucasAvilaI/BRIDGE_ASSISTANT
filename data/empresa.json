@@ -1,0 +1,62 @@
+{
+  "nombre": "Bridge SA",
+  "nombre_legal": "Bridge S.A.",
+  "sector": "Formación tecnológica y producto digital",
+  "mision": "Formar profesionales en datos, IA e ingeniería de software y acompañar a empresas en su transformación digital.",
+  "descripcion": "Bridge SA es una empresa ficticia del reto, con sede en Madrid. Combina programas formativos para particulares, proyectos in-company y un equipo interno de producto e ingeniería. Los empleados trabajan en remoto-first con reuniones presenciales puntuales en Madrid.",
+  "tamano_aproximado": 85,
+  "modalidad_principal": "remoto-first",
+  "sedes": ["Madrid (HQ)", "hub coworking Barcelona (opcional)"],
+  "departamentos": [
+    {
+      "id": "engineering",
+      "nombre": "Engineering & Product",
+      "mision": "Plataforma interna, herramientas para clientes formativos y automatizaciones."
+    },
+    {
+      "id": "sales",
+      "nombre": "Sales & Partnerships",
+      "mision": "Captación B2C y acuerdos con empresas."
+    },
+    {
+      "id": "operations",
+      "nombre": "Operations & Cohortes",
+      "mision": "Logística de programas formativos, accesos de participantes y soporte operativo."
+    },
+    {
+      "id": "people",
+      "nombre": "People & Culture",
+      "mision": "RRHH, onboarding, clima y formación interna."
+    },
+    {
+      "id": "curriculum",
+      "nombre": "Curriculum & Instruction",
+      "mision": "Diseño de syllabus y calidad pedagógica. No atiende onboarding de empleados."
+    }
+  ],
+  "valores": [
+    "Feedback directo y respetuoso",
+    "Aprendizaje continuo",
+    "Documentar antes de escalar",
+    "Privacidad de clientes y empleados"
+  ],
+  "programa_buddy": "Cada empleado nuevo tiene un buddy de su departamento durante las dos primeras semanas (Slack + dos videollamadas).",
+  "herramientas_corporativas": [
+    "Slack",
+    "Google Workspace",
+    "GitHub (organización bridge-sa-tech)",
+    "Notion (wiki interna)",
+    "Factorial (RRHH)",
+    "HubSpot (Sales)",
+    "Jira (Engineering)"
+  ],
+  "contactos": {
+    "rrhh": "rrhh@bridgesa.example",
+    "it": "it@bridgesa.example",
+    "people_partner": "people@bridgesa.example",
+    "onboarding": "onboarding@bridgesa.example"
+  },
+  "producto_reto": "Employee Onboarding Assistant",
+  "alcance_producto": "Asistente para empleados nuevos de Bridge SA en sus primeros 30 días. No atiende participantes externos de los programas formativos ni consultas académicas.",
+  "nota_importante": "Empresa ficticia del Team Challenge; no representa a ninguna organización real. Operations gestiona cohortes de clientes, pero el onboarding assistant solo ayuda a quien tiene contrato laboral con Bridge SA."
+}
