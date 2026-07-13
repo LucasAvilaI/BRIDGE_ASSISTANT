@@ -51,6 +51,19 @@ def cargar_json(ruta: Path | str) -> list[dict] | dict:
         raise ValueError(
             f"El JSON debe contener una lista o un diccionario: {ruta}"
         )
+def cargar_JSON(ruta: Path) -> list[dict]:
+    # TO_DO: Adecuar función
+    """Carga faq.json desde disco."""
+    with ruta.open(encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list):
+        raise ValueError("faq.json debe ser una lista de entradas")
+    return data
+
+def seleccionar_faq(faq: list[dict], consulta: str, max_entradas: int = 1) -> list[dict]:
+    """Elige entradas del FAQ por keywords (sin vector DB)."""
+    q = (consulta or "").lower()
+    puntuaciones: list[tuple[int, dict]] = []
 
     return datos
 
@@ -127,17 +140,18 @@ STOPWORDS = frozenset(
 # CARGA Y VALIDACIÓN DE DATOS
 # ============================================================
 
-# MODO VULNERABLE
-
-
-def seleccionar_faq_vulnerable(faq: list[dict], consulta: str) -> list[dict]:
+# TO_DO: integrar en logic.py cuando se acuerde el flujo compartido.
+# MODO VULNERABLE: contexto sin minimización ni control de acceso.
+def seleccionar_contexto_vulnerable(
+    entradas: list[dict],
+    consulta: str,
+) -> list[dict]:
     """
-    Anti-patrón intencional del modo vulnerable:
-    Devuelve todas las entradas disponibles sin filtrar por relevancia,
-    perfil, permisos, departamento o sensibilidad.
+    Anti-patrón intencional: conserva todo el contexto recibido.
 
-    Se mantiene argumento `consulta` para conservar `seleccionar_faq()` similar
-    y facilitar la integración de ambos modos desde logic.py.
+    La carga y normalización de las fuentes corresponde al módulo compartido
+    de contexto/data. Esta función únicamente modela el fallo vulnerable de
+    no aplicar minimización, relevancia ni autorización.
     """
     ruta = Path(ruta)
 
@@ -850,3 +864,7 @@ def construir_contexto(
             or faqs_seleccionadas
         ),
     }
+    _ = consulta
+    return entradas.copy()
+
+
