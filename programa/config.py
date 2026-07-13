@@ -32,21 +32,10 @@ MODEL = MODEL_1
 # MODEL_3 = "modelo_hugging_face"
 
 
-# ============================================================
-# PARÁMETROS DE GENERACIÓN
-# ============================================================
-
-# Temperatura baja para priorizar respuestas consistentes y basadas
-# en la documentación proporcionada.
 TEMPERATURE_DEFAULT = 0.2
 
-# Estas constantes dejan preparado el proyecto para que el equipo
-# de robustez y seguridad pueda aplicar temperaturas diferentes.
 TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
-
-# Número máximo de turnos completos que se conservarán en el contexto.
-# Un turno completo está formado por un mensaje del usuario y una respuesta.
 WINDOW = 4
 
 # Límites preventivos de entrada y salida.
