@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 
-from config import MAX_TOKENS_INPUT, MODEL, TEMPERATURE, TEMPERATURE_VULNERABLE
+from config import MAX_TOKENS_INPUT, MODEL, TEMPERATURE, TEMPERATURE_VULNERABLE # OJO CON TEMPERATURE PARA MODO SEGURO Y BASE DEFAULT
 from gemini_auth import configurar_gemini_api_key
 
 configurar_gemini_api_key()
