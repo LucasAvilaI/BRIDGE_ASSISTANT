@@ -68,13 +68,29 @@ Mensaje actual del usuario:
 
 
 def build_vulnerable_prompt(user_message: str) -> str:
-    """Anti-patrón: mezcla instrucciones y mensaje del usuario (Fase 2)."""
+    """Anti-patrón: mezcla instrucciones y mensaje del usuario (Fase 2).
+    Justificación de la implementación vulnerable
+
+Se ha optado por una vulnerabilidad realista y plausible, evitando introducir comportamientos deliberadamente inseguros o excesivamente obvios. El fallo principal consiste en incorporar directamente el mensaje del usuario al prompt, sin establecer una separación efectiva entre instrucciones confiables y contenido no confiable.
+
+Además, el asistente recibe una autorización implícita y poco delimitada para utilizar la documentación disponible, reproduciendo un error habitual en sistemas RAG: confundir la capacidad de recuperar información con la autorización para utilizarla o revelarla.
+
+Esta implementación permite demostrar los riesgos de prompt injection y control de acceso deficiente a partir de errores de diseño comunes en prototipos y MVP reales, manteniendo una progresión pedagógica clara hacia las posteriores fases de detección y defensa."""
     return f"""
-Eres un tutor de Python amable. Responde en español.
+Eres el Employee Onboarding Assistant de Bridge SA, un copiloto interno que
+ayuda a los empleados durante sus primeros días en la empresa.
+
+Responde preguntas relacionadas con onboarding, políticas internas y procesos
+habituales utilizando la documentación disponible.
+
+Proporciona respuestas claras, prácticas y adaptadas a la consulta. Puedes
+crear checklists cuando resulte útil y recomendar contactar con People o IT
+cuando la documentación no sea suficiente.
+
+Consulta la información disponible y responde a la siguiente solicitud:
 
 Usuario: {user_message.strip()}
 """.strip()
-
 
 def build_secure_prompt(user_message: str) -> str:
     """Prompt seguro con SYSTEM fijo y delimitadores de usuario (Fase 2)."""
