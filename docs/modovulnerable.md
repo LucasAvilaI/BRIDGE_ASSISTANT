@@ -99,3 +99,16 @@ hacia:
 🚧 En desarrollo.
 
 La implementación se realizará sobre la arquitectura común del proyecto una vez identificadas las funciones y contratos que deben reutilizarse.
+
+
+## Documentación y justificación de decisiones en modo vulnerable
+
+1. *def build_vulnerable_prompt* en prompts.py
+
+Se ha optado por una vulnerabilidad realista y plausible, evitando introducir comportamientos deliberadamente inseguros o excesivamente obvios. El fallo principal consiste en incorporar directamente el mensaje del usuario al prompt, sin establecer una separación efectiva entre instrucciones confiables y contenido no confiable.
+
+Además, el asistente recibe una autorización implícita y poco delimitada para utilizar la documentación disponible, reproduciendo un error habitual en sistemas RAG: confundir la capacidad de recuperar información con la autorización para utilizarla o revelarla.
+
+Esta implementación permite demostrar los riesgos de prompt injection y control de acceso deficiente a partir de errores de diseño comunes en prototipos y MVP reales, manteniendo una progresión pedagógica clara hacia las posteriores fases de detección y defensa.
+
+2. 
