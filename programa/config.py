@@ -1,3 +1,4 @@
+from pathlib import Path
 MODEL_1 = "gemini-3-flash-preview"
 '''
 MODEL_2 = "Llama"
@@ -9,6 +10,9 @@ TEMPERATURE_DEFAULT = 0.2
 
 TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
+
+# MODO VULNERABLE: Activar solo para tests de seguridad y detección de vulnerabilidades. No filtra ni valida la información.
+# EXPERIMENTAL_TEMPERATURES = [0.0, 0.2, 0.7, 1.0]
 WINDOW = 4
 MAX_TOKENS_INPUT = 8_000
 MAX_INPUT_CHARS = 2_000
@@ -107,6 +111,31 @@ PATRONES_SOSPECHOSOS = (
     "system:",
     "jailbreak",
 )
+
+# TO_DO MODO VULNERABLE > CONTEXTO VULNERABLE
+# Carga de contexto sin filtrar: aumenta ruido, coste y superficie de exposición.
+# Se deja fuera del MVP porque la vulnerabilidad prioritaria —pasar input
+# no validado al LLM— ya está implementada.
+#
+# Pendiente de integrar cuando el equipo defina la arquitectura compartida
+# de carga y normalización de contexto.
+
+'''
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+
+FAQ_PATH = DATA_DIR / "faq_onboarding.json"
+EMPLOYEES_PATH = DATA_DIR / "empleados_demo.json"
+ONBOARDING_PATH = DATA_DIR / "onboarding_docs.json"
+POLICIES_PATH = DATA_DIR / "empresa.json"
+
+VULNERABLE_CONTEXT_PATHS = [
+    FAQ_PATH,
+    EMPLOYEES_PATH,
+    ONBOARDING_PATH,
+    POLICIES_PATH,
+]
+'''
 
 #TO_DO: Definir respuesta JSON del modelo.
 JSON_SCHEMA_HINT = """
