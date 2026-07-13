@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from config import ASSISTANT_CONFIG_DEFAULT, TEMPERATURE, TEMPERATURE_VULNERABLE
-from context import cargar_faq, seleccionar_faq
+from config import ASSISTANT_CONFIG_DEFAULT, TEMPERATURE_DEFAULT, TEMPERATURE_VULNERABLE
+from context import cargar_faq, seleccionar_faq, seleccionar_contexto_vulnerable
 from gemini_client import MetricasLlamada, safe_generate
 from prompts import (
     build_assistant_prompt,
@@ -83,6 +83,68 @@ def procesar_turno(
         },
     )
 
+
+from context import seleccionar_contexto_vulnerable
+from prompts import build_vulnerable_prompt
+
+
+# ============================================================
+# TURNO MODO VULNERABLE
+# ============================================================
+
+def procesar_turno_vulnerable(
+    *,
+    assistant_config: dict,
+    user_state: dict,
+    user_message: str,
+    documentos: list[dict],
+    faqs: list[dict],
+    recent_messages: list[dict] | None = None,
+) -> str:
+    """
+    Orquesta un turno del asistente en modo vulnerable.
+
+    Anti-patrones intencionales:
+    - no valida la entrada del usuario;
+    - no filtra el contexto por relevancia;
+    - no aplica minimización del contexto;
+    - mezcla documentos y FAQ;
+    - pasa el mensaje directamente al prompt vulnerable.
+    """
+
+    # 1. Mantiene todos los documentos sin filtrar.
+    documentos_vulnerables = seleccionar_contexto_vulnerable(
+        documentos,
+        user_message,
+    )
+
+    # 2. Mantiene todas las FAQ sin filtrar.
+    faqs_vulnerables = seleccionar_contexto_vulnerable(
+        faqs,
+        user_message,
+    )
+
+    # 3. Une todo el contexto disponible.
+    contexto_vulnerable = [
+        *documentos_vulnerables,
+        *faqs_vulnerables,
+    ]
+
+    # 4. Construye el prompt sin separación de confianza.
+    prompt = build_vulnerable_prompt(
+        assistant_config=assistant_config,
+        user_state=user_state,
+        user_message=user_message,
+        extra_context=contexto_vulnerable,
+        recent_messages=recent_messages,
+    )
+
+    respuesta = generar_respuesta(prompt)
+
+    return {
+    "prompt": prompt,
+    "respuesta": respuesta,
+    }
 
 def crear_estado_demo() -> dict:
     """Estado inicial para las demos de Fase 1."""
@@ -166,6 +228,7 @@ def procesar_turno_seguro(user_message: str) -> dict:
             },
         )
 
+# TO_DO: Ojo aquí con la const de temperatura
     prompt = build_secure_prompt(user_message)
     try:
         raw, metricas = safe_generate(prompt, temperature=TEMPERATURE, json_mode=True)
