@@ -1,4 +1,3 @@
-
 import json
 import re
 import unicodedata
@@ -51,19 +50,6 @@ def cargar_json(ruta: Path | str) -> list[dict] | dict:
         raise ValueError(
             f"El JSON debe contener una lista o un diccionario: {ruta}"
         )
-def cargar_JSON(ruta: Path) -> list[dict]:
-    # TO_DO: Adecuar función
-    """Carga faq.json desde disco."""
-    with ruta.open(encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, list):
-        raise ValueError("faq.json debe ser una lista de entradas")
-    return data
-
-def seleccionar_faq(faq: list[dict], consulta: str, max_entradas: int = 1) -> list[dict]:
-    """Elige entradas del FAQ por keywords (sin vector DB)."""
-    q = (consulta or "").lower()
-    puntuaciones: list[tuple[int, dict]] = []
 
     return datos
 
@@ -71,6 +57,7 @@ def seleccionar_faq(faq: list[dict], consulta: str, max_entradas: int = 1) -> li
 # Alias temporal para mantener compatibilidad con módulos
 # que todavía utilizan el nombre antiguo.
 cargar_JSON = cargar_json
+
 
 # ============================================================
 # PALABRAS VACÍAS
@@ -140,51 +127,22 @@ STOPWORDS = frozenset(
 # CARGA Y VALIDACIÓN DE DATOS
 # ============================================================
 
-# TO_DO: integrar en logic.py cuando se acuerde el flujo compartido.
-# MODO VULNERABLE: contexto sin minimización ni control de acceso.
+# ============================================================
+# MODO VULNERABLE
+# ============================================================
+
 def seleccionar_contexto_vulnerable(
     entradas: list[dict],
     consulta: str,
 ) -> list[dict]:
     """
-    Anti-patrón intencional: conserva todo el contexto recibido.
+    Anti-patrón intencional del modo vulnerable.
 
-    La carga y normalización de las fuentes corresponde al módulo compartido
-    de contexto/data. Esta función únicamente modela el fallo vulnerable de
-    no aplicar minimización, relevancia ni autorización.
+    Devuelve todas las entradas recibidas sin aplicar filtros de relevancia,
+    minimización, departamento, perfil, permisos ni sensibilidad.
     """
-    ruta = Path(ruta)
-
-    if not ruta.exists():
-        raise FileNotFoundError(
-            f"No se ha encontrado el archivo JSON: {ruta}"
-        )
-
-    if not ruta.is_file():
-        raise ValueError(
-            f"La ruta indicada no corresponde a un archivo: {ruta}"
-        )
-
-    try:
-        with ruta.open("r", encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            f"El archivo contiene un JSON no válido: {ruta}"
-        ) from error
-
-    except OSError as error:
-        raise OSError(
-            f"No se ha podido leer el archivo JSON: {ruta}"
-        ) from error
-
-    if not isinstance(datos, (list, dict)):
-        raise ValueError(
-            f"El JSON debe contener una lista o un diccionario: {ruta}"
-        )
-
-    return datos
+    _ = consulta
+    return entradas.copy()
 
 
 def validar_lista_diccionarios(
@@ -864,7 +822,3 @@ def construir_contexto(
             or faqs_seleccionadas
         ),
     }
-    _ = consulta
-    return entradas.copy()
-
-
