@@ -1,5 +1,5 @@
 
-from config import JSON_SCHEMA_HINT, PERFILES, SYSTEM_PROMPT
+from config import JSON_SCHEMA_HINT, PERFILES, SYSTEM_PROMPT, VULNERABLE_SYSTEM_PROMPT
 
 
 def resolver_perfil(assistant_config: dict) -> dict:
@@ -67,30 +67,48 @@ Mensaje actual del usuario:
 """.strip()
 
 
-def build_vulnerable_prompt(user_message: str) -> str:
-    """Anti-patrón: mezcla instrucciones y mensaje del usuario (Fase 2).
-    Justificación de la implementación vulnerable
+# MODO VULNERABLE
+def build_vulnerable_prompt(
+    *,
+    assistant_config: dict,
+    user_state: dict,
+    user_message: str,
+    extra_context: list[dict] | None = None,
+    recent_messages: list[dict] | None = None,
+) -> str:
+    """
+    Construye el prompt del modo vulnerable.
 
-Se ha optado por una vulnerabilidad realista y plausible, evitando introducir comportamientos deliberadamente inseguros o excesivamente obvios. El fallo principal consiste en incorporar directamente el mensaje del usuario al prompt, sin establecer una separación efectiva entre instrucciones confiables y contenido no confiable.
+    Anti-patrón intencional: mezcla instrucciones, contexto,
+    historial y mensaje del usuario sin separación de confianza.
+    """
+    perfil = resolver_perfil(assistant_config)
+    profile = user_state.get("user_profile", {})
+    contexto = extra_context or []
+    recent = recent_messages or []
 
-Además, el asistente recibe una autorización implícita y poco delimitada para utilizar la documentación disponible, reproduciendo un error habitual en sistemas RAG: confundir la capacidad de recuperar información con la autorización para utilizarla o revelarla.
-
-Esta implementación permite demostrar los riesgos de prompt injection y control de acceso deficiente a partir de errores de diseño comunes en prototipos y MVP reales, manteniendo una progresión pedagógica clara hacia las posteriores fases de detección y defensa."""
     return f"""
-Eres el Employee Onboarding Assistant de Bridge SA, un copiloto interno que
-ayuda a los empleados durante sus primeros días en la empresa.
+{VULNERABLE_SYSTEM_PROMPT}
 
-Responde preguntas relacionadas con onboarding, políticas internas y procesos
-habituales utilizando la documentación disponible.
+{perfil["rol"]}
 
-Proporciona respuestas claras, prácticas y adaptadas a la consulta. Puedes
-crear checklists cuando resulte útil y recomendar contactar con People o IT
-cuando la documentación no sea suficiente.
+Responde en {assistant_config["idioma_respuesta"]}.
+Nivel de explicación: {perfil["nivel_explicacion"]}.
+Máximo aproximado: {assistant_config["max_palabras"]} palabras.
 
-Consulta la información disponible y responde a la siguiente solicitud:
+Perfil del empleado:
+{profile}
 
-Usuario: {user_message.strip()}
+Contexto disponible:
+{contexto}
+
+Historial reciente:
+{build_history_block(recent)}
+
+Mensaje actual del usuario:
+{user_message.strip()}
 """.strip()
+
 
 def build_secure_prompt(user_message: str) -> str:
     """Prompt seguro con SYSTEM fijo y delimitadores de usuario (Fase 2)."""

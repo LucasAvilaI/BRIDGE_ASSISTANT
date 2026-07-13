@@ -13,8 +13,13 @@ from config import (
     MIN_DOCUMENT_SCORE,
     MIN_FAQ_SCORE,
     TRANSVERSAL_DOCUMENT_IDS,
+    VULNERABLE_CONTEXT_PATHS
 )
 
+
+# ============================================================
+# CARGA DE DATOS
+# ============================================================
 def cargar_json(ruta: Path | str) -> list[dict] | dict:
     """
     Carga un archivo JSON desde disco.
@@ -51,14 +56,49 @@ def cargar_json(ruta: Path | str) -> list[dict] | dict:
         raise ValueError(
             f"El JSON debe contener una lista o un diccionario: {ruta}"
         )
-def cargar_JSON(ruta: Path) -> list[dict]:
-    # TO_DO: Adecuar función
-    """Carga faq.json desde disco."""
-    with ruta.open(encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, list):
-        raise ValueError("faq.json debe ser una lista de entradas")
-    return data
+
+    return datos
+
+
+# ============================================================
+# CARGA DE DATOS VULNERABLE (CORRESPONDE A MODO VULNERABLE)
+# ============================================================
+def cargar_contexto_vulnerable(
+    rutas: list[Path] = VULNERABLE_CONTEXT_PATHS,
+) -> dict[str, list[dict] | dict]:
+    """
+    Carga todas las fuentes configuradas para el modo vulnerable.
+
+    No aplica minimización, filtrado ni control de acceso.
+    """
+    contexto: dict[str, list[dict] | dict] = {}
+
+    for ruta in rutas:
+        contexto[ruta.stem] = cargar_json(ruta)
+
+    return contexto
+
+# ============================================================
+# SELECCIÓN DE DATOS VULNERABLE (CORRESPONDE A MODO VULNERABLE)
+# ============================================================
+# TO_DO: integrar en logic.py cuando se acuerde el flujo compartido.
+# Contexto sin minimización ni control de acceso.
+
+
+def seleccionar_contexto_vulnerable(
+    entradas: list[dict],
+    consulta: str,
+) -> list[dict]:
+    """
+    Anti-patrón intencional: conserva todo el contexto recibido.
+
+    No aplica minimización, relevancia ni autorización.
+    La consulta se recibe para mantener una interfaz compatible
+    con los selectores de contexto del proyecto.
+    """
+    _ = consulta
+    return entradas.copy()
+
 
 def seleccionar_faq(faq: list[dict], consulta: str, max_entradas: int = 1) -> list[dict]:
     """Elige entradas del FAQ por keywords (sin vector DB)."""
@@ -135,56 +175,9 @@ STOPWORDS = frozenset(
     }
 )
 
-
 # ============================================================
-# CARGA Y VALIDACIÓN DE DATOS
+# VALIDACIÓN DE DATOS
 # ============================================================
-
-# TO_DO: integrar en logic.py cuando se acuerde el flujo compartido.
-# MODO VULNERABLE: contexto sin minimización ni control de acceso.
-def seleccionar_contexto_vulnerable(
-    entradas: list[dict],
-    consulta: str,
-) -> list[dict]:
-    """
-    Anti-patrón intencional: conserva todo el contexto recibido.
-
-    La carga y normalización de las fuentes corresponde al módulo compartido
-    de contexto/data. Esta función únicamente modela el fallo vulnerable de
-    no aplicar minimización, relevancia ni autorización.
-    """
-    ruta = Path(ruta)
-
-    if not ruta.exists():
-        raise FileNotFoundError(
-            f"No se ha encontrado el archivo JSON: {ruta}"
-        )
-
-    if not ruta.is_file():
-        raise ValueError(
-            f"La ruta indicada no corresponde a un archivo: {ruta}"
-        )
-
-    try:
-        with ruta.open("r", encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            f"El archivo contiene un JSON no válido: {ruta}"
-        ) from error
-
-    except OSError as error:
-        raise OSError(
-            f"No se ha podido leer el archivo JSON: {ruta}"
-        ) from error
-
-    if not isinstance(datos, (list, dict)):
-        raise ValueError(
-            f"El JSON debe contener una lista o un diccionario: {ruta}"
-        )
-
-    return datos
 
 
 def validar_lista_diccionarios(
@@ -866,5 +859,3 @@ def construir_contexto(
     }
     _ = consulta
     return entradas.copy()
-
-
