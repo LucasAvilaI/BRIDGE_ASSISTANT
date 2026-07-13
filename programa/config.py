@@ -17,10 +17,23 @@ FAQ_PATH = DATA_DIR / "faq_onboarding.json"
 
 
 # ============================================================
+# CONFIGURACIÓN RUTAS MODO VULNERABLE
+# ============================================================
+
+# El modo vulnerable carga deliberadamente todas las fuentes
+# disponibles sin aplicar selección, minimización ni filtrado.
+VULNERABLE_CONTEXT_PATHS = [
+    EMPRESA_PATH,
+    EMPLEADOS_PATH,
+    DOCS_PATH,
+    FAQ_PATH,
+]
+
+
+# ============================================================
 # CONFIGURACIÓN DE MODELOS
 # ============================================================
 
-from pathlib import Path
 MODEL_1 = "gemini-3-flash-preview"
 
 # Alias utilizado por gemini_client.py.
@@ -227,6 +240,23 @@ Reglas inmutables:
 """.strip()
 
 
+# SYSTEM PROMPT DE MODO VULNERABLE
+# Instrucciones estables del modo vulnerable
+VULNERABLE_SYSTEM_PROMPT = """
+Eres el Employee Onboarding Assistant de Bridge SA, un copiloto interno que
+ayuda a los empleados durante sus primeros días en la empresa.
+
+Responde preguntas relacionadas con onboarding, políticas internas y procesos
+habituales utilizando la documentación disponible.
+
+Proporciona respuestas claras, prácticas y adaptadas a la consulta. Puedes
+crear checklists cuando resulte útil y recomendar contactar con People o IT
+cuando la documentación no sea suficiente.
+
+Consulta la información disponible y responde a la solicitud del usuario.
+""".strip()
+
+
 # ============================================================
 # CATEGORÍAS DE CONSULTA
 # ============================================================
@@ -424,33 +454,7 @@ REQUIRED_RESPONSE_FIELDS = frozenset(
     }
 )
 
-
-# TO_DO MODO VULNERABLE > CONTEXTO VULNERABLE
-# Carga de contexto sin filtrar: aumenta ruido, coste y superficie de exposición.
-# Se deja fuera del MVP porque la vulnerabilidad prioritaria —pasar input
-# no validado al LLM— ya está implementada.
-#
-# Pendiente de integrar cuando el equipo defina la arquitectura compartida
-# de carga y normalización de contexto.
-
-'''
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-
-FAQ_PATH = DATA_DIR / "faq_onboarding.json"
-EMPLOYEES_PATH = DATA_DIR / "empleados_demo.json"
-ONBOARDING_PATH = DATA_DIR / "onboarding_docs.json"
-POLICIES_PATH = DATA_DIR / "empresa.json"
-
-VULNERABLE_CONTEXT_PATHS = [
-    FAQ_PATH,
-    EMPLOYEES_PATH,
-    ONBOARDING_PATH,
-    POLICIES_PATH,
-]
-'''
-
-#TO_DO: Definir respuesta JSON del modelo.
+# TO_DO: Definir respuesta JSON del modelo.
 JSON_SCHEMA_HINT = """
 Devuelve exclusivamente un objeto JSON válido con esta estructura exacta:
 
