@@ -102,9 +102,9 @@ MIN_FAQ_SCORE = 2
 # ============================================================
 
 # Estos documentos pueden ser relevantes para empleados de cualquier
-# departamento. Se declaran por ID para evitar considerar globales
+# departamento. Se declaran por ID para evitar considerar transversales
 # todos los documentos pertenecientes a People, RRHH o IT.
-GLOBAL_DOCUMENT_IDS = frozenset(
+TRANSVERSAL_DOCUMENT_IDS = frozenset(
     {
         "doc_bienvenida_01",
         "doc_it_01",
