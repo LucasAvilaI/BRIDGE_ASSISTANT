@@ -42,7 +42,9 @@ def _metricas_a_dict(m: MetricasLlamada) -> dict:
         "total_tokens": m.total_tokens,
     }
 
-#TO_DO: Crear función de selección de rol.
+# TO_DO: Crear función de selección de rol.
+
+
 def procesar_turno(
     state: dict,
     user_message: str,
@@ -52,8 +54,8 @@ def procesar_turno(
     """Pipeline Fase 1: validar vacío → prompt → Gemini → actualizar estado."""
     if not user_message.strip():
         return respuesta_error("Mensaje vacío", ["El mensaje no puede estar vacío."])
-    
-    #TO_DO: Adecuación de perfil, dependiendo del input
+
+    # TO_DO: Adecuación de perfil, dependiendo del input
     config = assistant_config or ASSISTANT_CONFIG_DEFAULT.copy()
     ventana = config.get("max_turnos_historial", 6)
 
@@ -66,7 +68,8 @@ def procesar_turno(
     )
 
     try:
-        texto, metricas = safe_generate(prompt, temperature=config["temperature"])
+        texto, metricas = safe_generate(
+            prompt, temperature=config["temperature"])
     except ValueError as e:
         return respuesta_error("Error de contexto", [str(e)])
 
@@ -84,10 +87,6 @@ def procesar_turno(
     )
 
 
-from context import seleccionar_contexto_vulnerable
-from prompts import build_vulnerable_prompt
-
-
 # ============================================================
 # TURNO MODO VULNERABLE
 # ============================================================
@@ -100,7 +99,7 @@ def procesar_turno_vulnerable(
     documentos: list[dict],
     faqs: list[dict],
     recent_messages: list[dict] | None = None,
-) -> str:
+) -> dict:
     """
     Orquesta un turno del asistente en modo vulnerable.
 
@@ -139,12 +138,28 @@ def procesar_turno_vulnerable(
         recent_messages=recent_messages,
     )
 
-    respuesta = generar_respuesta(prompt)
+    try:
+        texto, metricas = safe_generate(
+            prompt,
+            temperature=TEMPERATURE_VULNERABLE,
+        )
 
-    return {
-    "prompt": prompt,
-    "respuesta": respuesta,
-    }
+    except ValueError as error:
+        return respuesta_error(
+            "Error de contexto",
+            [str(error)],
+        )
+
+    return respuesta_ok(
+        "Turno vulnerable completado",
+        {
+            "modo": "vulnerable",
+            "prompt": prompt,
+            "respuesta": texto,
+            "metricas": _metricas_a_dict(metricas),
+        },
+    )
+
 
 def crear_estado_demo() -> dict:
     """Estado inicial para las demos de Fase 1."""
@@ -171,8 +186,9 @@ def demo_seleccion_faq(faq_path: Path, consulta: str) -> dict:
         {"topic_id": seleccion[0].get("topic_id"), "entry": seleccion[0]},
     )
 
-#TO_DO: Def seleccion_onboarding_document(faq_path: Path, consulta: str) -> dict:
-    #Carga del documento mas relevante para el trabajador y consulta actual.
+# TO_DO: Def seleccion_onboarding_document(faq_path: Path, consulta: str) -> dict:
+    # Carga del documento mas relevante para el trabajador y consulta actual.
+
 
 def parsear_respuesta_tutor(raw: str) -> dict:
     """Parsea y valida el JSON devuelto por Gemini en modo seguro."""
@@ -184,27 +200,6 @@ def parsear_respuesta_tutor(raw: str) -> dict:
         if key not in obj:
             raise ValueError(f"Falta clave obligatoria en JSON: {key}")
     return obj
-
-
-def procesar_turno_vulnerable(user_message: str) -> dict:
-    """Pipeline débil para comparativa (Fase 2)."""
-    if not user_message.strip():
-        return respuesta_error("Mensaje vacío", ["El mensaje no puede estar vacío."])
-
-    prompt = build_vulnerable_prompt(user_message)
-    try:
-        texto, metricas = safe_generate(prompt, temperature=TEMPERATURE_VULNERABLE)
-    except ValueError as e:
-        return respuesta_error("Error de contexto", [str(e)])
-
-    return respuesta_ok(
-        "Turno vulnerable completado",
-        {
-            "modo": "vulnerable",
-            "respuesta": texto,
-            "metricas": _metricas_a_dict(metricas),
-        },
-    )
 
 
 def procesar_turno_seguro(user_message: str) -> dict:
@@ -231,7 +226,8 @@ def procesar_turno_seguro(user_message: str) -> dict:
 # TO_DO: Ojo aquí con la const de temperatura
     prompt = build_secure_prompt(user_message)
     try:
-        raw, metricas = safe_generate(prompt, temperature=TEMPERATURE, json_mode=True)
+        raw, metricas = safe_generate(
+            prompt, temperature=TEMPERATURE, json_mode=True)
         obj = parsear_respuesta_tutor(raw)
     except ValueError as e:
         return respuesta_error("Error al procesar respuesta", [str(e)])
