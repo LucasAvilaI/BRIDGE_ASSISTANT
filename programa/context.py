@@ -1,4 +1,3 @@
-
 import json
 import re
 import unicodedata
@@ -111,6 +110,7 @@ def seleccionar_faq(faq: list[dict], consulta: str, max_entradas: int = 1) -> li
 # Alias temporal para mantener compatibilidad con módulos
 # que todavía utilizan el nombre antiguo.
 cargar_JSON = cargar_json
+
 
 # ============================================================
 # PALABRAS VACÍAS
@@ -857,5 +857,3 @@ def construir_contexto(
             or faqs_seleccionadas
         ),
     }
-    _ = consulta
-    return entradas.copy()
