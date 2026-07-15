@@ -14,53 +14,100 @@ from config import (
     TRANSVERSAL_DOCUMENT_IDS,
 )
 
-def cargar_json(ruta: Path | str) -> list[dict] | dict:
+
+# ============================================================
+# CARGA Y VALIDACIÓN DE DATOS
+# ============================================================
+
+def cargar_json(
+    ruta: Path | str,
+) -> list[dict] | dict:
     """
     Carga un archivo JSON desde disco.
 
     Admite como estructura raíz una lista o un diccionario.
     """
-    ruta = Path(ruta)
+    ruta_normalizada = Path(ruta)
 
-    if not ruta.exists():
+    if not ruta_normalizada.exists():
         raise FileNotFoundError(
-            f"No se ha encontrado el archivo JSON: {ruta}"
+            "No se ha encontrado el archivo JSON: "
+            f"{ruta_normalizada}"
         )
 
-    if not ruta.is_file():
+    if not ruta_normalizada.is_file():
         raise ValueError(
-            f"La ruta indicada no corresponde a un archivo: {ruta}"
+            "La ruta indicada no corresponde a un archivo: "
+            f"{ruta_normalizada}"
         )
 
     try:
-        with ruta.open("r", encoding="utf-8") as archivo:
+        with ruta_normalizada.open(
+            "r",
+            encoding="utf-8",
+        ) as archivo:
             datos = json.load(archivo)
 
     except json.JSONDecodeError as error:
         raise ValueError(
-            f"El archivo contiene un JSON no válido: {ruta}"
+            "El archivo contiene un JSON no válido: "
+            f"{ruta_normalizada}"
         ) from error
 
     except OSError as error:
         raise OSError(
-            f"No se ha podido leer el archivo JSON: {ruta}"
+            "No se ha podido leer el archivo JSON: "
+            f"{ruta_normalizada}"
         ) from error
 
     if not isinstance(datos, (list, dict)):
         raise ValueError(
-            f"El JSON debe contener una lista o un diccionario: {ruta}"
+            "El JSON debe contener una lista o un diccionario: "
+            f"{ruta_normalizada}"
         )
 
     return datos
 
 
-# Alias temporal para mantener compatibilidad con módulos
-# que todavía utilizan el nombre antiguo.
+# Alias temporal para mantener compatibilidad durante
+# la integración entre ramas.
 cargar_JSON = cargar_json
 
 
+def validar_lista_diccionarios(
+    datos: Any,
+    nombre_fuente: str,
+    permitir_vacia: bool = False,
+) -> list[dict]:
+    """
+    Comprueba que una fuente contiene una lista de diccionarios.
+
+    Por defecto, una lista vacía se considera una fuente no válida.
+    """
+    if not isinstance(datos, list):
+        raise ValueError(
+            f"{nombre_fuente} debe contener una lista de entradas."
+        )
+
+    if not datos and not permitir_vacia:
+        raise ValueError(
+            f"{nombre_fuente} no puede estar vacío."
+        )
+
+    if not all(
+        isinstance(entrada, dict)
+        for entrada in datos
+    ):
+        raise ValueError(
+            f"Todas las entradas de {nombre_fuente} "
+            "deben ser diccionarios."
+        )
+
+    return datos
+
+
 # ============================================================
-# PALABRAS VACÍAS
+# NORMALIZACIÓN DE TEXTO
 # ============================================================
 
 # Palabras frecuentes que no aportan suficiente intención
@@ -123,66 +170,15 @@ STOPWORDS = frozenset(
 )
 
 
-# ============================================================
-# CARGA Y VALIDACIÓN DE DATOS
-# ============================================================
-
-# ============================================================
-# MODO VULNERABLE
-# ============================================================
-
-def seleccionar_contexto_vulnerable(
-    entradas: list[dict],
-    consulta: str,
-) -> list[dict]:
-    """
-    Anti-patrón intencional del modo vulnerable.
-
-    Devuelve todas las entradas recibidas sin aplicar filtros de relevancia,
-    minimización, departamento, perfil, permisos ni sensibilidad.
-    """
-    _ = consulta
-    return entradas.copy()
-
-
-def validar_lista_diccionarios(
-    datos: Any,
-    nombre_fuente: str,
-    permitir_vacia: bool = False,
-) -> list[dict]:
-    """
-    Comprueba que una fuente contiene una lista de diccionarios.
-
-    Por defecto, una lista vacía se considera una fuente no válida.
-    """
-    if not isinstance(datos, list):
-        raise ValueError(
-            f"{nombre_fuente} debe contener una lista de entradas."
-        )
-
-    if not datos and not permitir_vacia:
-        raise ValueError(
-            f"{nombre_fuente} no puede estar vacío."
-        )
-
-    if not all(isinstance(entrada, dict) for entrada in datos):
-        raise ValueError(
-            f"Todas las entradas de {nombre_fuente} deben ser diccionarios."
-        )
-
-    return datos
-
-
-# ============================================================
-# NORMALIZACIÓN DE TEXTO
-# ============================================================
-
-def normalizar_texto(texto: str | None) -> str:
+def normalizar_texto(
+    texto: str | None,
+) -> str:
     """
     Normaliza un texto para facilitar las comparaciones.
 
     Convierte el texto a minúsculas, elimina acentos,
-    sustituye separadores por espacios y elimina espacios duplicados.
+    sustituye separadores por espacios y elimina espacios
+    duplicados.
     """
     if texto is None:
         return ""
@@ -215,11 +211,15 @@ def normalizar_texto(texto: str | None) -> str:
     return texto_normalizado.strip()
 
 
-def extraer_palabras(texto: str | None) -> set[str]:
+def extraer_palabras(
+    texto: str | None,
+) -> set[str]:
     """
     Extrae las palabras relevantes de un texto normalizado.
     """
-    texto_normalizado = normalizar_texto(texto)
+    texto_normalizado = normalizar_texto(
+        texto
+    )
 
     palabras = re.findall(
         r"\b[a-z0-9]+\b",
@@ -234,11 +234,13 @@ def extraer_palabras(texto: str | None) -> set[str]:
     }
 
 
-def normalizar_tags(tags: Any) -> set[str]:
+def normalizar_tags(
+    tags: Any,
+) -> set[str]:
     """
     Normaliza una colección de tags.
 
-    Ignora los valores que no sean strings.
+    Los valores que no sean strings se ignoran.
     """
     if not isinstance(tags, list):
         return set()
@@ -249,15 +251,21 @@ def normalizar_tags(tags: Any) -> set[str]:
         if not isinstance(tag, str):
             continue
 
-        tag_normalizado = normalizar_texto(tag)
+        tag_normalizado = normalizar_texto(
+            tag
+        )
 
         if tag_normalizado:
-            tags_normalizados.add(tag_normalizado)
+            tags_normalizados.add(
+                tag_normalizado
+            )
 
     return tags_normalizados
 
 
-def extraer_palabras_tags(tags: Any) -> set[str]:
+def extraer_palabras_tags(
+    tags: Any,
+) -> set[str]:
     """
     Convierte una lista de tags en un conjunto de palabras útiles.
 
@@ -312,7 +320,7 @@ def buscar_empleado(
 
 
 # ============================================================
-# PUNTUACIÓN DE FAQ
+# PUNTUACIÓN Y SELECCIÓN DE FAQ
 # ============================================================
 
 def puntuar_faq(
@@ -321,7 +329,7 @@ def puntuar_faq(
     pregunta_normalizada: str,
 ) -> int:
     """
-    Calcula la relevancia de una FAQ respecto a una pregunta.
+    Calcula la relevancia de una FAQ respecto a una consulta.
 
     La puntuación combina:
     - coincidencias con tags;
@@ -353,16 +361,22 @@ def puntuar_faq(
         respuesta_corta
     )
 
-    coincidencias_tags = palabras_pregunta.intersection(
-        palabras_tags
+    coincidencias_tags = (
+        palabras_pregunta.intersection(
+            palabras_tags
+        )
     )
 
-    coincidencias_pregunta = palabras_pregunta.intersection(
-        palabras_pregunta_faq
+    coincidencias_pregunta = (
+        palabras_pregunta.intersection(
+            palabras_pregunta_faq
+        )
     )
 
-    coincidencias_respuesta = palabras_pregunta.intersection(
-        palabras_respuesta
+    coincidencias_respuesta = (
+        palabras_pregunta.intersection(
+            palabras_respuesta
+        )
     )
 
     puntuacion = 0
@@ -383,11 +397,16 @@ def puntuar_faq(
     )
 
     # Una coincidencia literal con un tag compuesto recibe
-    # una bonificación adicional porque suele representar
-    # una intención concreta.
+    # una bonificación adicional porque representa una
+    # intención más concreta.
     for tag in tags_normalizados:
-        if " " in tag and tag in pregunta_normalizada:
-            puntuacion += FAQ_SCORE_WEIGHTS["tag"]
+        if (
+            " " in tag
+            and tag in pregunta_normalizada
+        ):
+            puntuacion += (
+                FAQ_SCORE_WEIGHTS["tag"]
+            )
 
     return puntuacion
 
@@ -408,7 +427,10 @@ def seleccionar_faq(
         "faq_onboarding.json",
     )
 
-    if not isinstance(consulta, str) or not consulta.strip():
+    if (
+        not isinstance(consulta, str)
+        or not consulta.strip()
+    ):
         return []
 
     if max_entradas <= 0:
@@ -422,7 +444,9 @@ def seleccionar_faq(
         consulta
     )
 
-    faqs_puntuadas: list[tuple[int, dict]] = []
+    faqs_puntuadas: list[
+        tuple[int, dict]
+    ] = []
 
     for faq in faqs:
         puntuacion = puntuar_faq(
@@ -433,7 +457,10 @@ def seleccionar_faq(
 
         if puntuacion >= MIN_FAQ_SCORE:
             faqs_puntuadas.append(
-                (puntuacion, faq)
+                (
+                    puntuacion,
+                    faq,
+                )
             )
 
     # En caso de empate se ordena también por ID
@@ -441,18 +468,25 @@ def seleccionar_faq(
     faqs_puntuadas.sort(
         key=lambda elemento: (
             -elemento[0],
-            str(elemento[1].get("id", "")),
+            str(
+                elemento[1].get(
+                    "id",
+                    "",
+                )
+            ),
         )
     )
 
     return [
         faq
-        for _, faq in faqs_puntuadas[:max_entradas]
+        for _, faq in faqs_puntuadas[
+            :max_entradas
+        ]
     ]
 
 
 # ============================================================
-# PUNTUACIÓN DE DOCUMENTOS
+# PUNTUACIÓN Y SELECCIÓN DE DOCUMENTOS
 # ============================================================
 
 def puntuar_documento(
@@ -464,32 +498,52 @@ def puntuar_documento(
     """
     Calcula la relevancia de un documento para una consulta.
 
-    La intención de la pregunta tiene más peso que el departamento
-    del empleado. El departamento y el carácter global solo actúan
+    La intención de la pregunta tiene más peso que el
+    departamento del empleado.
+
+    El departamento y el carácter transversal solo actúan
     como factores de personalización o desempate.
     """
     departamento_empleado = normalizar_texto(
-        empleado.get("departamento", "")
+        empleado.get(
+            "departamento",
+            "",
+        )
     )
 
     departamento_documento = normalizar_texto(
-        documento.get("departamento", "")
+        documento.get(
+            "departamento",
+            "",
+        )
     )
 
     titulo = normalizar_texto(
-        documento.get("titulo", "")
+        documento.get(
+            "titulo",
+            "",
+        )
     )
 
     cuerpo = normalizar_texto(
-        documento.get("cuerpo", "")
+        documento.get(
+            "cuerpo",
+            "",
+        )
     )
 
     tags_normalizados = normalizar_tags(
-        documento.get("tags", [])
+        documento.get(
+            "tags",
+            [],
+        )
     )
 
     palabras_tags = extraer_palabras_tags(
-        documento.get("tags", [])
+        documento.get(
+            "tags",
+            [],
+        )
     )
 
     palabras_titulo = extraer_palabras(
@@ -500,16 +554,22 @@ def puntuar_documento(
         cuerpo
     )
 
-    coincidencias_tags = palabras_pregunta.intersection(
-        palabras_tags
+    coincidencias_tags = (
+        palabras_pregunta.intersection(
+            palabras_tags
+        )
     )
 
-    coincidencias_titulo = palabras_pregunta.intersection(
-        palabras_titulo
+    coincidencias_titulo = (
+        palabras_pregunta.intersection(
+            palabras_titulo
+        )
     )
 
-    coincidencias_cuerpo = palabras_pregunta.intersection(
-        palabras_cuerpo
+    coincidencias_cuerpo = (
+        palabras_pregunta.intersection(
+            palabras_cuerpo
+        )
     )
 
     puntuacion_intencion = 0
@@ -530,35 +590,48 @@ def puntuar_documento(
     )
 
     # Los tags compuestos obtienen una bonificación adicional
-    # cuando aparecen literalmente en la pregunta.
+    # cuando aparecen literalmente en la consulta.
     for tag in tags_normalizados:
-        if " " in tag and tag in pregunta_normalizada:
-            puntuacion_intencion += DOCUMENT_SCORE_WEIGHTS["tag"]
+        if (
+            " " in tag
+            and tag in pregunta_normalizada
+        ):
+            puntuacion_intencion += (
+                DOCUMENT_SCORE_WEIGHTS["tag"]
+            )
 
     puntuacion = puntuacion_intencion
 
     # El departamento solo añade puntuación cuando ya existe
-    # alguna coincidencia real con la intención de la consulta.
+    # alguna coincidencia real con la intención.
     if (
         puntuacion_intencion > 0
         and departamento_documento
-        and departamento_documento == departamento_empleado
+        and departamento_documento
+        == departamento_empleado
     ):
-        puntuacion += DOCUMENT_SCORE_WEIGHTS[
-            "employee_department"
-        ]
+        puntuacion += (
+            DOCUMENT_SCORE_WEIGHTS[
+                "employee_department"
+            ]
+        )
 
-    # Un documento global no entra únicamente por ser global.
+    # Un documento transversal no entra únicamente por serlo.
     # Solo recibe bonificación si ya es relevante por contenido.
-    documento_id = documento.get("id")
+    documento_id = documento.get(
+        "id"
+    )
 
     if (
         puntuacion_intencion > 0
-        and documento_id in TRANSVERSAL_DOCUMENT_IDS
+        and documento_id
+        in TRANSVERSAL_DOCUMENT_IDS
     ):
-        puntuacion += DOCUMENT_SCORE_WEIGHTS[
-            "global_document"
-        ]
+        puntuacion += (
+            DOCUMENT_SCORE_WEIGHTS[
+                "global_document"
+            ]
+        )
 
     return puntuacion
 
@@ -585,7 +658,10 @@ def seleccionar_documentos(
             "El empleado debe ser un diccionario."
         )
 
-    if not isinstance(consulta, str) or not consulta.strip():
+    if (
+        not isinstance(consulta, str)
+        or not consulta.strip()
+    ):
         return []
 
     if max_documentos <= 0:
@@ -599,7 +675,9 @@ def seleccionar_documentos(
         consulta
     )
 
-    documentos_puntuados: list[tuple[int, dict]] = []
+    documentos_puntuados: list[
+        tuple[int, dict]
+    ] = []
 
     for documento in documentos:
         puntuacion = puntuar_documento(
@@ -611,7 +689,10 @@ def seleccionar_documentos(
 
         if puntuacion >= MIN_DOCUMENT_SCORE:
             documentos_puntuados.append(
-                (puntuacion, documento)
+                (
+                    puntuacion,
+                    documento,
+                )
             )
 
     # En caso de empate se ordena también por ID
@@ -619,13 +700,19 @@ def seleccionar_documentos(
     documentos_puntuados.sort(
         key=lambda elemento: (
             -elemento[0],
-            str(elemento[1].get("id", "")),
+            str(
+                elemento[1].get(
+                    "id",
+                    "",
+                )
+            ),
         )
     )
 
     return [
         documento
-        for _, documento in documentos_puntuados[
+        for _, documento
+        in documentos_puntuados[
             :max_documentos
         ]
     ]
@@ -651,7 +738,10 @@ def obtener_documento_por_id(
 
     for documento in documentos:
         identificador = normalizar_texto(
-            documento.get("id", "")
+            documento.get(
+                "id",
+                "",
+            )
         )
 
         if identificador == doc_id_normalizado:
@@ -674,8 +764,8 @@ def combinar_documentos(
     Combina los documentos seleccionados directamente y los
     documentos referenciados por las FAQ.
 
-    Los documentos asociados a una FAQ tienen prioridad para evitar
-    que desaparezcan al aplicar el límite máximo.
+    Los documentos asociados a una FAQ tienen prioridad para
+    evitar que desaparezcan al aplicar el límite máximo.
     """
     if limite <= 0:
         return []
@@ -685,7 +775,9 @@ def combinar_documentos(
 
     # Primero se añaden los documentos referenciados por FAQ.
     for faq in faqs_seleccionadas:
-        doc_id = faq.get("doc_id")
+        doc_id = faq.get(
+            "doc_id"
+        )
 
         documento = obtener_documento_por_id(
             documentos=todos_documentos,
@@ -695,7 +787,9 @@ def combinar_documentos(
         if documento is None:
             continue
 
-        documento_id = documento.get("id")
+        documento_id = documento.get(
+            "id"
+        )
 
         if not documento_id:
             continue
@@ -704,19 +798,32 @@ def combinar_documentos(
             documento_id
         )
 
-        if documento_id_normalizado in ids_incluidos:
+        if (
+            documento_id_normalizado
+            in ids_incluidos
+        ):
             continue
 
-        documentos_finales.append(documento)
-        ids_incluidos.add(documento_id_normalizado)
+        documentos_finales.append(
+            documento
+        )
 
-        if len(documentos_finales) >= limite:
+        ids_incluidos.add(
+            documento_id_normalizado
+        )
+
+        if (
+            len(documentos_finales)
+            >= limite
+        ):
             return documentos_finales
 
-    # Después se completan las posiciones restantes con
-    # los documentos seleccionados por puntuación directa.
+    # Después se completan las posiciones restantes con los
+    # documentos seleccionados por puntuación directa.
     for documento in documentos_seleccionados:
-        documento_id = documento.get("id")
+        documento_id = documento.get(
+            "id"
+        )
 
         if not documento_id:
             continue
@@ -725,13 +832,24 @@ def combinar_documentos(
             documento_id
         )
 
-        if documento_id_normalizado in ids_incluidos:
+        if (
+            documento_id_normalizado
+            in ids_incluidos
+        ):
             continue
 
-        documentos_finales.append(documento)
-        ids_incluidos.add(documento_id_normalizado)
+        documentos_finales.append(
+            documento
+        )
 
-        if len(documentos_finales) >= limite:
+        ids_incluidos.add(
+            documento_id_normalizado
+        )
+
+        if (
+            len(documentos_finales)
+            >= limite
+        ):
             break
 
     return documentos_finales
@@ -793,7 +911,9 @@ def construir_contexto(
     )
 
     documentos_finales = combinar_documentos(
-        documentos_seleccionados=documentos_seleccionados,
+        documentos_seleccionados=(
+            documentos_seleccionados
+        ),
         faqs_seleccionadas=faqs_seleccionadas,
         todos_documentos=documentos,
         limite=limite_documentos,
@@ -822,3 +942,31 @@ def construir_contexto(
             or faqs_seleccionadas
         ),
     }
+
+
+# ============================================================
+# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
+# ============================================================
+
+# La variante vulnerable deberá respetar el mismo contrato
+# de entrada y salida que construir_contexto().
+#
+# No debe devolver una lista genérica ni crear módulos
+# paralelos como:
+#
+# - context_vulnerable.py
+# - context_seguro.py
+#
+# Las variantes deberán reutilizar este módulo mediante
+# estrategias, adaptadores o funciones específicas.
+
+
+# ============================================================
+# LLM Y BENCHMARK — SIN INTEGRACIÓN DIRECTA
+# ============================================================
+
+# Este módulo no construye prompts, no selecciona modelos y
+# no registra métricas.
+#
+# El área LLM y Benchmark consume únicamente el contexto
+# documental generado por construir_contexto().
