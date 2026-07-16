@@ -893,16 +893,6 @@ def validate_input(message: str, mode: str = MODO_SEGURIDAD_DEFAULT) -> str:
     return aplicar_blindaje_seguridad(message)
 
 # TO_DO
-
-
-def aplicar_blindaje_seguridad(message: str) -> str:
-    """
-    Punto de entrada para los validadores de Robustez.
-    TODO: Integrar aquí la lógica de saneamiento y detección de inyecciones 
-    desarrollada por el equipo.
-    """
-    return message
-
 def aplicar_blindaje_seguridad(message: str) -> str:
     """
     Punto de entrada para los validadores de Robustez.
