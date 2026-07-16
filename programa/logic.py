@@ -944,10 +944,216 @@ def crear_respuesta_controlada(
         },
     )
 
+# ORQUESTADOR DE CUALQUIER MODO (SEGURO | VULNERABLE)
+# ============================================================
+
+# Envuelve preparar_turno() para añadir controles de seguridad
+# antes y después, sin duplicar la lógica ya existente.
+
+# Le añade:
+# - Selección de modo
+# - validación de entrada y contexto
+# - autorización para llamar al modelo
 
 
+def preparar_turno_con_modo(
+    estado: dict,
+    consulta: str,
+    empleado: dict,
+    empresa: dict,
+    documentos: list[dict],
+    faqs: list[dict],
+    configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
+    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT,
+) -> dict:
+    """
+    Envuelve preparar_turno() sin duplicar su lógica.
+
+    Args:
+        estado:
+            El estado de la sesión.
+        consulta:
+            input del usuario.
+        empleado | empresa | documentos | faqs:
+            datos necesarios para el perfil, cálculo de día
+            selección de documentación y construcción de
+            contexto.
+        configuracion:
+            usar la default o una parcial.
+        fecha_referencia:
+            principalmente para pruebas. Si `None` se usa la
+            fecha actual.
+            date(yyyy, m, d)
+        modo_seguridad:
+            qué flujo va a ejecutar ("seguro" | "vulnerable")
+            por defecto el más restrictivo: seguro.
+
+    Modo seguro:
+    1. valida el input;
+    2. prepara el turno sin LLM;
+    3. valida el contexto;
+    4. autoriza o bloquea la futura llamada.
+
+    Modo vulnerable:
+    conserva las validaciones estructurales de preparar_turno(),
+    pero omite las defensas de seguridad a propósito.
+
+    Puede devolver:
+    - Error estructural
+    - Respuesta bloqueada
+    - Turno autorizado -> "llamar_modelo": True
+    """
+
+    # comprobar modo
+    if modo_seguridad not in MODOS_SEGURIDAD:
+        return respuesta_error(
+            "Modo de seguridad no válido.",
+            [f"Modo desconocido: {modo_seguridad!r}."],
+        )
+
+    # primera validación
+    if modo_seguridad == "seguro":
+        validacion_entrada = validar_entrada_segura(consulta)
+
+        # si no se autoriza
+        if not validacion_entrada["permitido"]:
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_entrada,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_entrada,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=False,
+            )
+
+    # si autoriza (o modo vulnerable)
+    resultado = preparar_turno(
+        estado=estado,
+        consulta=consulta,
+        empleado=empleado,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
+    )
+
+    # si no es OK problema estructural
+    if resultado.get("status") != "ok":
+        return resultado
+
+    # si todo OK se prepara turno
+    turno_preparado = resultado.get("data",{},).get("turno_preparado")
+
+    # segunda validación
+    if modo_seguridad == "seguro":
+        # si turno preparado no existe será None y se rechazará
+        validacion_contexto = validar_contexto_seguro(turno_preparado)
+
+        # si no la permite se registra el rechazo
+        if not validacion_contexto["permitido"]:
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_contexto,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_contexto,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=False,
+            )
+
+    # llega hasta aquí modo vulnerable
+    # modo seguro ha pasado todas las validaciones
+    # ESTO LE VA A LLEGAR AL MODELO
+    resultado["data"]["llamar_modelo"] = True
+    resultado["data"]["modelo_invocado"] = False
+    resultado["data"]["modo_seguridad"] = (modo_seguridad)
+
+    return resultado
 
 
+# tercera validación
+# ya se ha llamado al modelo y se va a validar su respuesta
+# se valida ANTES de guardarla en el historial
+def finalizar_turno_con_modo(
+    estado: dict,
+    turno_preparado: dict,
+    resultado_externo: dict,
+    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT,
+) -> dict:
+    """
+    Envuelve `finalizar_turno()` para añadir otra capa de seguridad
+    antes de guardar el input y la respuesta del modelo en el 
+    historial.
+    
+    Args:
+        estado:
+            estado actual de la conversación.
+        turno_preparado:
+            diccionario producido por `preparar_turno()`
+        resultado_externo:
+            respuesta generada por el modelo.
+            (modo seguro: lo revisa antes de que se guarde)
+        modo_seguridad:
+            determina si se aplica la validación de salida.
+            ("seguro" | "vulnerable") por defecto seguro.
+
+    En modo seguro:
+    1. valida la estructura y el contenido de la respuesta.
+    2. comprueba que no hay fugas de inforamción.
+    3. verifica que las fuentes pertenecen al contexto del turno.
+    4. bloquea la respuesta si no es validada.
+    5. usa finalizar_turno() cuando la salida es válida.
+
+    En modo vulnerable:
+    omite las validaciones y va directamente a `finalizar_turno()`.
+    se conservan las validaciones básicas de finalizar_turno().
+    """
+
+    # comprobar modo
+    if modo_seguridad not in MODOS_SEGURIDAD:
+        return respuesta_error(
+            "Modo de seguridad no válido.",
+            [f"Modo desconocido: {modo_seguridad!r}."],
+        )
+
+    # con modo seguro activo se valida la salida
+    if modo_seguridad == "seguro":
+        validacion_salida = validar_salida_segura(
+            resultado_externo=resultado_externo,
+            turno_preparado=turno_preparado,
+        )
+
+        # si se rechaza la respuesta del modelo
+        # no se ejecuta finalizar_turno()
+        if not validacion_salida["permitido"]:
+            consulta = turno_preparado.get("consulta", "",)
+
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_salida,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_salida,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=True,
+            )
+
+    # se llega directamente en modo vulnerable
+    # se ha superado la validación de la respuesta
+    return finalizar_turno(
+        estado=estado,
+        turno_preparado=turno_preparado,
+        resultado_externo=resultado_externo,
+    )
 
 # ============================================================
 # LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE
