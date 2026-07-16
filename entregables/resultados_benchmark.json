@@ -1,0 +1,206 @@
+{
+    "gemini-2.5-pro": [
+        {
+            "pregunta_id": "bench_01_engineering_acceso_github",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0010949999999999998,
+            "tokens_input": 276,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_02_engineering_dia_3",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0011424999999999999,
+            "tokens_input": 314,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_03_sales_dia_2",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.001085,
+            "tokens_input": 268,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_04_operations_incidencia_cohorte",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0010775,
+            "tokens_input": 262,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_05_remoto_ue_otro_pais",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0011049999999999999,
+            "tokens_input": 284,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_06_checklist_engineering_dia_1",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0011974999999999998,
+            "tokens_input": 358,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_07_ambiguedad_tipo_baja",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0010799999999999998,
+            "tokens_input": 264,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_08_limite_dato_sensible",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0011049999999999999,
+            "tokens_input": 284,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_09_limite_inyeccion",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0010875,
+            "tokens_input": 270,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_10_limite_politica_no_documentada",
+            "modelo": "gemini-2.5-pro",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 0.0010925,
+            "tokens_input": 274,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        }
+    ],
+    "gemini-2.5-flash": [
+        {
+            "pregunta_id": "bench_01_engineering_acceso_github",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.57e-05,
+            "tokens_input": 276,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_02_engineering_dia_3",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.855e-05,
+            "tokens_input": 314,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_03_sales_dia_2",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.51e-05,
+            "tokens_input": 268,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_04_operations_incidencia_cohorte",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.465e-05,
+            "tokens_input": 262,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_05_remoto_ue_otro_pais",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.63e-05,
+            "tokens_input": 284,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_06_checklist_engineering_dia_1",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 7.185e-05,
+            "tokens_input": 358,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_07_ambiguedad_tipo_baja",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.48e-05,
+            "tokens_input": 264,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_08_limite_dato_sensible",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.63e-05,
+            "tokens_input": 284,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_09_limite_inyeccion",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.525e-05,
+            "tokens_input": 270,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        },
+        {
+            "pregunta_id": "bench_10_limite_politica_no_documentada",
+            "modelo": "gemini-2.5-flash",
+            "latencia_segundos": 0.0,
+            "costo_dolares": 6.555e-05,
+            "tokens_input": 274,
+            "tokens_output": 150,
+            "robustez_valida": true,
+            "cumple_esquema": true
+        }
+    ]
+}

@@ -31,6 +31,17 @@ VULNERABLE_CONTEXT_PATHS = [
 
 
 # ============================================================
+# RUTAS DE DATOS Y ENTREGABLES — LLM Y BENCHMARK
+# ============================================================
+# El archivo semilla de preguntas (Entrada)
+PREGUNTAS_BENCHMARK_PATH = DATA_DIR / "preguntas_benchmark.json"
+
+# El reporte final generado por el script (Salida)
+# Lo guardamos en la carpeta de entregables para que sea visible en la entrega final
+RESULTADOS_BENCHMARK_PATH = BASE_DIR / "entregables" / "resultados_benchmark.json"
+
+
+# ============================================================
 # LLM Y BENCHMARK
 # ============================================================
 
@@ -76,10 +87,8 @@ WINDOW = 4
 MAX_OUTPUT_WORDS = 200
 
 ASSISTANT_CONFIG_DEFAULT = {
-    # LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE.
-    # El módulo responsable deberá incorporar aquí, si lo necesita:
-    # "model": nombre_modelo,
-    # "temperature": temperatura,
+    "model": MODEL,
+    "temperature": TEMPERATURE_DEFAULT,
     "perfil_activo": "onboarding",
     "max_turnos_historial": WINDOW,
     "idioma_respuesta": "español",
