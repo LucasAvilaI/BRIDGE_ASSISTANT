@@ -909,6 +909,7 @@ def preparar_turno_con_modo(
     - Turno autorizado -> "llamar_modelo": True
     """
 
+    # 1. Validación de existencia del modo
     # comprobar modo
     if modo_seguridad not in MODOS_SEGURIDAD:
         return respuesta_error(
@@ -916,6 +917,7 @@ def preparar_turno_con_modo(
             [f"Modo desconocido: {modo_seguridad!r}."],
         )
 
+    # 2. Lógica del MODO SEGURO (Validación de entrada)
     # primera validación
     if modo_seguridad == "seguro":
         validacion_entrada = validar_entrada_segura(consulta)
@@ -934,6 +936,7 @@ def preparar_turno_con_modo(
                 modelo_invocado=False,
             )
 
+    # 3. Preparación del turno (Común para ambos modos)
     # si autoriza (o modo vulnerable)
     resultado = preparar_turno(
         estado=estado,
@@ -953,6 +956,7 @@ def preparar_turno_con_modo(
     # si todo OK se prepara turno
     turno_preparado = resultado.get("data", {},).get("turno_preparado")
 
+    # 4. Lógica del MODO SEGURO (Validación de contexto)
     # segunda validación
     if modo_seguridad == "seguro":
         # si turno preparado no existe será None y se rechazará
@@ -972,6 +976,7 @@ def preparar_turno_con_modo(
                 modelo_invocado=False,
             )
 
+    # 5. Autorización para LLM (Llega aquí tanto en seguro como en vulnerable)
     # llega hasta aquí modo vulnerable
     # modo seguro ha pasado todas las validaciones
     # ESTO LE VA A LLEGAR AL MODELO

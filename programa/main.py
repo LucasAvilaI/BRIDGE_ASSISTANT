@@ -6,7 +6,8 @@ from config import (
     FAQ_PATH,
 )
 from context import buscar_empleado, cargar_json
-from logic import preparar_turno
+# from logic import preparar_turno
+from logic import preparar_turno_con_modo, finalizar_turno_con_modo
 from state import inicializar_estado
 
 
@@ -337,6 +338,48 @@ def ejecutar_sesion(
             )
             break
 
+        # 1. PREPARACIÓN (Usando el orquestador)
+        resultado = preparar_turno_con_modo(
+            estado=estado,
+            consulta=consulta,
+            empleado=empleado,
+            empresa=empresa,
+            documentos=documentos,
+            faqs=faqs,
+            configuracion=ASSISTANT_CONFIG_DEFAULT,
+            modo_seguridad="seguro"  # Aquí se alternan modos "seguro" o "vulnerable"
+        )
+
+        # 2. DECISIÓN DE FLUJO (Aquí integramos el flag de seguridad)
+        if resultado.get("status") == "ok":
+            data = resultado.get("data", {})
+
+            # Si el orquestador autoriza la llamada al modelo
+            if data.get("llamar_modelo"):
+                turno = data["turno_preparado"]
+
+                # SIMULACIÓN DEL ADAPTADOR LLM (Aquí iría tu llamada al modelo real)
+                # resultado_externo = adaptador_llm(turno)
+                resultado_externo = {
+                    "in_scope": True, "category": "general", "answer": "Respuesta simulada"}
+
+                # 3. FINALIZACIÓN (Validación de salida)
+                resultado_final = finalizar_turno_con_modo(
+                    estado=estado,
+                    turno_preparado=turno,
+                    resultado_externo=resultado_externo,
+                    modo_seguridad="seguro"
+                )
+                imprimir_respuesta_final(resultado_final)
+            else:
+                # Si llamar_modelo es False, el orquestador ya bloqueó la consulta
+                imprimir_respuesta_final(resultado)
+        else:
+            imprimir_errores(resultado)
+
+# ejecutar_sesion se tiene que refactorizar y sustituir la de abajo
+# por la de arriba con preparar_turno_con_modo
+        """
         resultado = preparar_turno(
             estado=estado,
             consulta=consulta,
@@ -349,7 +392,7 @@ def ejecutar_sesion(
 
         imprimir_turno_preparado(
             resultado
-        )
+        )"""
 
         # ====================================================
         # INTEGRACIÓN PENDIENTE: ROBUSTEZ
