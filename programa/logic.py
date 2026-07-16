@@ -9,11 +9,20 @@ from config import (
     DOMAIN_KEYWORDS,
     MAX_CONTEXT_DOCUMENTS,
     MAX_CONTEXT_FAQS,
+    MODO_SEGURIDAD_DEFAULT,
+    MODOS_SEGURIDAD,
     ONBOARDING_PROFILE_DAYS,
     PERFILES,
     VALID_CATEGORIES,
     VALID_PROFILES,
 )
+
+from validators import (
+    validar_contexto_seguro, 
+    validar_entrada_segura, 
+    validar_salida_segura,
+)
+
 from context import construir_contexto, normalizar_texto
 from state import append_assistant, append_user, ultimos_n
 
@@ -828,6 +837,116 @@ def finalizar_turno(
             ],
         },
     )
+
+
+# ============================================================
+# ROBUSTEZ Y SEGURIDAD
+# ============================================================
+
+# añade al diccionario del estado los "eventos_seguridad"
+def _registrar_evento_seguridad(
+    estado: dict,
+    validacion: dict,   # resultado devuelto por las funciones validar_entrada_segura() | validar_contexto_seguro() | validar_salida_segura()
+    consulta: Any,      # input del usuario
+) -> None:
+    """
+    Registra metadatos mínimos sin conservar el ataque completo.
+
+    Esta lista no forma parte de state["messages"] y, por tanto,
+    nunca entra en el historial enviado al modelo.
+
+    Parámetros:
+    - estado: diccionario del estado de la sesión
+    - validacion: resultado de las funciones `validar_entrada_segura()` |
+                  `validar_contexto_seguro()` | `validar_salida_segura()`
+    - consulta: input del usuario
+
+    Tiene como objetivo modificar directamente el diccionario del estado.
+    """
+    if not isinstance(estado, dict):
+        return
+
+    # si no existe crea la lista vacía y la devuelve
+    # si existe no sustituye, recupera la lista existente
+    eventos = estado.setdefault("eventos_seguridad", [],)
+
+    # comprobar que realmente es una lista y si no
+    # se reemplaza lo inválido por una lista
+    if not isinstance(eventos, list):
+        estado["eventos_seguridad"] = []
+
+    longitud_consulta = 0
+
+    # calcula la longitud del input si es una cadena de texto
+    if isinstance(consulta, str):
+        longitud_consulta = len(consulta)
+
+    # añade el evento a una lista sin guardar el texto del input
+    # si es un ataque o introducción de información sensible
+    # se evita guardarlo
+    eventos.append(
+        {
+            "fase": validacion.get("fase"),
+            "codigo": validacion.get("codigo"),
+            "longitud_consulta": longitud_consulta,
+        }
+    )
+
+    # Evita que el registro crezca sin límite almacenando los últimos 20.
+    estado["eventos_seguridad"] = eventos[-20:]
+
+
+# RESPUESTAS CONTROLADAS DE SEGURIDAD
+# ============================================================
+
+# después de un bloqueo es necesario generar la respuesta para el usuario
+# se adapta aquí el diccionario que generan las funciones de validaciones
+# al diccionario que espera recibir `main.py`
+
+def crear_respuesta_controlada(
+    validacion: dict,
+    modo_seguridad: str,
+    modelo_invocado: bool = False,
+) -> dict:
+    """
+    Adapta el resultado interno de las validaciones al contrato estándar
+    de logic.py, para que pueda ser procesado por imprimir_respuesta_final().
+
+    Un input bloqueado es una respuesta funcional, no un error técnico.
+    Por eso la wrapper del modo seguro mantiene status="ok", pero
+    llamar_modelo=False para impedir que el flujo siga y se produzca
+    la llamada al modelo.
+
+    Args:
+        - validacion: resultado producido por las funciones de validación
+                      validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
+
+        - modo_seguridad: modo activo al producirse la respuesta
+                          seguro | vulnerable
+        
+        - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
+                           por defecto `False`. Los bloqueos deben producirse antes
+
+    Devuelve un diccionario con el contrato estándar.
+    No modifica directamente el estado.
+
+    """
+
+    # status:ok -> un bloqueo de seguridad es un comportamiento esperado
+    return respuesta_ok(
+        "Consulta atendida de forma controlada.",
+        {
+            "respuesta": validacion["mensaje_usuario"], # texto que verá el usuario
+            "llamar_modelo": False,                     # indica a main.py que el flujo se detiene antes de la llamada
+            "modelo_invocado": modelo_invocado,         # True si llamada
+            "modo_seguridad": modo_seguridad,           # modo que estaba activo
+            "motivo_bloqueo": validacion["codigo"],     # se guarda el ID de rechazo
+        },
+    )
+
+
+
+
 
 
 # ============================================================
