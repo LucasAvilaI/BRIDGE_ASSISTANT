@@ -17,6 +17,66 @@ FAQ_PATH = DATA_DIR / "faq_onboarding.json"
 
 
 # ============================================================
+# CONFIGURACIÓN RUTAS MODO VULNERABLE
+# ============================================================
+
+# El modo vulnerable carga deliberadamente todas las fuentes
+# disponibles sin aplicar selección, minimización ni filtrado.
+VULNERABLE_CONTEXT_PATHS = [
+    EMPRESA_PATH,
+    EMPLEADOS_PATH,
+    DOCS_PATH,
+    FAQ_PATH,
+]
+
+
+# ============================================================
+# RUTAS DE DATOS Y ENTREGABLES — LLM Y BENCHMARK
+# ============================================================
+# El archivo semilla de preguntas (Entrada)
+PREGUNTAS_BENCHMARK_PATH = DATA_DIR / "preguntas_benchmark.json"
+
+# El reporte final generado por el script (Salida)
+# Lo guardamos en la carpeta de entregables para que sea visible en la entrega final
+RESULTADOS_BENCHMARK_PATH = BASE_DIR / "entregables" / "resultados_benchmark.json"
+
+
+# ============================================================
+# LLM Y BENCHMARK
+# ============================================================
+
+# Modelos reales disponibles en tu API para el test A/B
+MODEL_1 = "gemini-2.5-flash"  # Variante A (Eficiencia)
+MODEL_2 = "gemini-2.5-pro"    # Variante B (Calidad)
+
+# Selección de modelo por defecto para el asistente en producción
+MODEL = MODEL_1
+
+TEMPERATURE_DEFAULT = 0.2
+# TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
+TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
+
+MAX_TOKENS_INPUT = 8_000
+
+REQUIRED_RESPONSE_FIELDS = frozenset(
+    {
+        "in_scope",
+        "category",
+        "answer",
+        "document_ids",
+        "faq_ids",
+        "needs_escalation",
+        "escalation_department",
+    }
+)
+
+# JSON_SCHEMA_HINT = """
+# El área LLM y Benchmark debe definir aquí el contrato de respuesta
+# estructurada solicitado al modelo.
+# """.strip()
+
+
+# ============================================================
 # CONFIGURACIÓN GENERAL DEL ASISTENTE
 # ============================================================
 
@@ -31,10 +91,8 @@ MAX_INPUT_CHARS = 2_500
 MAX_OUTPUT_WORDS = 200
 
 ASSISTANT_CONFIG_DEFAULT = {
-    # LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE.
-    # El módulo responsable deberá incorporar aquí, si lo necesita:
-    # "model": nombre_modelo,
-    # "temperature": temperatura,
+    "model": MODEL,
+    "temperature": TEMPERATURE_DEFAULT,
     "perfil_activo": "onboarding",
     "max_turnos_historial": WINDOW,
     "idioma_respuesta": "español",
@@ -387,45 +445,6 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
 # Alias temporal para mantener compatibilidad con módulos que
 # todavía utilizan el nombre anterior.
 DOMINIO_KEYWORDS = DOMAIN_KEYWORDS
-
-
-# ============================================================
-# LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# Este bloque conserva los puntos de referencia necesarios para
-# integrar posteriormente los módulos responsabilidad del área
-# LLM y Benchmark.
-#
-# El código activo de config.py no selecciona modelos, no define
-# temperaturas, no controla tokens y no establece el contrato de
-# respuesta generado por el proveedor.
-
-# MODEL_1 = "gemini-3-flash-preview"
-# MODEL = MODEL_1
-
-# TEMPERATURE_DEFAULT = 0.2
-# TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
-# TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
-
-# MAX_TOKENS_INPUT = 8_000
-
-# REQUIRED_RESPONSE_FIELDS = frozenset(
-#     {
-#         "in_scope",
-#         "category",
-#         "answer",
-#         "document_ids",
-#         "faq_ids",
-#         "needs_escalation",
-#         "escalation_department",
-#     }
-# )
-
-# JSON_SCHEMA_HINT = """
-# El área LLM y Benchmark debe definir aquí el contrato de respuesta
-# estructurada solicitado al modelo.
-# """.strip()
 
 
 # ============================================================
