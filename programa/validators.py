@@ -40,16 +40,10 @@ def normalizar_texto_seguridad(texto: str) -> str:
     # paginas web...
     # se pueden utilizar otro tipo de caracteres para engañar al modelo
     # así unificamos los caracteres que van a llegar a la llamada
-    texto_normalizado = unicodedata.normalize(
-        "NFKC",
-        texto,
-    )
+    texto_normalizado = unicodedata.normalize("NFKC", texto,)
 
     # separa caracter del tipo de acento que lleve
-    texto_normalizado = unicodedata.normalize(
-        "NFKD",
-        texto_normalizado,
-    )
+    texto_normalizado = unicodedata.normalize("NFKD", texto_normalizado,)
 
     # recorre caracter por caracter y si es del tipo "Mn" lo descarta (`, ´, ¨, ~)
     texto_normalizado = "".join(
@@ -237,14 +231,10 @@ def validar_entrada_segura(texto: Any) -> dict:
         )
 
     # preparación de texto para los patrones REGEX
-    texto_normalizado = normalizar_texto_seguridad(
-        texto_limpio
-    )
+    texto_normalizado = normalizar_texto_seguridad(texto_limpio)
 
     # versión compacta para ciertos casos
-    texto_compacto = _compactar_texto(
-        texto_limpio
-    )
+    texto_compacto = _compactar_texto(texto_limpio)
 
     hay_inyeccion = _coincide_algun_patron( # True | False
         texto_normalizado,
@@ -367,9 +357,7 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
     Solamente comprueba que el input esté dentro del dominio.
     """
 
-    consulta_normalizada = normalizar_texto_seguridad(
-        consulta
-    )
+    consulta_normalizada = normalizar_texto_seguridad(consulta)
 
 
     if _coincide_algun_patron(
@@ -381,9 +369,7 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
     for expresiones in DOMAIN_KEYWORDS.values(): # diccionario que cada clave tiene una tupla
         for expresion in expresiones: # recorre los elementos de la tupla
             expresion_normalizada = ( # la normaliza
-                normalizar_texto_seguridad(
-                    expresion
-                )
+                normalizar_texto_seguridad(expresion)
             )
 
             # puede haber algún error y que haya una expresión vacía
@@ -423,24 +409,15 @@ def _texto_de_campos(
     fragmentos: list[str] = []
 
     for campo in campos:
-        valor = elemento.get(
-            campo,
-            "",
-        )
+        valor = elemento.get(campo, "",)
 
         if isinstance(valor, list): # algunos campos como tags son una lista
-            fragmentos.extend(
-                str(parte)
-                for parte in valor
-            )
+            fragmentos.extend(str(parte) for parte in valor)
         elif valor:
-            fragmentos.append(
-                str(valor)
-            )
+            fragmentos.append(str(valor))
 
-    return " ".join( # une todos los fragmentos utilizando un espacio
-        fragmentos
-    )
+    # une todos los fragmentos utilizando un espacio
+    return " ".join(fragmentos)
 
 # Procesa las fuentes que construir_contexto() ha seleccionado -> context.py
 def _texto_del_contexto(contexto: dict) -> str:
@@ -449,10 +426,7 @@ def _texto_del_contexto(contexto: dict) -> str:
 
     # de todo el contexto se queda lo que hay en "documentos"
     # recorre la lista que son diccionarios 
-    for documento in contexto.get(
-        "documentos",
-        [],
-    ):
+    for documento in contexto.get("documentos", [],):
         if isinstance(documento, dict):
             fragmentos.append(
                 _texto_de_campos(
@@ -469,10 +443,7 @@ def _texto_del_contexto(contexto: dict) -> str:
 
     # aquí se queda lo que hay en "faqs"
     # recorre la lista que son diccionarios
-    for faq in contexto.get(
-        "faqs",
-        [],
-    ):
+    for faq in contexto.get("faqs", [], ):
         if isinstance(faq, dict):
             fragmentos.append(
                 _texto_de_campos(
@@ -490,9 +461,7 @@ def _texto_del_contexto(contexto: dict) -> str:
     # una vez añadidos toda la documentación a la lista fragmentos
     # se unifican todas las cadenas de texto en una sola
     # se normaliza el texto con la primera función de este módulo
-    return normalizar_texto_seguridad(
-        " ".join(fragmentos)
-    )
+    return normalizar_texto_seguridad(" ".join(fragmentos))
 
 # no todas las palabras sirven para seleccionar los documentos
 # elimina las palabras demasiado genéricas
@@ -522,9 +491,7 @@ def _terminos_significativos(texto: str) -> set[str]:
     return (
         palabras
         .difference(STOPWORDS)
-        .difference(
-            TERMINOS_POCO_INFORMATIVOS_SEGURIDAD
-        )
+        .difference(TERMINOS_POCO_INFORMATIVOS_SEGURIDAD)
     )
 
 
@@ -568,14 +535,10 @@ def validar_contexto_seguro(
 
 
     # input del usuario
-    consulta = turno_preparado.get(
-        "consulta"
-    )
+    consulta = turno_preparado.get("consulta")
 
     # documentos y faq seleccionados
-    contexto = turno_preparado.get(
-        "contexto"
-    )
+    contexto = turno_preparado.get("contexto")
 
     # comprueba simultaneamente que el input sea cadena de texto
     # y el contexto un diccionario
@@ -590,9 +553,7 @@ def validar_contexto_seguro(
         )
 
     # normaliza el input
-    consulta_normalizada = normalizar_texto_seguridad(
-        consulta
-    )
+    consulta_normalizada = normalizar_texto_seguridad(consulta)
 
     # comprueba si hay referencia a cosas internas (aunque no estén documentadas)
     referencia_interna = _coincide_algun_patron(
@@ -601,9 +562,7 @@ def validar_contexto_seguro(
     )
 
     # comprueba si forma parte del dominio
-    senal_dominio = _contiene_senal_de_dominio(
-        consulta
-    )
+    senal_dominio = _contiene_senal_de_dominio(consulta)
 
     # la función contruir_contexto() en context.py construye "hay_contexto"
     if not contexto.get("hay_contexto"):
@@ -621,9 +580,7 @@ def validar_contexto_seguro(
 
     # si llega hasta aquí es porque hay contexto y documentos
     # quedarse con los términos relevantes
-    terminos_consulta = _terminos_significativos(
-        consulta
-    )
+    terminos_consulta = _terminos_significativos(consulta)
 
     # unir contexto en una sola string
     # quedarse con los términos relevantes
@@ -653,9 +610,7 @@ def validar_contexto_seguro(
         )
 
         # Solo para pruebas o logging interno; no se imprime.
-        resultado["coincidencias"] = sorted(
-            coincidencias
-        )
+        resultado["coincidencias"] = sorted(coincidencias)
 
         return resultado
 
@@ -800,11 +755,9 @@ def validar_salida_segura(
             )
             # o no todos los elementos de la respuesta del modelo
             # están dentro de los seleccionados antes
-            or not set(
-                ids_documentos_devueltos
-            ).issubset(
-                ids_documentos_permitidos
-            )
+            or not (set(ids_documentos_devueltos)
+                    .issubset(ids_documentos_permitidos)
+                    )
         ):
             # rechazar
             return _resultado_validacion(
@@ -823,11 +776,9 @@ def validar_salida_segura(
                 isinstance(faq_id, str)
                 for faq_id in ids_faq_devuelta
             )
-            or not set(
-                ids_faq_devuelta
-            ).issubset(
-                ids_faq_permitidas
-            )
+            or not (set(ids_faq_devuelta)
+                    .issubset(ids_faq_permitidas)
+                    )
         ):
             return _resultado_validacion(
                 False,

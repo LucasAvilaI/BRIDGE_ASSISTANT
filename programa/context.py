@@ -42,10 +42,7 @@ def cargar_json(
         )
 
     try:
-        with ruta_normalizada.open(
-            "r",
-            encoding="utf-8",
-        ) as archivo:
+        with ruta_normalizada.open("r",encoding="utf-8") as archivo:
             datos = json.load(archivo)
 
     except json.JSONDecodeError as error:
@@ -85,19 +82,12 @@ def validar_lista_diccionarios(
     Por defecto, una lista vacía se considera una fuente no válida.
     """
     if not isinstance(datos, list):
-        raise ValueError(
-            f"{nombre_fuente} debe contener una lista de entradas."
-        )
+        raise ValueError(f"{nombre_fuente} debe contener una lista de entradas.")
 
     if not datos and not permitir_vacia:
-        raise ValueError(
-            f"{nombre_fuente} no puede estar vacío."
-        )
+        raise ValueError(f"{nombre_fuente} no puede estar vacío.")
 
-    if not all(
-        isinstance(entrada, dict)
-        for entrada in datos
-    ):
+    if not all(isinstance(entrada, dict) for entrada in datos):
         raise ValueError(
             f"Todas las entradas de {nombre_fuente} "
             "deben ser diccionarios."
@@ -185,10 +175,7 @@ def normalizar_texto(
 
     texto_normalizado = str(texto).lower().strip()
 
-    texto_normalizado = unicodedata.normalize(
-        "NFD",
-        texto_normalizado,
-    )
+    texto_normalizado = unicodedata.normalize("NFD", texto_normalizado)
 
     texto_normalizado = "".join(
         caracter
@@ -217,14 +204,9 @@ def extraer_palabras(
     """
     Extrae las palabras relevantes de un texto normalizado.
     """
-    texto_normalizado = normalizar_texto(
-        texto
-    )
+    texto_normalizado = normalizar_texto(texto)
 
-    palabras = re.findall(
-        r"\b[a-z0-9]+\b",
-        texto_normalizado,
-    )
+    palabras = re.findall(r"\b[a-z0-9]+\b", texto_normalizado,)
 
     return {
         palabra
@@ -251,14 +233,10 @@ def normalizar_tags(
         if not isinstance(tag, str):
             continue
 
-        tag_normalizado = normalizar_texto(
-            tag
-        )
+        tag_normalizado = normalizar_texto(tag)
 
         if tag_normalizado:
-            tags_normalizados.add(
-                tag_normalizado
-            )
+            tags_normalizados.add(tag_normalizado)
 
     return tags_normalizados
 
@@ -275,9 +253,7 @@ def extraer_palabras_tags(
     palabras: set[str] = set()
 
     for tag in normalizar_tags(tags):
-        palabras.update(
-            extraer_palabras(tag)
-        )
+        palabras.update(extraer_palabras(tag))
 
     return palabras
 
@@ -296,22 +272,15 @@ def buscar_empleado(
     La búsqueda no diferencia entre mayúsculas, minúsculas
     ni acentos.
     """
-    validar_lista_diccionarios(
-        empleados,
-        "empleados_demo.json",
-    )
+    validar_lista_diccionarios(empleados, "empleados_demo.json")
 
-    empleado_id_normalizado = normalizar_texto(
-        empleado_id
-    )
+    empleado_id_normalizado = normalizar_texto(empleado_id)
 
     if not empleado_id_normalizado:
         return None
 
     for empleado in empleados:
-        identificador = normalizar_texto(
-            empleado.get("id", "")
-        )
+        identificador = normalizar_texto(empleado.get("id", ""))
 
         if identificador == empleado_id_normalizado:
             return empleado
@@ -337,76 +306,38 @@ def puntuar_faq(
     - coincidencias con la respuesta corta;
     - coincidencias literales con tags compuestos.
     """
-    pregunta_faq = normalizar_texto(
-        faq.get("pregunta", "")
-    )
+    pregunta_faq = normalizar_texto(faq.get("pregunta", ""))
 
-    respuesta_corta = normalizar_texto(
-        faq.get("respuesta_corta", "")
-    )
+    respuesta_corta = normalizar_texto(faq.get("respuesta_corta", ""))
 
-    tags_normalizados = normalizar_tags(
-        faq.get("tags", [])
-    )
+    tags_normalizados = normalizar_tags(faq.get("tags", []))
 
-    palabras_tags = extraer_palabras_tags(
-        faq.get("tags", [])
-    )
+    palabras_tags = extraer_palabras_tags(faq.get("tags", []))
 
-    palabras_pregunta_faq = extraer_palabras(
-        pregunta_faq
-    )
+    palabras_pregunta_faq = extraer_palabras(pregunta_faq)
 
-    palabras_respuesta = extraer_palabras(
-        respuesta_corta
-    )
+    palabras_respuesta = extraer_palabras(respuesta_corta)
 
-    coincidencias_tags = (
-        palabras_pregunta.intersection(
-            palabras_tags
-        )
-    )
+    coincidencias_tags = (palabras_pregunta.intersection(palabras_tags))
 
-    coincidencias_pregunta = (
-        palabras_pregunta.intersection(
-            palabras_pregunta_faq
-        )
-    )
+    coincidencias_pregunta = (palabras_pregunta.intersection(palabras_pregunta_faq))
 
-    coincidencias_respuesta = (
-        palabras_pregunta.intersection(
-            palabras_respuesta
-        )
-    )
+    coincidencias_respuesta = (palabras_pregunta.intersection(palabras_respuesta))
 
     puntuacion = 0
 
-    puntuacion += (
-        len(coincidencias_tags)
-        * FAQ_SCORE_WEIGHTS["tag"]
-    )
+    puntuacion += (len(coincidencias_tags) * FAQ_SCORE_WEIGHTS["tag"])
 
-    puntuacion += (
-        len(coincidencias_pregunta)
-        * FAQ_SCORE_WEIGHTS["question"]
-    )
+    puntuacion += (len(coincidencias_pregunta) * FAQ_SCORE_WEIGHTS["question"])
 
-    puntuacion += (
-        len(coincidencias_respuesta)
-        * FAQ_SCORE_WEIGHTS["short_answer"]
-    )
+    puntuacion += (len(coincidencias_respuesta) * FAQ_SCORE_WEIGHTS["short_answer"])
 
     # Una coincidencia literal con un tag compuesto recibe
     # una bonificación adicional porque representa una
     # intención más concreta.
     for tag in tags_normalizados:
-        if (
-            " " in tag
-            and tag in pregunta_normalizada
-        ):
-            puntuacion += (
-                FAQ_SCORE_WEIGHTS["tag"]
-            )
+        if (" " in tag and tag in pregunta_normalizada):
+            puntuacion += (FAQ_SCORE_WEIGHTS["tag"])
 
     return puntuacion
 
@@ -422,31 +353,19 @@ def seleccionar_faq(
     Las FAQ funcionan como índice de búsqueda y pueden apuntar
     al documento principal mediante el campo doc_id.
     """
-    validar_lista_diccionarios(
-        faqs,
-        "faq_onboarding.json",
-    )
+    validar_lista_diccionarios(faqs, "faq_onboarding.json")
 
-    if (
-        not isinstance(consulta, str)
-        or not consulta.strip()
-    ):
+    if (not isinstance(consulta, str) or not consulta.strip()):
         return []
 
     if max_entradas <= 0:
         return []
 
-    palabras_pregunta = extraer_palabras(
-        consulta
-    )
+    palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto(
-        consulta
-    )
+    pregunta_normalizada = normalizar_texto(consulta)
 
-    faqs_puntuadas: list[
-        tuple[int, dict]
-    ] = []
+    faqs_puntuadas: list[tuple[int, dict]] = []
 
     for faq in faqs:
         puntuacion = puntuar_faq(
@@ -456,33 +375,17 @@ def seleccionar_faq(
         )
 
         if puntuacion >= MIN_FAQ_SCORE:
-            faqs_puntuadas.append(
-                (
-                    puntuacion,
-                    faq,
-                )
-            )
+            faqs_puntuadas.append(puntuacion, faq)
 
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
-    faqs_puntuadas.sort(
-        key=lambda elemento: (
+    faqs_puntuadas.sort(key=lambda elemento: (
             -elemento[0],
-            str(
-                elemento[1].get(
-                    "id",
-                    "",
-                )
-            ),
+            str(elemento[1].get("id", ""))
         )
     )
 
-    return [
-        faq
-        for _, faq in faqs_puntuadas[
-            :max_entradas
-        ]
-    ]
+    return [faq for _, faq in faqs_puntuadas[:max_entradas]]
 
 
 # ============================================================
@@ -505,100 +408,52 @@ def puntuar_documento(
     como factores de personalización o desempate.
     """
     departamento_empleado = normalizar_texto(
-        empleado.get(
-            "departamento",
-            "",
-        )
+        empleado.get("departamento", "")
     )
 
     departamento_documento = normalizar_texto(
-        documento.get(
-            "departamento",
-            "",
-        )
+        documento.get("departamento", "")
     )
 
     titulo = normalizar_texto(
-        documento.get(
-            "titulo",
-            "",
-        )
+        documento.get("titulo", "")
     )
 
     cuerpo = normalizar_texto(
-        documento.get(
-            "cuerpo",
-            "",
-        )
+        documento.get("cuerpo", "")
     )
 
     tags_normalizados = normalizar_tags(
-        documento.get(
-            "tags",
-            [],
-        )
+        documento.get("tags", [])
     )
 
     palabras_tags = extraer_palabras_tags(
-        documento.get(
-            "tags",
-            [],
-        )
+        documento.get("tags",[])
     )
 
-    palabras_titulo = extraer_palabras(
-        titulo
-    )
+    palabras_titulo = extraer_palabras(titulo)
 
-    palabras_cuerpo = extraer_palabras(
-        cuerpo
-    )
+    palabras_cuerpo = extraer_palabras(cuerpo)
 
-    coincidencias_tags = (
-        palabras_pregunta.intersection(
-            palabras_tags
-        )
-    )
+    coincidencias_tags = palabras_pregunta.intersection(palabras_tags)
 
-    coincidencias_titulo = (
-        palabras_pregunta.intersection(
-            palabras_titulo
-        )
-    )
+    coincidencias_titulo = palabras_pregunta.intersection(palabras_titulo)
 
-    coincidencias_cuerpo = (
-        palabras_pregunta.intersection(
-            palabras_cuerpo
-        )
-    )
+    coincidencias_cuerpo = palabras_pregunta.intersection(palabras_cuerpo)
 
     puntuacion_intencion = 0
 
-    puntuacion_intencion += (
-        len(coincidencias_tags)
-        * DOCUMENT_SCORE_WEIGHTS["tag"]
-    )
+    puntuacion_intencion += (len(coincidencias_tags) * DOCUMENT_SCORE_WEIGHTS["tag"])
 
-    puntuacion_intencion += (
-        len(coincidencias_titulo)
-        * DOCUMENT_SCORE_WEIGHTS["title"]
-    )
+    puntuacion_intencion += (len(coincidencias_titulo) * DOCUMENT_SCORE_WEIGHTS["title"])
 
-    puntuacion_intencion += (
-        len(coincidencias_cuerpo)
-        * DOCUMENT_SCORE_WEIGHTS["body"]
-    )
+    puntuacion_intencion += (len(coincidencias_cuerpo) * DOCUMENT_SCORE_WEIGHTS["body"])
 
     # Los tags compuestos obtienen una bonificación adicional
     # cuando aparecen literalmente en la consulta.
     for tag in tags_normalizados:
-        if (
-            " " in tag
-            and tag in pregunta_normalizada
-        ):
-            puntuacion_intencion += (
-                DOCUMENT_SCORE_WEIGHTS["tag"]
-            )
+        if (" " in tag and tag in pregunta_normalizada):
+            puntuacion_intencion += DOCUMENT_SCORE_WEIGHTS["tag"]
 
     puntuacion = puntuacion_intencion
 
@@ -610,28 +465,19 @@ def puntuar_documento(
         and departamento_documento
         == departamento_empleado
     ):
-        puntuacion += (
-            DOCUMENT_SCORE_WEIGHTS[
-                "employee_department"
-            ]
-        )
+        puntuacion += DOCUMENT_SCORE_WEIGHTS["employee_department"]
+        
 
     # Un documento transversal no entra únicamente por serlo.
     # Solo recibe bonificación si ya es relevante por contenido.
-    documento_id = documento.get(
-        "id"
-    )
+    documento_id = documento.get("id")
 
     if (
         puntuacion_intencion > 0
         and documento_id
         in TRANSVERSAL_DOCUMENT_IDS
     ):
-        puntuacion += (
-            DOCUMENT_SCORE_WEIGHTS[
-                "global_document"
-            ]
-        )
+        puntuacion += DOCUMENT_SCORE_WEIGHTS["global_document"]
 
     return puntuacion
 
@@ -648,36 +494,22 @@ def seleccionar_documentos(
     Los documentos constituyen la fuente principal y autorizada
     para construir la respuesta.
     """
-    validar_lista_diccionarios(
-        documentos,
-        "onboarding_docs.json",
-    )
+    validar_lista_diccionarios(documentos,"onboarding_docs.json")
 
     if not isinstance(empleado, dict):
-        raise ValueError(
-            "El empleado debe ser un diccionario."
-        )
+        raise ValueError("El empleado debe ser un diccionario.")
 
-    if (
-        not isinstance(consulta, str)
-        or not consulta.strip()
-    ):
+    if not isinstance(consulta, str) or not consulta.strip():
         return []
 
     if max_documentos <= 0:
         return []
 
-    palabras_pregunta = extraer_palabras(
-        consulta
-    )
+    palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto(
-        consulta
-    )
+    pregunta_normalizada = normalizar_texto(consulta)
 
-    documentos_puntuados: list[
-        tuple[int, dict]
-    ] = []
+    documentos_puntuados: list[tuple[int, dict]] = []
 
     for documento in documentos:
         puntuacion = puntuar_documento(
@@ -688,34 +520,17 @@ def seleccionar_documentos(
         )
 
         if puntuacion >= MIN_DOCUMENT_SCORE:
-            documentos_puntuados.append(
-                (
-                    puntuacion,
-                    documento,
-                )
-            )
+            documentos_puntuados.append(puntuacion, documento)
 
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
-    documentos_puntuados.sort(
-        key=lambda elemento: (
+    documentos_puntuados.sort(key=lambda elemento: (
             -elemento[0],
-            str(
-                elemento[1].get(
-                    "id",
-                    "",
-                )
-            ),
+            str(elemento[1].get("id", ""))
         )
     )
 
-    return [
-        documento
-        for _, documento
-        in documentos_puntuados[
-            :max_documentos
-        ]
-    ]
+    return [documento for _, documento in documentos_puntuados[:max_documentos]]
 
 
 # ============================================================
@@ -732,16 +547,11 @@ def obtener_documento_por_id(
     if not doc_id:
         return None
 
-    doc_id_normalizado = normalizar_texto(
-        doc_id
-    )
+    doc_id_normalizado = normalizar_texto(doc_id)
 
     for documento in documentos:
         identificador = normalizar_texto(
-            documento.get(
-                "id",
-                "",
-            )
+            documento.get("id", "")
         )
 
         if identificador == doc_id_normalizado:
@@ -775,8 +585,7 @@ def combinar_documentos(
 
     # Primero se añaden los documentos referenciados por FAQ.
     for faq in faqs_seleccionadas:
-        doc_id = faq.get(
-            "doc_id"
+        doc_id = faq.get("doc_id"
         )
 
         documento = obtener_documento_por_id(
@@ -787,69 +596,41 @@ def combinar_documentos(
         if documento is None:
             continue
 
-        documento_id = documento.get(
-            "id"
-        )
+        documento_id = documento.get("id")
 
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto(
-            documento_id
-        )
+        documento_id_normalizado = normalizar_texto(documento_id)
 
-        if (
-            documento_id_normalizado
-            in ids_incluidos
-        ):
+        if documento_id_normalizado in ids_incluidos:
             continue
 
-        documentos_finales.append(
-            documento
-        )
+        documentos_finales.append(documento)
 
-        ids_incluidos.add(
-            documento_id_normalizado
-        )
+        ids_incluidos.add(documento_id_normalizado)
 
-        if (
-            len(documentos_finales)
-            >= limite
-        ):
+        if len(documentos_finales)>= limite:
             return documentos_finales
 
     # Después se completan las posiciones restantes con los
     # documentos seleccionados por puntuación directa.
     for documento in documentos_seleccionados:
-        documento_id = documento.get(
-            "id"
-        )
+        documento_id = documento.get("id")
 
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto(
-            documento_id
-        )
+        documento_id_normalizado = normalizar_texto(documento_id)
 
-        if (
-            documento_id_normalizado
-            in ids_incluidos
-        ):
+        if documento_id_normalizado in ids_incluidos:
             continue
 
-        documentos_finales.append(
-            documento
-        )
+        documentos_finales.append(documento)
 
-        ids_incluidos.add(
-            documento_id_normalizado
-        )
+        ids_incluidos.add(documento_id_normalizado)
 
-        if (
-            len(documentos_finales)
-            >= limite
-        ):
+        if len(documentos_finales)>= limite:
             break
 
     return documentos_finales
@@ -877,25 +658,15 @@ def construir_contexto(
     4. Desduplica y limita las fuentes.
     5. Devuelve las fuentes y sus metadatos.
     """
-    validar_lista_diccionarios(
-        documentos,
-        "onboarding_docs.json",
-    )
+    validar_lista_diccionarios(documentos, "onboarding_docs.json")
 
-    validar_lista_diccionarios(
-        faqs,
-        "faq_onboarding.json",
-    )
+    validar_lista_diccionarios(faqs, "faq_onboarding.json")
 
     if not isinstance(empleado, dict):
-        raise ValueError(
-            "El empleado debe ser un diccionario."
-        )
+        raise ValueError("El empleado debe ser un diccionario.")
 
     if not isinstance(consulta, str):
-        raise ValueError(
-            "La consulta debe ser un string."
-        )
+        raise ValueError("La consulta debe ser un string.")
 
     faqs_seleccionadas = seleccionar_faq(
         faqs=faqs,
@@ -920,14 +691,12 @@ def construir_contexto(
     )
 
     document_ids = [
-        documento["id"]
-        for documento in documentos_finales
+        documento["id"] for documento in documentos_finales
         if documento.get("id")
     ]
 
     faq_ids = [
-        faq["id"]
-        for faq in faqs_seleccionadas
+        faq["id"] for faq in faqs_seleccionadas
         if faq.get("id")
     ]
 
