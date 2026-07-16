@@ -1,184 +1,873 @@
 
-import json
-from pathlib import Path
+import re
+from copy import deepcopy
+from datetime import date
+from typing import Any
 
-from config import ASSISTANT_CONFIG_DEFAULT, TEMPERATURE, TEMPERATURE_VULNERABLE
-from context import cargar_faq, seleccionar_faq
-from gemini_client import MetricasLlamada, safe_generate
-from prompts import (
-    build_assistant_prompt,
-    build_secure_prompt,
-    build_vulnerable_prompt,
+from config import (
+    ASSISTANT_CONFIG_DEFAULT,
+    DOMAIN_KEYWORDS,
+    MAX_CONTEXT_DOCUMENTS,
+    MAX_CONTEXT_FAQS,
+    ONBOARDING_PROFILE_DAYS,
+    PERFILES,
+    VALID_CATEGORIES,
+    VALID_PROFILES,
 )
-from state import (
-    actualizar_perfil_desde_mensaje,
-    append_assistant,
-    append_user,
-    inicializar_estado,
-    ultimos_n,
-)
-from validators import (
-    parece_dominio_python,
-    rechazo_fuera_de_dominio,
-    validate_input,
-)
+from context import construir_contexto, normalizar_texto
+from state import append_assistant, append_user, ultimos_n
 
 
-def respuesta_ok(mensaje: str, data: dict | None = None) -> dict:
-    """Formato estándar de éxito. Ya implementada."""
-    return {"status": "ok", "mensaje": mensaje, "data": data or {}}
+# ============================================================
+# RESPUESTAS ESTÁNDAR
+# ============================================================
 
-
-def respuesta_error(mensaje: str, errores: list[str]) -> dict:
-    """Formato estándar de error. Ya implementada."""
-    return {"status": "error", "mensaje": mensaje, "data": {"errores": errores}}
-
-
-def _metricas_a_dict(m: MetricasLlamada) -> dict:
+def respuesta_ok(
+    mensaje: str,
+    data: dict | None = None,
+) -> dict:
+    """
+    Construye la respuesta estándar de éxito.
+    """
     return {
-        "elapsed_ms": m.elapsed_ms,
-        "prompt_tokens": m.prompt_tokens,
-        "output_tokens": m.output_tokens,
-        "total_tokens": m.total_tokens,
+        "status": "ok",
+        "mensaje": mensaje,
+        "data": data or {},
     }
 
-#TO_DO: Crear función de selección de rol.
-def procesar_turno(
-    state: dict,
-    user_message: str,
-    assistant_config: dict | None = None,
-    faq_entries: list[dict] | None = None,
+
+def respuesta_error(
+    mensaje: str,
+    errores: list[str],
 ) -> dict:
-    """Pipeline Fase 1: validar vacío → prompt → Gemini → actualizar estado."""
-    if not user_message.strip():
-        return respuesta_error("Mensaje vacío", ["El mensaje no puede estar vacío."])
-    
-    #TO_DO: Adecuación de perfil, dependiendo del input
-    config = assistant_config or ASSISTANT_CONFIG_DEFAULT.copy()
-    ventana = config.get("max_turnos_historial", 6)
+    """
+    Construye la respuesta estándar de error.
+    """
+    return {
+        "status": "error",
+        "mensaje": mensaje,
+        "data": {
+            "errores": errores,
+        },
+    }
 
-    prompt = build_assistant_prompt(
-        assistant_config=config,
-        user_state=state,
-        user_message=user_message,
-        extra_context=faq_entries or [],
-        recent_messages=ultimos_n(state, ventana),
+
+# ============================================================
+# VALIDACIONES DE ARQUITECTURA
+# ============================================================
+
+def _validar_estado(estado: Any) -> None:
+    """
+    Valida la estructura mínima del estado conversacional.
+    """
+    if not isinstance(estado, dict):
+        raise TypeError(
+            "El estado debe ser un diccionario."
+        )
+
+    mensajes = estado.get("messages")
+
+    if not isinstance(mensajes, list):
+        raise ValueError(
+            "El estado debe contener una lista en el campo 'messages'."
+        )
+
+    if not all(isinstance(mensaje, dict) for mensaje in mensajes):
+        raise ValueError(
+            "Todos los mensajes del estado deben ser diccionarios."
+        )
+
+    turnos = estado.get("turnos")
+
+    if not isinstance(turnos, int) or isinstance(turnos, bool):
+        raise ValueError(
+            "El estado debe contener un entero en el campo 'turnos'."
+        )
+
+    if turnos < 0:
+        raise ValueError(
+            "El número de turnos no puede ser negativo."
+        )
+
+
+def _validar_consulta(consulta: Any) -> str:
+    """
+    Valida y normaliza superficialmente la consulta.
+
+    Las validaciones de seguridad y robustez no corresponden
+    a este módulo.
+    """
+    if not isinstance(consulta, str):
+        raise TypeError(
+            "La consulta debe ser un string."
+        )
+
+    consulta_limpia = consulta.strip()
+
+    if not consulta_limpia:
+        raise ValueError(
+            "La consulta no puede estar vacía."
+        )
+
+    return consulta_limpia
+
+
+def _validar_diccionario(
+    valor: Any,
+    nombre: str,
+) -> dict:
+    """
+    Comprueba que un valor sea un diccionario.
+    """
+    if not isinstance(valor, dict):
+        raise TypeError(
+            f"{nombre} debe ser un diccionario."
+        )
+
+    return valor
+
+
+def _validar_lista(
+    valor: Any,
+    nombre: str,
+) -> list:
+    """
+    Comprueba que un valor sea una lista.
+
+    La validación específica de documentos y FAQ corresponde
+    a context.py.
+    """
+    if not isinstance(valor, list):
+        raise TypeError(
+            f"{nombre} debe ser una lista."
+        )
+
+    return valor
+
+
+def _validar_entero_no_negativo(
+    valor: Any,
+    nombre: str,
+) -> int:
+    """
+    Comprueba que un valor sea un entero no negativo.
+    """
+    if (
+        not isinstance(valor, int)
+        or isinstance(valor, bool)
+        or valor < 0
+    ):
+        raise ValueError(
+            f"{nombre} debe ser un entero no negativo."
+        )
+
+    return valor
+
+
+def _resolver_configuracion(
+    configuracion: dict | None,
+) -> dict:
+    """
+    Combina la configuración por defecto con una configuración
+    parcial proporcionada para la interacción.
+    """
+    if configuracion is not None and not isinstance(
+        configuracion,
+        dict,
+    ):
+        raise TypeError(
+            "La configuración debe ser un diccionario o None."
+        )
+
+    configuracion_final = deepcopy(
+        ASSISTANT_CONFIG_DEFAULT
     )
+
+    if configuracion:
+        configuracion_final.update(
+            deepcopy(configuracion)
+        )
+
+    perfil_configurado = configuracion_final.get(
+        "perfil_activo"
+    )
+
+    if perfil_configurado not in VALID_PROFILES:
+        raise ValueError(
+            f"Perfil configurado desconocido: "
+            f"{perfil_configurado!r}."
+        )
+
+    ventana_historial = configuracion_final.get(
+        "max_turnos_historial"
+    )
+
+    limite_documentos = configuracion_final.get(
+        "max_documentos_contexto",
+        MAX_CONTEXT_DOCUMENTS,
+    )
+
+    limite_faqs = configuracion_final.get(
+        "max_faqs_contexto",
+        MAX_CONTEXT_FAQS,
+    )
+
+    _validar_entero_no_negativo(
+        ventana_historial,
+        "max_turnos_historial",
+    )
+
+    _validar_entero_no_negativo(
+        limite_documentos,
+        "max_documentos_contexto",
+    )
+
+    _validar_entero_no_negativo(
+        limite_faqs,
+        "max_faqs_contexto",
+    )
+
+    idioma = configuracion_final.get(
+        "idioma_respuesta"
+    )
+
+    if not isinstance(idioma, str) or not idioma.strip():
+        raise ValueError(
+            "idioma_respuesta debe ser un string no vacío."
+        )
+
+    max_palabras = configuracion_final.get(
+        "max_palabras"
+    )
+
+    if (
+        not isinstance(max_palabras, int)
+        or isinstance(max_palabras, bool)
+        or max_palabras <= 0
+    ):
+        raise ValueError(
+            "max_palabras debe ser un entero positivo."
+        )
+
+    return configuracion_final
+
+
+# ============================================================
+# DÍA DE ONBOARDING
+# ============================================================
+
+def calcular_dia_onboarding(
+    empleado: dict,
+    fecha_referencia: date | None = None,
+) -> int:
+    """
+    Calcula el día de onboarding del empleado.
+
+    La fecha de incorporación debe encontrarse en el campo
+    'fecha_inicio' y utilizar el formato ISO AAAA-MM-DD.
+
+    El día de incorporación se considera el día 1.
+    Las fechas futuras también devuelven el día 1.
+    """
+    _validar_diccionario(
+        empleado,
+        "El empleado",
+    )
+
+    fecha_inicio_raw = empleado.get(
+        "fecha_inicio"
+    )
+
+    if not isinstance(fecha_inicio_raw, str):
+        raise ValueError(
+            "El empleado debe contener una fecha_inicio "
+            "en formato AAAA-MM-DD."
+        )
+
+    fecha_inicio_limpia = fecha_inicio_raw.strip()
+
+    if not fecha_inicio_limpia:
+        raise ValueError(
+            "La fecha_inicio del empleado no puede estar vacía."
+        )
 
     try:
-        texto, metricas = safe_generate(prompt, temperature=config["temperature"])
-    except ValueError as e:
-        return respuesta_error("Error de contexto", [str(e)])
+        fecha_inicio = date.fromisoformat(
+            fecha_inicio_limpia
+        )
+    except ValueError as error:
+        raise ValueError(
+            "La fecha_inicio del empleado debe utilizar "
+            "el formato AAAA-MM-DD."
+        ) from error
 
-    actualizar_perfil_desde_mensaje(state, user_message)
-    append_user(state, user_message)
-    append_assistant(state, texto)
+    if fecha_referencia is None:
+        referencia = date.today()
+    elif isinstance(fecha_referencia, date):
+        referencia = fecha_referencia
+    else:
+        raise TypeError(
+            "La fecha de referencia debe ser una fecha o None."
+        )
 
-    return respuesta_ok(
-        "Turno completado",
-        {
-            "respuesta": texto,
-            "perfil_activo": config["perfil_activo"],
-            "metricas": _metricas_a_dict(metricas),
-        },
+    dias_transcurridos = (
+        referencia - fecha_inicio
+    ).days
+
+    if dias_transcurridos < 0:
+        return 1
+
+    return dias_transcurridos + 1
+
+
+# ============================================================
+# CLASIFICACIÓN PRELIMINAR
+# ============================================================
+
+def _contar_coincidencias(
+    consulta_normalizada: str,
+    expresiones: tuple[str, ...],
+) -> int:
+    """
+    Cuenta las expresiones de una categoría presentes en la
+    consulta normalizada.
+
+    Las palabras simples se comparan como términos completos.
+    Las expresiones compuestas se buscan de forma literal.
+    """
+    puntuacion = 0
+
+    for expresion in expresiones:
+        expresion_normalizada = normalizar_texto(
+            expresion
+        )
+
+        if not expresion_normalizada:
+            continue
+
+        if " " in expresion_normalizada:
+            if expresion_normalizada in consulta_normalizada:
+                puntuacion += 1
+            continue
+
+        patron = (
+            rf"\b{re.escape(expresion_normalizada)}\b"
+        )
+
+        if re.search(patron, consulta_normalizada):
+            puntuacion += 1
+
+    return puntuacion
+
+
+def clasificar_consulta(
+    consulta: str,
+) -> str:
+    """
+    Clasifica preliminarmente una consulta mediante las señales
+    definidas en DOMAIN_KEYWORDS.
+
+    Si no existe ninguna coincidencia devuelve 'general'.
+    La categoría 'out_of_scope' no se asigna únicamente mediante
+    palabras clave.
+    """
+    consulta_limpia = _validar_consulta(
+        consulta
     )
 
+    consulta_normalizada = normalizar_texto(
+        consulta_limpia
+    )
 
-def crear_estado_demo() -> dict:
-    """Estado inicial para las demos de Fase 1."""
-    return inicializar_estado(
-        {
-            "nombre": "",
-            "nivel": "junior",
-            "tema_actual": "",
+    puntuaciones: list[tuple[int, int, str]] = []
+
+    for posicion, (
+        categoria,
+        expresiones,
+    ) in enumerate(DOMAIN_KEYWORDS.items()):
+        if categoria not in VALID_CATEGORIES:
+            continue
+
+        puntuacion = _contar_coincidencias(
+            consulta_normalizada,
+            expresiones,
+        )
+
+        puntuaciones.append(
+            (
+                puntuacion,
+                -posicion,
+                categoria,
+            )
+        )
+
+    if not puntuaciones:
+        return "general"
+
+    mejor_puntuacion, _, mejor_categoria = max(
+        puntuaciones
+    )
+
+    if mejor_puntuacion <= 0:
+        return "general"
+
+    return mejor_categoria
+
+
+# ============================================================
+# SELECCIÓN DEL PERFIL
+# ============================================================
+
+def seleccionar_perfil(
+    categoria_preliminar: str,
+    dia_onboarding: int,
+) -> str:
+    """
+    Selecciona el perfil funcional según la categoría preliminar
+    y el día de onboarding.
+
+    Prioridad:
+    1. IT.
+    2. RRHH.
+    3. Onboarding durante los días 1 a 7.
+    4. Administrativo de RRHH desde el día 8.
+    """
+    if categoria_preliminar not in VALID_CATEGORIES:
+        raise ValueError(
+            f"Categoría preliminar desconocida: "
+            f"{categoria_preliminar!r}."
+        )
+
+    if (
+        not isinstance(dia_onboarding, int)
+        or isinstance(dia_onboarding, bool)
+        or dia_onboarding < 1
+    ):
+        raise ValueError(
+            "El día de onboarding debe ser un entero "
+            "igual o superior a 1."
+        )
+
+    if categoria_preliminar == "it":
+        perfil_activo = "it"
+
+    elif categoria_preliminar == "rrhh":
+        perfil_activo = "administrativo_rrhh"
+
+    elif dia_onboarding <= ONBOARDING_PROFILE_DAYS:
+        perfil_activo = "onboarding"
+
+    else:
+        perfil_activo = "administrativo_rrhh"
+
+    if perfil_activo not in VALID_PROFILES:
+        raise ValueError(
+            f"Perfil funcional desconocido: "
+            f"{perfil_activo!r}."
+        )
+
+    return perfil_activo
+
+
+# ============================================================
+# PREPARACIÓN DEL TURNO
+# ============================================================
+
+def preparar_turno(
+    estado: dict,
+    consulta: str,
+    empleado: dict,
+    empresa: dict,
+    documentos: list[dict],
+    faqs: list[dict],
+    configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
+) -> dict:
+    """
+    Prepara un turno completo sin construir prompts ni invocar
+    ningún proveedor LLM.
+
+    Devuelve el paquete de interacción que deberá consumir el
+    adaptador implementado por el área LLM y Benchmark.
+    """
+    try:
+        _validar_estado(
+            estado
+        )
+
+        consulta_limpia = _validar_consulta(
+            consulta
+        )
+
+        empleado_validado = _validar_diccionario(
+            empleado,
+            "El empleado",
+        )
+
+        empresa_validada = _validar_diccionario(
+            empresa,
+            "La empresa",
+        )
+
+        documentos_validados = _validar_lista(
+            documentos,
+            "Los documentos",
+        )
+
+        faqs_validadas = _validar_lista(
+            faqs,
+            "Las FAQ",
+        )
+
+        configuracion_final = _resolver_configuracion(
+            configuracion
+        )
+
+        dia_onboarding = calcular_dia_onboarding(
+            empleado=empleado_validado,
+            fecha_referencia=fecha_referencia,
+        )
+
+        categoria_preliminar = clasificar_consulta(
+            consulta_limpia
+        )
+
+        perfil_activo = seleccionar_perfil(
+            categoria_preliminar=categoria_preliminar,
+            dia_onboarding=dia_onboarding,
+        )
+
+        configuracion_final["perfil_activo"] = (
+            perfil_activo
+        )
+
+        limite_documentos = configuracion_final[
+            "max_documentos_contexto"
+        ]
+
+        limite_faqs = configuracion_final[
+            "max_faqs_contexto"
+        ]
+
+        contexto = construir_contexto(
+            consulta=consulta_limpia,
+            empleado=empleado_validado,
+            documentos=documentos_validados,
+            faqs=faqs_validadas,
+            limite_documentos=limite_documentos,
+            limite_faqs=limite_faqs,
+        )
+
+        ventana_historial = configuracion_final[
+            "max_turnos_historial"
+        ]
+
+        historial = ultimos_n(
+            estado,
+            ventana_historial,
+        )
+
+        turno_preparado = {
+            "consulta": consulta_limpia,
+            "empleado": deepcopy(
+                empleado_validado
+            ),
+            "empresa": deepcopy(
+                empresa_validada
+            ),
+            "perfil_activo": perfil_activo,
+            "perfil": deepcopy(
+                PERFILES[perfil_activo]
+            ),
+            "categoria_preliminar": (
+                categoria_preliminar
+            ),
+            "dia_onboarding": dia_onboarding,
+            "contexto": deepcopy(
+                contexto
+            ),
+            "historial": deepcopy(
+                historial
+            ),
+            "configuracion": deepcopy(
+                configuracion_final
+            ),
         }
-    )
 
-
-def demo_seleccion_faq(faq_path: Path, consulta: str) -> dict:
-    """Muestra qué entrada FAQ se seleccionó para una consulta."""
-    faq = cargar_faq(faq_path)
-    seleccion = seleccionar_faq(faq, consulta, max_entradas=1)
-    if not seleccion:
+    except (TypeError, ValueError) as error:
         return respuesta_error(
-            "FAQ sin coincidencias",
-            ["Ninguna entrada del FAQ coincide con la consulta."],
+            "No se ha podido preparar el turno.",
+            [str(error)],
         )
-    return respuesta_ok(
-        "Entrada FAQ seleccionada",
-        {"topic_id": seleccion[0].get("topic_id"), "entry": seleccion[0]},
-    )
-
-#TO_DO: Def seleccion_onboarding_document(faq_path: Path, consulta: str) -> dict:
-    #Carga del documento mas relevante para el trabajador y consulta actual.
-
-def parsear_respuesta_tutor(raw: str) -> dict:
-    """Parsea y valida el JSON devuelto por Gemini en modo seguro."""
-    try:
-        obj = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"JSON inválido del modelo: {raw!r}") from e
-    for key in ("in_scope", "category", "answer"):
-        if key not in obj:
-            raise ValueError(f"Falta clave obligatoria en JSON: {key}")
-    return obj
-
-
-def procesar_turno_vulnerable(user_message: str) -> dict:
-    """Pipeline débil para comparativa (Fase 2)."""
-    if not user_message.strip():
-        return respuesta_error("Mensaje vacío", ["El mensaje no puede estar vacío."])
-
-    prompt = build_vulnerable_prompt(user_message)
-    try:
-        texto, metricas = safe_generate(prompt, temperature=TEMPERATURE_VULNERABLE)
-    except ValueError as e:
-        return respuesta_error("Error de contexto", [str(e)])
 
     return respuesta_ok(
-        "Turno vulnerable completado",
+        "Turno preparado",
         {
-            "modo": "vulnerable",
-            "respuesta": texto,
-            "metricas": _metricas_a_dict(metricas),
+            "turno_preparado": turno_preparado,
         },
     )
 
 
-def procesar_turno_seguro(user_message: str) -> dict:
-    """Pipeline seguro con defensa en capas (Fase 2)."""
-    errores = validate_input(user_message)
-    if errores:
-        return respuesta_error("Input rechazado", errores)
+# ============================================================
+# FINALIZACIÓN DEL TURNO
+# ============================================================
 
-    if not parece_dominio_python(user_message):
-        return respuesta_ok(
-            "Fuera de dominio (sin llamar al modelo)",
-            {
-                "modo": "seguro",
-                "respuesta": rechazo_fuera_de_dominio(),
-                "json": {
-                    "in_scope": False,
-                    "category": "out_of_scope",
-                    "answer": rechazo_fuera_de_dominio(),
-                },
-                "metricas": None,
-            },
+def _validar_turno_preparado(
+    turno_preparado: Any,
+) -> dict:
+    """
+    Valida la estructura mínima necesaria para finalizar el turno.
+    """
+    if not isinstance(turno_preparado, dict):
+        raise TypeError(
+            "El turno preparado debe ser un diccionario."
         )
 
-    prompt = build_secure_prompt(user_message)
+    campos_requeridos = {
+        "consulta",
+        "perfil_activo",
+        "categoria_preliminar",
+        "dia_onboarding",
+    }
+
+    campos_ausentes = campos_requeridos.difference(
+        turno_preparado
+    )
+
+    if campos_ausentes:
+        campos = ", ".join(
+            sorted(campos_ausentes)
+        )
+
+        raise ValueError(
+            "Faltan campos obligatorios en el turno "
+            f"preparado: {campos}."
+        )
+
+    consulta = turno_preparado.get(
+        "consulta"
+    )
+
+    _validar_consulta(
+        consulta
+    )
+
+    perfil_activo = turno_preparado.get(
+        "perfil_activo"
+    )
+
+    if perfil_activo not in VALID_PROFILES:
+        raise ValueError(
+            f"Perfil activo desconocido: "
+            f"{perfil_activo!r}."
+        )
+
+    categoria = turno_preparado.get(
+        "categoria_preliminar"
+    )
+
+    if categoria not in VALID_CATEGORIES:
+        raise ValueError(
+            f"Categoría preliminar desconocida: "
+            f"{categoria!r}."
+        )
+
+    dia_onboarding = turno_preparado.get(
+        "dia_onboarding"
+    )
+
+    if (
+        not isinstance(dia_onboarding, int)
+        or isinstance(dia_onboarding, bool)
+        or dia_onboarding < 1
+    ):
+        raise ValueError(
+            "El día de onboarding del turno preparado "
+            "debe ser un entero igual o superior a 1."
+        )
+
+    return turno_preparado
+
+
+def _validar_resultado_externo(
+    resultado_externo: Any,
+) -> dict:
+    """
+    Valida el contrato mínimo de la respuesta externa.
+
+    La validación completa del formato generado corresponde al
+    área LLM y Benchmark.
+    """
+    if not isinstance(resultado_externo, dict):
+        raise TypeError(
+            "El resultado externo debe ser un diccionario."
+        )
+
+    campos_requeridos = {
+        "in_scope",
+        "category",
+        "answer",
+    }
+
+    campos_ausentes = campos_requeridos.difference(
+        resultado_externo
+    )
+
+    if campos_ausentes:
+        campos = ", ".join(
+            sorted(campos_ausentes)
+        )
+
+        raise ValueError(
+            "Faltan campos obligatorios en el resultado "
+            f"externo: {campos}."
+        )
+
+    in_scope = resultado_externo.get(
+        "in_scope"
+    )
+
+    if not isinstance(in_scope, bool):
+        raise ValueError(
+            "El campo 'in_scope' debe ser booleano."
+        )
+
+    categoria = resultado_externo.get(
+        "category"
+    )
+
+    if categoria not in VALID_CATEGORIES:
+        raise ValueError(
+            f"Categoría externa desconocida: "
+            f"{categoria!r}."
+        )
+
+    respuesta = resultado_externo.get(
+        "answer"
+    )
+
+    if not isinstance(respuesta, str):
+        raise ValueError(
+            "El campo 'answer' debe ser un string."
+        )
+
+    if not respuesta.strip():
+        raise ValueError(
+            "El campo 'answer' no puede estar vacío."
+        )
+
+    return resultado_externo
+
+
+def finalizar_turno(
+    estado: dict,
+    turno_preparado: dict,
+    resultado_externo: dict,
+) -> dict:
+    """
+    Finaliza un turno después de recibir una respuesta externa.
+
+    La función valida el contrato mínimo, actualiza el historial
+    y devuelve la envolvente estándar del proyecto.
+    """
     try:
-        raw, metricas = safe_generate(prompt, temperature=TEMPERATURE, json_mode=True)
-        obj = parsear_respuesta_tutor(raw)
-    except ValueError as e:
-        return respuesta_error("Error al procesar respuesta", [str(e)])
+        _validar_estado(
+            estado
+        )
+
+        turno_validado = _validar_turno_preparado(
+            turno_preparado
+        )
+
+        resultado_validado = _validar_resultado_externo(
+            resultado_externo
+        )
+
+        consulta = turno_validado[
+            "consulta"
+        ]
+
+        respuesta = resultado_validado[
+            "answer"
+        ].strip()
+
+        append_user(
+            estado,
+            consulta,
+        )
+
+        append_assistant(
+            estado,
+            respuesta,
+        )
+
+    except (TypeError, ValueError) as error:
+        return respuesta_error(
+            "No se ha podido finalizar el turno.",
+            [str(error)],
+        )
 
     return respuesta_ok(
-        "Turno seguro completado",
+        "Turno finalizado",
         {
-            "modo": "seguro",
-            "respuesta": obj.get("answer", ""),
-            "json": obj,
-            "metricas": _metricas_a_dict(metricas),
+            "respuesta": respuesta,
+            "resultado": deepcopy(
+                resultado_validado
+            ),
+            "perfil_activo": turno_validado[
+                "perfil_activo"
+            ],
+            "categoria": resultado_validado[
+                "category"
+            ],
+            "categoria_preliminar": turno_validado[
+                "categoria_preliminar"
+            ],
+            "dia_onboarding": turno_validado[
+                "dia_onboarding"
+            ],
         },
     )
+
+
+# ============================================================
+# LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE
+# ============================================================
+
+# Punto de integración previsto:
+#
+# turno = preparar_turno(...)
+# resultado_externo = adaptador_llm(
+#     turno["data"]["turno_preparado"]
+# )
+# resultado = finalizar_turno(
+#     estado,
+#     turno["data"]["turno_preparado"],
+#     resultado_externo,
+# )
+#
+# El área LLM y Benchmark deberá implementar:
+#
+# - Construcción del prompt.
+# - Selección del modelo.
+# - Selección de temperatura.
+# - Llamada al proveedor.
+# - Control de tokens.
+# - Generación estructurada.
+# - Métricas y benchmarking.
+
+
+# ============================================================
+# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
+# ============================================================
+
+# El área de Robustez podrá intervenir antes del adaptador LLM
+# o envolver el flujo completo sin duplicar este archivo.
+#
+# No deben crearse variantes como:
+#
+# - logic_seguro.py
+# - logic_vulnerable.py
+#
+# Las variantes deberán reutilizar preparar_turno() y
+# finalizar_turno() mediante funciones, adaptadores o estrategias.
