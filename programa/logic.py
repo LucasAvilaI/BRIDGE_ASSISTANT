@@ -18,8 +18,8 @@ from config import (
 )
 
 from validators import (
-    validar_contexto_seguro, 
-    validar_entrada_segura, 
+    validar_contexto_seguro,
+    validar_entrada_segura,
     validar_salida_segura,
 )
 
@@ -719,7 +719,7 @@ def finalizar_turno(
 
         append_user(estado, consulta,)
 
-        append_assistant(estado,respuesta,)
+        append_assistant(estado, respuesta,)
 
     except (TypeError, ValueError) as error:
         return respuesta_error(
@@ -824,7 +824,7 @@ def crear_respuesta_controlada(
 
         - modo_seguridad: modo activo al producirse la respuesta
                           seguro | vulnerable
-        
+
         - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
                            por defecto `False`. Los bloqueos deben producirse antes
 
@@ -837,11 +837,14 @@ def crear_respuesta_controlada(
     return respuesta_ok(
         "Consulta atendida de forma controlada.",
         {
-            "respuesta": validacion["mensaje_usuario"], # texto que verá el usuario
-            "llamar_modelo": False,                     # indica a main.py que el flujo se detiene antes de la llamada
+            # texto que verá el usuario
+            "respuesta": validacion["mensaje_usuario"],
+            # indica a main.py que el flujo se detiene antes de la llamada
+            "llamar_modelo": False,
             "modelo_invocado": modelo_invocado,         # True si llamada
             "modo_seguridad": modo_seguridad,           # modo que estaba activo
-            "motivo_bloqueo": validacion["codigo"],     # se guarda el ID de rechazo
+            # se guarda el ID de rechazo
+            "motivo_bloqueo": validacion["codigo"],
         },
     )
 
@@ -906,6 +909,7 @@ def preparar_turno_con_modo(
     - Turno autorizado -> "llamar_modelo": True
     """
 
+    # 1. Validación de existencia del modo
     # comprobar modo
     if modo_seguridad not in MODOS_SEGURIDAD:
         return respuesta_error(
@@ -913,6 +917,7 @@ def preparar_turno_con_modo(
             [f"Modo desconocido: {modo_seguridad!r}."],
         )
 
+    # 2. Lógica del MODO SEGURO (Validación de entrada)
     # primera validación
     if modo_seguridad == "seguro":
         validacion_entrada = validar_entrada_segura(consulta)
@@ -931,6 +936,7 @@ def preparar_turno_con_modo(
                 modelo_invocado=False,
             )
 
+    # 3. Preparación del turno (Común para ambos modos)
     # si autoriza (o modo vulnerable)
     resultado = preparar_turno(
         estado=estado,
@@ -948,8 +954,9 @@ def preparar_turno_con_modo(
         return resultado
 
     # si todo OK se prepara turno
-    turno_preparado = resultado.get("data",{},).get("turno_preparado")
+    turno_preparado = resultado.get("data", {},).get("turno_preparado")
 
+    # 4. Lógica del MODO SEGURO (Validación de contexto)
     # segunda validación
     if modo_seguridad == "seguro":
         # si turno preparado no existe será None y se rechazará
@@ -969,6 +976,7 @@ def preparar_turno_con_modo(
                 modelo_invocado=False,
             )
 
+    # 5. Autorización para LLM (Llega aquí tanto en seguro como en vulnerable)
     # llega hasta aquí modo vulnerable
     # modo seguro ha pasado todas las validaciones
     # ESTO LE VA A LLEGAR AL MODELO
@@ -992,7 +1000,7 @@ def finalizar_turno_con_modo(
     Envuelve `finalizar_turno()` para añadir otra capa de seguridad
     antes de guardar el input y la respuesta del modelo en el 
     historial.
-    
+
     Args:
         estado:
             estado actual de la conversación.
