@@ -134,3 +134,10 @@ REGLAS_SISTEMA_SEGURAS
 - funciones auxiliares para los documentos
 - Capa 2. Validaciones de onboarding y faq
 - Capa 3. Validación de la respuesta del modelo.
+
+## AÑADIDO A `logic.py`
+
+Añadidas las variables `MODO_SEGURIDAD_DEFAULT` y `MODOS_SEGURIDAD` en el import de `config`.
+
+Import de `validar_contexto_seguro()`, `validar_entrada_segura()` y `validar_salida_segura()` desde `validators`
+
