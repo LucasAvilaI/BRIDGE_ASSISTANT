@@ -16,7 +16,7 @@ Dada la arquitectura no es necesario trabajar en diferente main, ni logic, ni co
 ## Consideraciones del código actual
 
 - [x] Revisión de `config.py` -> robustez comentada, dejo los comentarios como están por si se necesitan esas partes a futuro.
-- [] Revisar `validators.py` -> funciones anteriores del tutor (tal vez crear funciones nuevas)
+- [x] Revisar `validators.py` -> funciones anteriores del tutor (tal vez crear funciones nuevas)
 - [] Revisar `logic.py` -> `preparar_turno()` no llama a al LLM, lo deja todo preparado ANTES
 - [] `context.py` -> está preparado para devolver los documentos necesarios y hacer una segunda validación (en caso de creerlo oportuno)
 - [] `state.py` -> una entrada bloqueada no va a entrar en el historial
@@ -48,27 +48,27 @@ flowchart TD
 
 Tal como recibe el texto el código tiene que hacer unas validaciones ANTES de preparar el turno.
 
-- [] tipo de dato
-- [] mensaje vacío
-- [] longitud máxima permitida (caracteres/palabras)
-- [] prompt injection
-- [] usuario preguntando sobre salarios, y datos privados de otros
-- [] usuario intentando averiguar credenciales de todo tipo
-- [] datos en general privados de otros trabajadores
-- [] no ser trabajador de la empresa o ser un alumno
-- [] gestiones de bajas (?¿)
+- [x] tipo de dato
+- [x] mensaje vacío
+- [x] longitud máxima permitida (caracteres/palabras)
+- [x] prompt injection
+- [x] usuario preguntando sobre salarios, y datos privados de otros
+- [x] usuario intentando averiguar credenciales de todo tipo
+- [x] datos en general privados de otros trabajadores
+- [x] no ser trabajador de la empresa o ser un alumno
+- [x] gestiones de bajas, ambigüedad
 
 Si cualquiera de estas falla la variable `llamar_modelo = False`
 
 ### 2. Validaciones de documentos
 
-La fucnión `preparar_turno()` recibe diferentes argumentos y con ellos hace el contexto.
+La función `preparar_turno()` recibe diferentes argumentos y con ellos hace el contexto.
 En ningún momento hace ninguna llamada al LLM.
-Dentro del contexto si tiene información de onboarding o de las FAQ tendrá `turno_preparado["contexto"]["hay_contexto"]` == True
+Dentro del contexto si tiene información de onboarding o de las FAQ tendrá `turno_preparado["contexto"]["hay_contexto"] == True`
 
-- [] validación de que hay documentos
-- [] validación de documentos y FAQ seleccionados
-- [] validación palabras clave input user y tags de los documentos
+- [x] validación de que hay documentos
+- [x] validación de documentos y FAQ seleccionados
+- [x] validación palabras clave input user y tags de los documentos
 
 ### 3. Validaciones de la salida
 
@@ -78,12 +78,12 @@ de guardar la consulta y la respuesta en el historial. Si pasa todas las validac
 
 El resultado cumple debe cumplir:
 
-- [] la respuesta del LLM es un `JSON` (o diccionario)
-- [] tenga `in_scope = True`
-- [] hay respuesta, no está vacío
-- [] cumple con el límite de palabras/caracteres
-- [] no ha sido vulnerable y está revelando información sensible como contraseñas, credenciales varias
-- [] no cita IDs que no sean de los documentos seleccionados
+- [x] la respuesta del LLM es un `JSON` (o diccionario)
+- [x] tenga `in_scope = True`
+- [x] hay respuesta, no está vacío
+- [x] cumple con el límite de palabras/caracteres **REVISAR** -> `validar_salida_segura()` bloque de respuesta
+- [x] no ha sido vulnerable y está revelando información sensible como contraseñas, credenciales varias
+- [x] no cita IDs que no sean de los documentos seleccionados
 
 Si esto falla <span style="color:red"><b>NO</b></span> se añade al pregunta ni la salida al historial.
 Tenemos una ventana de 4 mensajes de historial. Si la respuesta no cumple las validaciones se descarta.
@@ -127,3 +127,10 @@ REGLAS_SISTEMA_SEGURAS
 
 ## AÑADIDO A `validators.py`
 
+- imports necesarios
+- función para normalizar texto `normalizar_texto_seguridad()`
+- funciones auxiliares internas 
+- Capa 1. Validación del input
+- funciones auxiliares para los documentos
+- Capa 2. Validaciones de onboarding y faq
+- Capa 3. Validación de la respuesta del modelo.
