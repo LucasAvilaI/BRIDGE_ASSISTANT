@@ -563,6 +563,7 @@ PATRONES_INYECCION = (
 # - Datos sobre salarios o bonus
 # - Datos sobre credenciales
 # - Datos personales de otros empleados o clientes
+# El orden de las key indica también la jerarquía
 PATRONES_SENSIBLES_POR_CODIGO = {
     # consultas relacionadas con salarios
     "salary_or_bonus": (
