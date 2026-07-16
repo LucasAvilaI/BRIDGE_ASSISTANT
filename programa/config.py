@@ -23,6 +23,9 @@ FAQ_PATH = DATA_DIR / "faq_onboarding.json"
 # Número máximo de mensajes recientes incluidos en el historial.
 WINDOW = 4
 
+# Número máximo de caracteres que puede tener un input
+MAX_INPUT_CHARS = 2_500
+
 # Extensión máxima aproximada de la respuesta final.
 # En la parte de robustez para modo seguro añado restricción aquí
 MAX_OUTPUT_WORDS = 200
