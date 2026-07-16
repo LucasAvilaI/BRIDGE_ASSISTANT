@@ -21,6 +21,7 @@ from validators import (
     validar_contexto_seguro, 
     validar_entrada_segura, 
     validar_salida_segura,
+    validate_input # Propuesta MODO VULNERABLE: Middleware para aplicar modo seguro y vulnerable
 )
 
 from context import construir_contexto, normalizar_texto
@@ -945,8 +946,23 @@ def crear_respuesta_controlada(
     )
 
 
-
-
+# ============================================================
+# PROCESA LÓGICA DE ASISTENTE DELEGANDO SEGURIDAD A MIDDLEWARE
+# ============================================================
+def procesar_logica(mensaje_usuario: str, mode: str = MODO_SEGURIDAD_DEFAULT):
+    """    
+    Args:
+        mensaje_usuario: El texto introducido por el empleado.
+        mode: El modo de ejecución. Por defecto es seguro.
+    """
+    # El middleware decide si sanitizar o pasar el texto (vulnerable)
+    mensaje_validado = validate_input(mensaje_usuario, mode=mode)
+    
+    # Resto de la lógica del asistente...
+    # (Contexto, llamada a Gemini, etc.)
+    respuesta = gemini_client.get_response(mensaje_validado)
+    
+    return respuesta
 
 
 # ============================================================

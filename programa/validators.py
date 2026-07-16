@@ -14,6 +14,9 @@ from config import (
     MAX_OUTPUT_WORDS,
     MAX_SAFE_OUTPUT_CHARS,
     MENSAJES_SEGURIDAD,
+    # Necesarios para middleware en validators que gestiona activación de modos:
+    MODO_SEGURIDAD_DEFAULT,
+    MODOS_SEGURIDAD,
     PATRONES_DOMINIO_ADICIONALES,
     PATRONES_FUERA_DE_DOMINIO,
     PATRONES_FUGA_SALIDA,
@@ -27,6 +30,8 @@ from context import STOPWORDS
 
 # NORMALIZAR TEXTOS SEGURO
 # retirar espacios, todo en minúsculas, sin tildes...
+
+
 def normalizar_texto_seguridad(texto: str) -> str:
     """
     Normaliza mayúsculas, Unicode, acentos y separadores.
@@ -86,6 +91,8 @@ def normalizar_texto_seguridad(texto: str) -> str:
 # Son de uso interno de validators.py
 
 # debe usarse para comprobar ciertas firmas compactas
+
+
 def _compactar_texto(texto: str) -> str:
     """
     Elimina separadores para detectar palabras fragmentadas.
@@ -103,6 +110,8 @@ def _compactar_texto(texto: str) -> str:
 
 # Para revisar grupos de patrones de: INYECCION, FUERA_DE_DOMINIO
 # FUGA_SALIDA, REFERENCIA_INTERNA, SENSIBLES_POR_CODIGO
+
+
 def _coincide_algun_patron(
     texto_normalizado: str,
     patrones: tuple[str, ...],
@@ -111,18 +120,20 @@ def _coincide_algun_patron(
     Devuelve True al encontrar al menos un patrón, False si no detecta ninguno.
     El texto haberse normalizado previamente con normalizar_texto_seguridad()
     """
-    return any( # si hay objeto Match -> True, si hay None -> False
-        re.search( # si hay una coincidencia devuelve un objeto Match
+    return any(  # si hay objeto Match -> True, si hay None -> False
+        re.search(  # si hay una coincidencia devuelve un objeto Match
             patron,
             texto_normalizado,
-            flags=re.IGNORECASE | re.DOTALL, # IGNORECASE ignora mayúsculas
-                                             # DOTALL abarca también saltos de línea
+            flags=re.IGNORECASE | re.DOTALL,  # IGNORECASE ignora mayúsculas
+            # DOTALL abarca también saltos de línea
         )
         for patron in patrones
     )
 
 # garantiza que todas las validaciones tengan la misma estructura
 # logic.py puede trabajar del mismo modo con cualquier validación
+
+
 def _resultado_validacion(
     permitido: bool,
     codigo: str,
@@ -144,7 +155,7 @@ def _resultado_validacion(
     if not permitido:
         # Cada código de rechazo debe existir como key en MENSAJES_SEGURIDAD
         # Si no existe KeyError y romperá el código, revelando un fallo de programación.
-        mensaje_usuario = MENSAJES_SEGURIDAD[codigo] 
+        mensaje_usuario = MENSAJES_SEGURIDAD[codigo]
 
     return {
         "permitido": permitido,
@@ -160,6 +171,8 @@ def _resultado_validacion(
 # No construye prompt ni llama al modelo.
 # Puede recibir cualquier tipo de dato (texto: Any) ya que debe
 # comprobar en primer lugar si lo que recibe como input es una string
+
+
 def validar_entrada_segura(texto: Any) -> dict:
     """
     Primera puerta del modo seguro.
@@ -187,13 +200,13 @@ def validar_entrada_segura(texto: Any) -> dict:
             "fase": "input",
             "mensaje_usuario": str,
         }
-    
+
     Si permitido es False el flujo se detiene. Si es True continua hacia preparar_turno().
     """
 
     # si no es string
     if not isinstance(texto, str):
-        return _resultado_validacion( # nos genera el diccionario
+        return _resultado_validacion(  # nos genera el diccionario
             False,
             "invalid_type",
             "input",
@@ -224,7 +237,7 @@ def validar_entrada_segura(texto: Any) -> dict:
     contiene_control_no_permitido = any(
         # devuelve el numero Unicode y comprueba si es menor de 32
         ord(caracter) < 32
-        and caracter not in "\n\r\t" # \n salto linea | \r retorno de carro | \t tabulacion
+        and caracter not in "\n\r\t"  # \n salto linea | \r retorno de carro | \t tabulacion
         for caracter in texto_limpio
     )
 
@@ -246,12 +259,12 @@ def validar_entrada_segura(texto: Any) -> dict:
         texto_limpio
     )
 
-    hay_inyeccion = _coincide_algun_patron( # True | False
+    hay_inyeccion = _coincide_algun_patron(  # True | False
         texto_normalizado,
         PATRONES_INYECCION,
     )
 
-    hay_firma_compacta = any( # True | False
+    hay_firma_compacta = any(  # True | False
         firma in texto_compacto
         for firma in FIRMAS_INYECCION_COMPACTAS
     )
@@ -271,15 +284,15 @@ def validar_entrada_segura(texto: Any) -> dict:
     ):
         if _coincide_algun_patron(
             texto_normalizado,
-            patrones, # tupla que contiene los patrones para cada caso
+            patrones,  # tupla que contiene los patrones para cada caso
         ):
-            return _resultado_validacion( # si alguno coincide bloquea
+            return _resultado_validacion(  # si alguno coincide bloquea
                 False,
                 codigo,
                 "input",
             )
 
-    if _coincide_algun_patron( 
+    if _coincide_algun_patron(
         texto_normalizado,
         PATRONES_FUERA_DE_DOMINIO,
     ):
@@ -316,15 +329,14 @@ def validar_entrada_segura(texto: Any) -> dict:
 
     # comprueba si se especifica el tipo de baja
     especifica_tipo_baja = bool(
-            re.search(
-                (
-                    r"\b(medica|enfermedad|incapacidad|excedencia|"
-                    r"laboral|voluntaria|contrato)\b"
-                ),
-                texto_normalizado,
-            )
+        re.search(
+            (
+                r"\b(medica|enfermedad|incapacidad|excedencia|"
+                r"laboral|voluntaria|contrato)\b"
+            ),
+            texto_normalizado,
+        )
     )
-
 
     # si no especifica el tipo se rechaza por ambigüedad
     if (
@@ -357,10 +369,12 @@ def validar_entrada_segura(texto: Any) -> dict:
 # Principalmente usadas por validar_contexto_seguro()
 
 # determina si el input forma parte del dominio o no
+
+
 def _contiene_senal_de_dominio(consulta: str) -> bool:
     """
     Usa las señales declaradas en config.py.
-    
+
     Ante la primera coincidencia frente a todo lo definido
     en config.py devuelve True.
 
@@ -371,16 +385,15 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
         consulta
     )
 
-
     if _coincide_algun_patron(
         consulta_normalizada,
         PATRONES_DOMINIO_ADICIONALES,
     ):
         return True
 
-    for expresiones in DOMAIN_KEYWORDS.values(): # diccionario que cada clave tiene una tupla
-        for expresion in expresiones: # recorre los elementos de la tupla
-            expresion_normalizada = ( # la normaliza
+    for expresiones in DOMAIN_KEYWORDS.values():  # diccionario que cada clave tiene una tupla
+        for expresion in expresiones:  # recorre los elementos de la tupla
+            expresion_normalizada = (  # la normaliza
                 normalizar_texto_seguridad(
                     expresion
                 )
@@ -389,7 +402,7 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
             # puede haber algún error y que haya una expresión vacía
             if not expresion_normalizada:
                 continue
-            
+
             # si tiene más de una palabra comprueba si la contiene la consulta
             # si no, sigue
             if " " in expresion_normalizada:
@@ -399,7 +412,7 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
                 ):
                     return True
                 continue
-            
+
             # escapa los caracteres significantes dentro de un patrón regex
             patron = (
                 rf"\b{re.escape(expresion_normalizada)}\b"
@@ -415,6 +428,7 @@ def _contiene_senal_de_dominio(consulta: str) -> bool:
 
     return False
 
+
 def _texto_de_campos(
     elemento: dict,           # doc o FAQ de la que extraerá información
     campos: tuple[str, ...],  # nombres de los campos que interesa extraer
@@ -428,7 +442,7 @@ def _texto_de_campos(
             "",
         )
 
-        if isinstance(valor, list): # algunos campos como tags son una lista
+        if isinstance(valor, list):  # algunos campos como tags son una lista
             fragmentos.extend(
                 str(parte)
                 for parte in valor
@@ -438,17 +452,19 @@ def _texto_de_campos(
                 str(valor)
             )
 
-    return " ".join( # une todos los fragmentos utilizando un espacio
+    return " ".join(  # une todos los fragmentos utilizando un espacio
         fragmentos
     )
 
 # Procesa las fuentes que construir_contexto() ha seleccionado -> context.py
+
+
 def _texto_del_contexto(contexto: dict) -> str:
     """Agrupa únicamente las fuentes seleccionadas para el turno."""
     fragmentos: list[str] = []
 
     # de todo el contexto se queda lo que hay en "documentos"
-    # recorre la lista que son diccionarios 
+    # recorre la lista que son diccionarios
     for documento in contexto.get(
         "documentos",
         [],
@@ -496,10 +512,12 @@ def _texto_del_contexto(contexto: dict) -> str:
 
 # no todas las palabras sirven para seleccionar los documentos
 # elimina las palabras demasiado genéricas
+
+
 def _terminos_significativos(texto: str) -> set[str]:
     """
     Extrae términos útiles para comprobar apoyo documental.
-    
+
     Normaliza el texto, elimina duplicados, descarta palabras
     de uso frecuente, retira términos demasiado generales.
 
@@ -512,7 +530,8 @@ def _terminos_significativos(texto: str) -> set[str]:
     palabras = set(
         re.findall(
             r"\b[a-z0-9]{2,}\b",
-            normalizar_texto_seguridad(texto), # lo hace con el texto normalizado
+            # lo hace con el texto normalizado
+            normalizar_texto_seguridad(texto),
         )
     )
 
@@ -563,9 +582,8 @@ def validar_contexto_seguro(
         return _resultado_validacion(
             False,
             "invalid_context",
-            "context", # ahora context porque es la segunda capa de validaciones
+            "context",  # ahora context porque es la segunda capa de validaciones
         )
-
 
     # input del usuario
     consulta = turno_preparado.get(
@@ -638,7 +656,7 @@ def validar_contexto_seguro(
     )
 
     consulta_cubierta = bool(
-        coincidencias # si hay algo es True
+        coincidencias  # si hay algo es True
         or (
             senal_dominio
             and not terminos_consulta
@@ -683,8 +701,9 @@ def validar_contexto_seguro(
 # No revela información confidencial
 # No cita documentos distintos a los autorizados
 
+
 def validar_salida_segura(
-    resultado_externo: Any, # respuesta del modelo
+    resultado_externo: Any,  # respuesta del modelo
     turno_preparado: Any,   # return de preparar_turno()
 ) -> dict:
     """
@@ -721,7 +740,7 @@ def validar_salida_segura(
             "unsafe_output",
             "output",
         )
-    
+
     # aunque pase validaciones el modelo puede considerar que no es suficiente
     if in_scope is False:
         return _resultado_validacion(
@@ -755,8 +774,8 @@ def validar_salida_segura(
         or not respuesta.strip()
         or len(respuesta.strip()) > MAX_SAFE_OUTPUT_CHARS
         # or len(respuesta.split()) > MAX_OUTPUT_WORDS -> comentada por si flexibilizamos lo largas
-                                                        # o cortas que pueden ser las respuestas
-                                                        # según antigüedad
+        # o cortas que pueden ser las respuestas
+        # según antigüedad
     ):
         return _resultado_validacion(
             False,
@@ -791,7 +810,7 @@ def validar_salida_segura(
     if ids_documentos_devueltos is not None:
         if (
             # no es una lista
-            not isinstance(ids_documentos_devueltos, list) 
+            not isinstance(ids_documentos_devueltos, list)
             or not all(
                 # todos los elementos de la lista no son string
                 isinstance(documento_id, str)
@@ -846,9 +865,62 @@ def validar_salida_segura(
 # con finalizar_turno() para guardar la interacción en el historial
 
 
+# ============================================================
+# MIDDLEWARE PARA APLICAR MODO SEGURO Y MODO VULNERABLE
+# ============================================================
+
+def validate_input(message: str, mode: str = MODO_SEGURIDAD_DEFAULT) -> str:
+    """
+    Middleware centralizado de seguridad para el pipeline de mensajes.
+
+    Args:
+        message: Texto de entrada del usuario.
+        mode: Determina el nivel de filtrado. 'SEGURO' aplica blindaje, 
+              'VULNERABLE' actúa como passthrough para auditoría de contraste.
+
+    Returns:
+        Mensaje sanitizado o original según el modo seleccionado.
+    """
+    if mode not in MODOS_SEGURIDAD:
+        mode = MODO_SEGURIDAD_DEFAULT  # Fallback de seguridad
+    # Si es vulnerable, retornamos el mensaje original
+    if mode == "vulnerable":
+        # Utilidad: Permite el paso de cualquier entrada sin filtros.
+        # Esencial para contrastar el rendimiento del modelo frente a inyecciones.
+        return message
+
+    # Aquí se mantiene la lógica para el modo SEGURO
+    return aplicar_blindaje_seguridad(message)
+
+# TO_DO
 
 
+def aplicar_blindaje_seguridad(message: str) -> str:
+    """
+    Punto de entrada para los validadores de Robustez.
+    TODO: Integrar aquí la lógica de saneamiento y detección de inyecciones 
+    desarrollada por el equipo.
+    """
+    return message
 
+def aplicar_blindaje_seguridad(message: str) -> str:
+    """
+    Punto de entrada para los validadores de Robustez.
+    
+    TODO:
+    1. [ ] Implementar filtro de longitud: Rechazar o truncar mensajes que excedan 'MAX_TOKENS_INPUT' 
+           para prevenir ataques de desbordamiento.
+    2. [ ] Implementar filtro de caracteres prohibidos: Sanitizar entradas que contengan 
+           secuencias de escape de shell o inyección SQL básica (ej. ';', '--', 'DROP').
+    3. [ ] Implementar detección de patrones de Jailbreak: Comparar el mensaje contra una lista 
+           de prompts conocidos de inyección (ej. "ignore all previous instructions", "DAN mode").
+    4. [ ] Implementar normalización de entrada: Convertir a Unicode estándar y eliminar caracteres 
+           ocultos o de control que puedan alterar la interpretación del prompt.[cite: 1]
+    5. [ ] Implementar log de rechazo: Registrar en consola/archivo los intentos de inyección 
+           detectados con nivel de severidad para auditoría.[cite: 1]
+    """
+    print(f"[DEBUG] Mensaje procesado por blindaje seguro: {message[:20]}...") 
+    return message
 
 
 # ============================================================
@@ -856,7 +928,7 @@ def validar_salida_segura(
 # ============================================================
 
 # def validate_input(texto: str) -> list[str]:
-        
+
 #     """Devuelve lista de errores (vacía = OK). Ver README Fase 2, Tarea 1."""
 #     errores: list[str] = []
 #     t = (texto or "").strip()
