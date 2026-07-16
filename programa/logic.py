@@ -18,10 +18,9 @@ from config import (
 )
 
 from validators import (
-    validar_contexto_seguro, 
-    validar_entrada_segura, 
+    validar_contexto_seguro,
+    validar_entrada_segura,
     validar_salida_segura,
-    validate_input # Propuesta MODO VULNERABLE: Middleware para aplicar modo seguro y vulnerable
 )
 
 from context import construir_contexto, normalizar_texto
@@ -348,9 +347,7 @@ def _contar_coincidencias(
     puntuacion = 0
 
     for expresion in expresiones:
-        expresion_normalizada = normalizar_texto(
-            expresion
-        )
+        expresion_normalizada = normalizar_texto(expresion)
 
         if not expresion_normalizada:
             continue
@@ -360,9 +357,7 @@ def _contar_coincidencias(
                 puntuacion += 1
             continue
 
-        patron = (
-            rf"\b{re.escape(expresion_normalizada)}\b"
-        )
+        patron = (rf"\b{re.escape(expresion_normalizada)}\b")
 
         if re.search(patron, consulta_normalizada):
             puntuacion += 1
@@ -381,13 +376,9 @@ def clasificar_consulta(
     La categoría 'out_of_scope' no se asigna únicamente mediante
     palabras clave.
     """
-    consulta_limpia = _validar_consulta(
-        consulta
-    )
+    consulta_limpia = _validar_consulta(consulta)
 
-    consulta_normalizada = normalizar_texto(
-        consulta_limpia
-    )
+    consulta_normalizada = normalizar_texto(consulta_limpia)
 
     puntuaciones: list[tuple[int, int, str]] = []
 
@@ -501,13 +492,9 @@ def preparar_turno(
     adaptador implementado por el área LLM y Benchmark.
     """
     try:
-        _validar_estado(
-            estado
-        )
+        _validar_estado(estado)
 
-        consulta_limpia = _validar_consulta(
-            consulta
-        )
+        consulta_limpia = _validar_consulta(consulta)
 
         empleado_validado = _validar_diccionario(
             empleado,
@@ -529,35 +516,25 @@ def preparar_turno(
             "Las FAQ",
         )
 
-        configuracion_final = _resolver_configuracion(
-            configuracion
-        )
+        configuracion_final = _resolver_configuracion(configuracion)
 
         dia_onboarding = calcular_dia_onboarding(
             empleado=empleado_validado,
             fecha_referencia=fecha_referencia,
         )
 
-        categoria_preliminar = clasificar_consulta(
-            consulta_limpia
-        )
+        categoria_preliminar = clasificar_consulta(consulta_limpia)
 
         perfil_activo = seleccionar_perfil(
             categoria_preliminar=categoria_preliminar,
             dia_onboarding=dia_onboarding,
         )
 
-        configuracion_final["perfil_activo"] = (
-            perfil_activo
-        )
+        configuracion_final["perfil_activo"] = (perfil_activo)
 
-        limite_documentos = configuracion_final[
-            "max_documentos_contexto"
-        ]
+        limite_documentos = configuracion_final["max_documentos_contexto"]
 
-        limite_faqs = configuracion_final[
-            "max_faqs_contexto"
-        ]
+        limite_faqs = configuracion_final["max_faqs_contexto"]
 
         contexto = construir_contexto(
             consulta=consulta_limpia,
@@ -568,40 +545,21 @@ def preparar_turno(
             limite_faqs=limite_faqs,
         )
 
-        ventana_historial = configuracion_final[
-            "max_turnos_historial"
-        ]
+        ventana_historial = configuracion_final["max_turnos_historial"]
 
-        historial = ultimos_n(
-            estado,
-            ventana_historial,
-        )
+        historial = ultimos_n(estado, ventana_historial,)
 
         turno_preparado = {
             "consulta": consulta_limpia,
-            "empleado": deepcopy(
-                empleado_validado
-            ),
-            "empresa": deepcopy(
-                empresa_validada
-            ),
+            "empleado": deepcopy(empleado_validado),
+            "empresa": deepcopy(empresa_validada),
             "perfil_activo": perfil_activo,
-            "perfil": deepcopy(
-                PERFILES[perfil_activo]
-            ),
-            "categoria_preliminar": (
-                categoria_preliminar
-            ),
+            "perfil": deepcopy(PERFILES[perfil_activo]),
+            "categoria_preliminar": (categoria_preliminar),
             "dia_onboarding": dia_onboarding,
-            "contexto": deepcopy(
-                contexto
-            ),
-            "historial": deepcopy(
-                historial
-            ),
-            "configuracion": deepcopy(
-                configuracion_final
-            ),
+            "contexto": deepcopy(contexto),
+            "historial": deepcopy(historial),
+            "configuracion": deepcopy(configuracion_final),
         }
 
     except (TypeError, ValueError) as error:
@@ -640,31 +598,21 @@ def _validar_turno_preparado(
         "dia_onboarding",
     }
 
-    campos_ausentes = campos_requeridos.difference(
-        turno_preparado
-    )
+    campos_ausentes = campos_requeridos.difference(turno_preparado)
 
     if campos_ausentes:
-        campos = ", ".join(
-            sorted(campos_ausentes)
-        )
+        campos = ", ".join(sorted(campos_ausentes))
 
         raise ValueError(
             "Faltan campos obligatorios en el turno "
             f"preparado: {campos}."
         )
 
-    consulta = turno_preparado.get(
-        "consulta"
-    )
+    consulta = turno_preparado.get("consulta")
 
-    _validar_consulta(
-        consulta
-    )
+    _validar_consulta(consulta)
 
-    perfil_activo = turno_preparado.get(
-        "perfil_activo"
-    )
+    perfil_activo = turno_preparado.get("perfil_activo")
 
     if perfil_activo not in VALID_PROFILES:
         raise ValueError(
@@ -672,9 +620,7 @@ def _validar_turno_preparado(
             f"{perfil_activo!r}."
         )
 
-    categoria = turno_preparado.get(
-        "categoria_preliminar"
-    )
+    categoria = turno_preparado.get("categoria_preliminar")
 
     if categoria not in VALID_CATEGORIES:
         raise ValueError(
@@ -682,9 +628,7 @@ def _validar_turno_preparado(
             f"{categoria!r}."
         )
 
-    dia_onboarding = turno_preparado.get(
-        "dia_onboarding"
-    )
+    dia_onboarding = turno_preparado.get("dia_onboarding")
 
     if (
         not isinstance(dia_onboarding, int)
@@ -709,9 +653,7 @@ def _validar_resultado_externo(
     área LLM y Benchmark.
     """
     if not isinstance(resultado_externo, dict):
-        raise TypeError(
-            "El resultado externo debe ser un diccionario."
-        )
+        raise TypeError("El resultado externo debe ser un diccionario.")
 
     campos_requeridos = {
         "in_scope",
@@ -719,32 +661,22 @@ def _validar_resultado_externo(
         "answer",
     }
 
-    campos_ausentes = campos_requeridos.difference(
-        resultado_externo
-    )
+    campos_ausentes = campos_requeridos.difference(resultado_externo)
 
     if campos_ausentes:
-        campos = ", ".join(
-            sorted(campos_ausentes)
-        )
+        campos = ", ".join(sorted(campos_ausentes))
 
         raise ValueError(
             "Faltan campos obligatorios en el resultado "
             f"externo: {campos}."
         )
 
-    in_scope = resultado_externo.get(
-        "in_scope"
-    )
+    in_scope = resultado_externo.get("in_scope")
 
     if not isinstance(in_scope, bool):
-        raise ValueError(
-            "El campo 'in_scope' debe ser booleano."
-        )
+        raise ValueError("El campo 'in_scope' debe ser booleano.")
 
-    categoria = resultado_externo.get(
-        "category"
-    )
+    categoria = resultado_externo.get("category")
 
     if categoria not in VALID_CATEGORIES:
         raise ValueError(
@@ -752,19 +684,13 @@ def _validar_resultado_externo(
             f"{categoria!r}."
         )
 
-    respuesta = resultado_externo.get(
-        "answer"
-    )
+    respuesta = resultado_externo.get("answer")
 
     if not isinstance(respuesta, str):
-        raise ValueError(
-            "El campo 'answer' debe ser un string."
-        )
+        raise ValueError("El campo 'answer' debe ser un string.")
 
     if not respuesta.strip():
-        raise ValueError(
-            "El campo 'answer' no puede estar vacío."
-        )
+        raise ValueError("El campo 'answer' no puede estar vacío.")
 
     return resultado_externo
 
@@ -781,35 +707,19 @@ def finalizar_turno(
     y devuelve la envolvente estándar del proyecto.
     """
     try:
-        _validar_estado(
-            estado
-        )
+        _validar_estado(estado)
 
-        turno_validado = _validar_turno_preparado(
-            turno_preparado
-        )
+        turno_validado = _validar_turno_preparado(turno_preparado)
 
-        resultado_validado = _validar_resultado_externo(
-            resultado_externo
-        )
+        resultado_validado = _validar_resultado_externo(resultado_externo)
 
-        consulta = turno_validado[
-            "consulta"
-        ]
+        consulta = turno_validado["consulta"]
 
-        respuesta = resultado_validado[
-            "answer"
-        ].strip()
+        respuesta = resultado_validado["answer"].strip()
 
-        append_user(
-            estado,
-            consulta,
-        )
+        append_user(estado, consulta,)
 
-        append_assistant(
-            estado,
-            respuesta,
-        )
+        append_assistant(estado, respuesta,)
 
     except (TypeError, ValueError) as error:
         return respuesta_error(
@@ -821,21 +731,11 @@ def finalizar_turno(
         "Turno finalizado",
         {
             "respuesta": respuesta,
-            "resultado": deepcopy(
-                resultado_validado
-            ),
-            "perfil_activo": turno_validado[
-                "perfil_activo"
-            ],
-            "categoria": resultado_validado[
-                "category"
-            ],
-            "categoria_preliminar": turno_validado[
-                "categoria_preliminar"
-            ],
-            "dia_onboarding": turno_validado[
-                "dia_onboarding"
-            ],
+            "resultado": deepcopy(resultado_validado),
+            "perfil_activo": turno_validado["perfil_activo"],
+            "categoria": resultado_validado["category"],
+            "categoria_preliminar": turno_validado["categoria_preliminar"],
+            "dia_onboarding": turno_validado["dia_onboarding"],
         },
     )
 
@@ -924,7 +824,7 @@ def crear_respuesta_controlada(
 
         - modo_seguridad: modo activo al producirse la respuesta
                           seguro | vulnerable
-        
+
         - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
                            por defecto `False`. Los bloqueos deben producirse antes
 
@@ -937,33 +837,227 @@ def crear_respuesta_controlada(
     return respuesta_ok(
         "Consulta atendida de forma controlada.",
         {
-            "respuesta": validacion["mensaje_usuario"], # texto que verá el usuario
-            "llamar_modelo": False,                     # indica a main.py que el flujo se detiene antes de la llamada
+            # texto que verá el usuario
+            "respuesta": validacion["mensaje_usuario"],
+            # indica a main.py que el flujo se detiene antes de la llamada
+            "llamar_modelo": False,
             "modelo_invocado": modelo_invocado,         # True si llamada
             "modo_seguridad": modo_seguridad,           # modo que estaba activo
-            "motivo_bloqueo": validacion["codigo"],     # se guarda el ID de rechazo
+            # se guarda el ID de rechazo
+            "motivo_bloqueo": validacion["codigo"],
         },
     )
 
+# ORQUESTADOR DE CUALQUIER MODO (SEGURO | VULNERABLE)
+# ============================================================
 
-# ============================================================
-# PROCESA LÓGICA DE ASISTENTE DELEGANDO SEGURIDAD A MIDDLEWARE
-# ============================================================
-def procesar_logica(mensaje_usuario: str, mode: str = MODO_SEGURIDAD_DEFAULT):
-    """    
-    Args:
-        mensaje_usuario: El texto introducido por el empleado.
-        mode: El modo de ejecución. Por defecto es seguro.
+# Envuelve preparar_turno() para añadir controles de seguridad
+# antes y después, sin duplicar la lógica ya existente.
+
+# Le añade:
+# - Selección de modo
+# - validación de entrada y contexto
+# - autorización para llamar al modelo
+
+
+def preparar_turno_con_modo(
+    estado: dict,
+    consulta: str,
+    empleado: dict,
+    empresa: dict,
+    documentos: list[dict],
+    faqs: list[dict],
+    configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
+    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT,
+) -> dict:
     """
-    # El middleware decide si sanitizar o pasar el texto (vulnerable)
-    mensaje_validado = validate_input(mensaje_usuario, mode=mode)
-    
-    # Resto de la lógica del asistente...
-    # (Contexto, llamada a Gemini, etc.)
-    respuesta = gemini_client.get_response(mensaje_validado)
-    
-    return respuesta
+    Envuelve preparar_turno() sin duplicar su lógica.
 
+    Args:
+        estado:
+            El estado de la sesión.
+        consulta:
+            input del usuario.
+        empleado | empresa | documentos | faqs:
+            datos necesarios para el perfil, cálculo de día
+            selección de documentación y construcción de
+            contexto.
+        configuracion:
+            usar la default o una parcial.
+        fecha_referencia:
+            principalmente para pruebas. Si `None` se usa la
+            fecha actual.
+            date(yyyy, m, d)
+        modo_seguridad:
+            qué flujo va a ejecutar ("seguro" | "vulnerable")
+            por defecto el más restrictivo: seguro.
+
+    Modo seguro:
+    1. valida el input;
+    2. prepara el turno sin LLM;
+    3. valida el contexto;
+    4. autoriza o bloquea la futura llamada.
+
+    Modo vulnerable:
+    conserva las validaciones estructurales de preparar_turno(),
+    pero omite las defensas de seguridad a propósito.
+
+    Puede devolver:
+    - Error estructural
+    - Respuesta bloqueada
+    - Turno autorizado -> "llamar_modelo": True
+    """
+
+    # comprobar modo
+    if modo_seguridad not in MODOS_SEGURIDAD:
+        return respuesta_error(
+            "Modo de seguridad no válido.",
+            [f"Modo desconocido: {modo_seguridad!r}."],
+        )
+
+    # primera validación
+    if modo_seguridad == "seguro":
+        validacion_entrada = validar_entrada_segura(consulta)
+
+        # si no se autoriza
+        if not validacion_entrada["permitido"]:
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_entrada,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_entrada,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=False,
+            )
+
+    # si autoriza (o modo vulnerable)
+    resultado = preparar_turno(
+        estado=estado,
+        consulta=consulta,
+        empleado=empleado,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
+    )
+
+    # si no es OK problema estructural
+    if resultado.get("status") != "ok":
+        return resultado
+
+    # si todo OK se prepara turno
+    turno_preparado = resultado.get("data", {},).get("turno_preparado")
+
+    # segunda validación
+    if modo_seguridad == "seguro":
+        # si turno preparado no existe será None y se rechazará
+        validacion_contexto = validar_contexto_seguro(turno_preparado)
+
+        # si no la permite se registra el rechazo
+        if not validacion_contexto["permitido"]:
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_contexto,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_contexto,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=False,
+            )
+
+    # llega hasta aquí modo vulnerable
+    # modo seguro ha pasado todas las validaciones
+    # ESTO LE VA A LLEGAR AL MODELO
+    resultado["data"]["llamar_modelo"] = True
+    resultado["data"]["modelo_invocado"] = False
+    resultado["data"]["modo_seguridad"] = (modo_seguridad)
+
+    return resultado
+
+
+# tercera validación
+# ya se ha llamado al modelo y se va a validar su respuesta
+# se valida ANTES de guardarla en el historial
+def finalizar_turno_con_modo(
+    estado: dict,
+    turno_preparado: dict,
+    resultado_externo: dict,
+    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT,
+) -> dict:
+    """
+    Envuelve `finalizar_turno()` para añadir otra capa de seguridad
+    antes de guardar el input y la respuesta del modelo en el 
+    historial.
+
+    Args:
+        estado:
+            estado actual de la conversación.
+        turno_preparado:
+            diccionario producido por `preparar_turno()`
+        resultado_externo:
+            respuesta generada por el modelo.
+            (modo seguro: lo revisa antes de que se guarde)
+        modo_seguridad:
+            determina si se aplica la validación de salida.
+            ("seguro" | "vulnerable") por defecto seguro.
+
+    En modo seguro:
+    1. valida la estructura y el contenido de la respuesta.
+    2. comprueba que no hay fugas de inforamción.
+    3. verifica que las fuentes pertenecen al contexto del turno.
+    4. bloquea la respuesta si no es validada.
+    5. usa finalizar_turno() cuando la salida es válida.
+
+    En modo vulnerable:
+    omite las validaciones y va directamente a `finalizar_turno()`.
+    se conservan las validaciones básicas de finalizar_turno().
+    """
+
+    # comprobar modo
+    if modo_seguridad not in MODOS_SEGURIDAD:
+        return respuesta_error(
+            "Modo de seguridad no válido.",
+            [f"Modo desconocido: {modo_seguridad!r}."],
+        )
+
+    # con modo seguro activo se valida la salida
+    if modo_seguridad == "seguro":
+        validacion_salida = validar_salida_segura(
+            resultado_externo=resultado_externo,
+            turno_preparado=turno_preparado,
+        )
+
+        # si se rechaza la respuesta del modelo
+        # no se ejecuta finalizar_turno()
+        if not validacion_salida["permitido"]:
+            consulta = turno_preparado.get("consulta", "",)
+
+            _registrar_evento_seguridad(
+                estado=estado,
+                validacion=validacion_salida,
+                consulta=consulta,
+            )
+
+            return crear_respuesta_controlada(
+                validacion=validacion_salida,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=True,
+            )
+
+    # se llega directamente en modo vulnerable
+    # se ha superado la validación de la respuesta
+    return finalizar_turno(
+        estado=estado,
+        turno_preparado=turno_preparado,
+        resultado_externo=resultado_externo,
+    )
 
 # ============================================================
 # LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE

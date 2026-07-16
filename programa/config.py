@@ -481,12 +481,7 @@ DOMINIO_KEYWORDS = DOMAIN_KEYWORDS
 
 # Para poder compartir contexto entre el vulnerable y el seguro
 # Variable con ambos modos para poder alternar cómodamente
-MODOS_SEGURIDAD = frozenset(
-    {
-        "seguro",
-        "vulnerable",
-    }
-)
+MODOS_SEGURIDAD = frozenset({"seguro", "vulnerable"})
 
 # En producción siempre debe arrancar en modo seguro.
 MODO_SEGURIDAD_DEFAULT = "seguro"
