@@ -14,7 +14,7 @@ from config import (
     ONBOARDING_PROFILE_DAYS,
     PERFILES,
     VALID_CATEGORIES,
-    VALID_PROFILES,
+    VALID_PROFILES
 )
 
 from validators import (

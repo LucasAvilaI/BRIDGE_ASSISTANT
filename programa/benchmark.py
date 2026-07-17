@@ -9,17 +9,17 @@ import json
 import time
 
 # 1. Rutas e inicializaciones desde la única fuente de verdad (config.py)
-from programa.config import (
+from config import (
     PREGUNTAS_BENCHMARK_PATH,
-    RESULTADOS_BENCHMARK_PATH,
-    REQUIRED_RESPONSE_FIELDS
+    RESULTADOS_BENCHMARK_PATH
 )
-from programa.model_registry import MODELS
-from programa.model_utils import obtener_modelo
+
+from model_registry import MODELS
+from model_utils import obtener_modelo
 
 # Importación preventiva y segura de los validadores de Modo Seguro
 try:
-    from programa.validators import validar_respuesta_estructurada
+    from validators import validar_respuesta_estructurada
     ROBUSTEZ_DISPONIBLE = True
 except ImportError:
     ROBUSTEZ_DISPONIBLE = False
@@ -96,7 +96,15 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
         costo_estimado = calcular_costo(tokens_in, tokens_out, model_key)
 
         # 2. Esquema de respuesta dinámico a partir de config.py (Single Source of Truth)
-        respuesta_mock = {campo: None for campo in REQUIRED_RESPONSE_FIELDS}
+        respuesta_mock = {
+            "in_scope": True,
+            "category": categoria_esperada,
+            "answer": ("Respuesta estructurada de simulación."),
+            "document_ids": [],
+            "faq_ids": [],
+            "needs_escalation": False,
+            "escalation_department": None
+        }
         respuesta_mock["in_scope"] = True
         respuesta_mock["category"] = categoria_esperada
         respuesta_mock["answer"] = "Respuesta estructurada de simulación."
@@ -105,16 +113,11 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
         respuesta_mock["needs_escalation"] = False
 
         # 3. Validación de Robustez preventiva
-        valida_robustez = True
-        cumple_esquema = True
+        validacion_estructura = validar_respuesta_estructurada(respuesta_mock)
 
-        if ROBUSTEZ_DISPONIBLE:
-            try:
-                # Se asume que el validador analiza el dict de salida estructurada
-                validar_respuesta_estructurada(respuesta_mock)
-            except Exception:
-                valida_robustez = False
-                cumple_esquema = False  # Ajustable según el tipo de excepción lanzada
+        cumple_esquema = validacion_estructura["valido"]
+
+        valida_robustez = cumple_esquema
 
         # 4. Estructuración y registro del resultado
         resultado_normalizado = estructurar_resultado_benchmark(

@@ -58,22 +58,31 @@ TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
 MAX_TOKENS_INPUT = 8_000
 
-REQUIRED_RESPONSE_FIELDS = frozenset(
-    {
-        "in_scope",
-        "category",
-        "answer",
-        "document_ids",
-        "faq_ids",
-        "needs_escalation",
-        "escalation_department"
-    }
-)
+JSON_SCHEMA_HINT = """
+Devuelve exclusivamente un objeto JSON válido con esta estructura:
 
-# JSON_SCHEMA_HINT = """
-# El área LLM y Benchmark debe definir aquí el contrato de respuesta
-# estructurada solicitado al modelo.
-# """.strip()
+{
+  "in_scope": true,
+  "category": "categoria_de_la_consulta",
+  "answer": "respuesta para el empleado",
+  "document_ids": ["doc_id_utilizado"],
+  "faq_ids": ["faq_id_utilizada"],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+
+Reglas del formato:
+
+- "in_scope" debe ser un booleano.
+- "category" debe ser una categoría válida del asistente.
+- "answer" debe ser un texto no vacío.
+- "document_ids" debe ser una lista de strings.
+- "faq_ids" debe ser una lista de strings.
+- "needs_escalation" debe ser un booleano.
+- "escalation_department" debe ser un string o null.
+- No añadas texto, explicaciones ni bloques Markdown fuera del JSON.
+- No añadas propiedades distintas de las indicadas.
+""".strip()
 
 
 # ============================================================
@@ -117,9 +126,7 @@ MAX_CONTEXT_FAQS = 2
 ONBOARDING_PROFILE_DAYS = 7
 
 # El acompañamiento inicial se considera comprendido dentro
-# de los primeros 30 días. Superar este límite no bloquea
-# el uso del asistente.
-MAX_ONBOARDING_DAYS = 30
+# de los primeros 30 días.
 
 
 # ============================================================
@@ -362,7 +369,18 @@ DOMAIN_KEYWORDS = {
         "contrato",
         "trabajo remoto",
         "teletrabajo",
-        "beneficios"
+        "beneficios",
+        # Gestión administrativa de datos propios.
+        "dni",
+        "nie",
+        "pasaporte",
+        "dirección personal",
+        "direccion personal",
+        "teléfono personal",
+        "telefono personal",
+        "datos personales",
+        "actualizar mis datos",
+        "cambiar mis datos"
     ),
     "people": (
         "people",
@@ -415,7 +433,7 @@ DOMAIN_KEYWORDS = {
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
 PATRONES_DOMINIO_ADICIONALES = (
     r"\bdia\s+[1-5]\b",
-    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b"
+    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",
 )
 
 
@@ -436,15 +454,6 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
     "general": "people",
     "out_of_scope": None
 }
-
-
-# ============================================================
-# ALIAS TEMPORALES DE INTEGRACIÓN
-# ============================================================
-
-# Alias temporal para mantener compatibilidad con módulos que
-# todavía utilizan el nombre anterior.
-DOMINIO_KEYWORDS = DOMAIN_KEYWORDS
 
 
 # ============================================================
@@ -485,28 +494,11 @@ MODOS_SEGURIDAD = frozenset({"seguro", "vulnerable"})
 
 # En producción siempre debe arrancar en modo seguro.
 MODO_SEGURIDAD_DEFAULT = "seguro"
-
-MAX_INPUT_CHARS = 2_000
 MAX_SAFE_OUTPUT_CHARS = 4_000
 
 # ============================================================
 # PATRONES PARA PROMPT INJECTION | DATOS SENSIBLES | DOMINIO
 # ============================================================
-
-# Patrones sospechosos para prompt injection
-PATRONES_SOSPECHOSOS = (
-    "ignora las instrucciones",
-    "olvida las instrucciones",
-    "ignore previous instructions",
-    "ignore prior instructions",
-    "prompt injection",
-    "revela system prompt",
-    "system prompt",
-    "mensaje del sistema",
-    "prompt del sistema",
-    "developer mode",
-    "jailbreak"
-)
 
 # Permiten detectar texto separado con espacios o signos,
 # por ejemplo: "i g n o r a las i n s t r u c c i o n e s".
@@ -569,6 +561,44 @@ PATRONES_INYECCION = (
         r"\b(copia|vuelca|exporta|imprime|revela)\b"
         r".{0,100}\b(documentos internos|base de conocimiento|"
         r"contexto completo|archivo json|faq completas)\b"
+    ),
+)
+
+# SOLICITUDES DE SECRETOS Y CREDENCIALES
+PATRONES_SOLICITUD_SECRETOS = (
+    (
+        r"\b(dame|dime|muestra|revela|ensena|comparte|facilita|"
+        r"proporciona|entrega|extrae|exporta|imprime|copia)\b"
+        r".{0,60}\b(contrasena|password|token|api key|clave api|"
+        r"clave de acceso|credencial|credenciales|secreto)\b"
+    ),
+    (
+        r"\b(cual es|cuales son)\b"
+        r".{0,60}\b(contrasena|password|token|api key|clave api|"
+        r"clave de acceso|credencial|credenciales|secreto)\b"
+    ),
+    (
+        r"\b(contrasena|password|token|api key|clave api|"
+        r"clave de acceso|credencial|credenciales|secreto)\b"
+        r".{0,60}\b(dame|dime|muestra|revela|comparte|facilita|"
+        r"proporciona|entrega|copia)\b"
+    )
+)
+
+PATRONES_INCIDENCIA_CREDENCIALES = (
+    (
+        r"\b(no puedo|no me deja|no funciona|he olvidado|olvide|"
+        r"he perdido|ha caducado|esta caducado|esta bloqueada|"
+        r"esta bloqueado|error|problema|incidencia)\b"
+        r".{0,80}\b(acceder|iniciar sesion|cuenta|contrasena|"
+        r"password|token|api key|clave api|credencial|"
+        r"credenciales|2fa|autenticacion)\b"
+    ),
+    (
+        r"\b(restablecer|resetear|recuperar|regenerar|rotar|"
+        r"revocar|renovar|cambiar)\b"
+        r".{0,60}\b(contrasena|password|token|api key|clave api|"
+        r"credencial|credenciales|2fa)\b"
     )
 )
 
@@ -589,7 +619,7 @@ PATRONES_SENSIBLES_POR_CODIGO = {
         (
             r"\b(cobra|gana)\b.{0,60}\b(manager|jefe|companero|"
             r"companera|empleado|empleada)\b"
-        )
+        ),
     ),
     # consultas relacionadas con contraseñas, secretos, accesos...
     "credentials": (
@@ -597,26 +627,44 @@ PATRONES_SENSIBLES_POR_CODIGO = {
             r"\b(contrasena|password|token|api key|clave de acceso|"
             r"credencial|credenciales|secreto)\b"
             r".{0,40}\b(wifi|cuenta|acceso)"
-        )
+        ),
     ),
     # solicitudes de datos personales: identificación, dirección, contacto, datos médicos...
     "personal_data": (
         (
-            r"\b(dni|nie|pasaporte|direccion personal|telefono personal|"
-            r"datos medicos|expediente medico|evaluacion de desempeno|"
-            r"sancion disciplinaria)\b"
+            r"\b(dame|dime|muestra|revela|comparte|facilita|"
+            r"proporciona|extrae|exporta|imprime|copia)\b"
+            r".{0,80}\b(dni|nie|pasaporte|direccion personal|"
+            r"telefono personal|datos medicos|expediente medico|"
+            r"evaluacion de desempeno|sancion disciplinaria)\b"
+            r".{0,60}\b(de|del|de la)\b"
+            r".{0,30}\b(manager|jefe|companero|companera|"
+            r"empleado|empleada|cliente|participante|otra persona)\b"
         ),
         (
-            r"\b(extrae|exporta|comparte|revela)\b"
-            r".{0,100}\b(datos|listado|correos|telefonos|expedientes)\b"
-            r".{0,60}\b(cliente|clientes|participante|participantes|"
-            r"empleado|empleados|companero|companeros)\b"
+            r"\b(dni|nie|pasaporte|direccion personal|"
+            r"telefono personal|datos medicos|expediente medico|"
+            r"evaluacion de desempeno|sancion disciplinaria)\b"
+            r".{0,60}\b(de|del|de la)\b"
+            r".{0,30}\b(manager|jefe|companero|companera|"
+            r"empleado|empleada|cliente|participante|otra persona)\b"
+            r".{0,80}\b(dame|dime|muestra|revela|comparte|"
+            r"facilita|proporciona|extrae|exporta|imprime|copia)\b"
         ),
         (
-            r"\b(datos|listado|correos|telefonos|expedientes)\b"
-            r".{0,60}\b(cliente|clientes|participante|participantes|"
-            r"empleado|empleados|companero|companeros)\b"
-            r".{0,100}\b(extrae|exporta|comparte|revela)\b"
+            r"\b(extrae|exporta|comparte|revela|descarga|genera)\b"
+            r".{0,100}\b(datos|listado|correos|telefonos|"
+            r"direcciones|documentos|expedientes)\b"
+            r".{0,60}\b(clientes|participantes|empleados|"
+            r"companeros|candidatos)\b"
+        ),
+        (
+            r"\b(datos|listado|correos|telefonos|direcciones|"
+            r"documentos|expedientes)\b"
+            r".{0,60}\b(clientes|participantes|empleados|"
+            r"companeros|candidatos)\b"
+            r".{0,100}\b(extrae|exporta|comparte|revela|"
+            r"descarga|genera)\b"
         )
     )
 }
@@ -641,7 +689,7 @@ PATRONES_FUERA_DE_DOMINIO = (
         r"\b(escribe|redacta|genera|crea)\b.{0,60}"
         r"\b(poema|cuento|historia|cancion|codigo|programa|ensayo|receta)\b"
     ),
-    r"\b(cuentame|dime)\b.{0,30}\b(chiste|adivinanza)\b"
+    r"\b(cuentame|dime)\b.{0,30}\b(chiste|adivinanza)\b",
 )
 
 # REFERENCIAS INTERNAS
@@ -655,7 +703,7 @@ PATRONES_REFERENCIA_INTERNA = (
         # referencias a políticas, normas y procedimientos internos
         r"\b(empresa|politica interna|norma interna|"
         r"ley interna|procedimiento interno)\b"
-    )
+    ),
 )
 
 # POCA INFORMACION PARA SEGURIDAD
@@ -724,7 +772,7 @@ PATRONES_FUGA_SALIDA = (
     # empieza por AIza
     # [0-9A-Za-z_-] cualquier caracter del 0 al 9, de la A a la Z (también en minúsculas), y _ y -
     # {20,} de ese bloque debe haber mínimo 20 caracteres
-    r"\bAIza[0-9A-Za-z_-]{20,}\b"
+    r"\bAIza[0-9A-Za-z_-]{20,}\b",
 )
 
 # ============================================================

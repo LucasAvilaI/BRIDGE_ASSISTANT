@@ -1,22 +1,18 @@
-'''
-# Imports anteriores que dejo comentados (alex)
-from config import DOMINIO_KEYWORDS, MAX_INPUT_CHARS, PATRONES_SOSPECHOSOS
-'''
 
 import re
 import unicodedata
 from typing import Any
 from config import (
     DOMAIN_KEYWORDS,
-    DOMINIO_KEYWORDS,
     FIRMAS_INYECCION_COMPACTAS,
     MAX_INPUT_CHARS,
-    MAX_OUTPUT_WORDS,
     MAX_SAFE_OUTPUT_CHARS,
     MENSAJES_SEGURIDAD,
     # Necesarios para middleware en validators que gestiona activación de modos:
     MODO_SEGURIDAD_DEFAULT,
     MODOS_SEGURIDAD,
+    PATRONES_INCIDENCIA_CREDENCIALES,
+    PATRONES_SOLICITUD_SECRETOS,
     PATRONES_DOMINIO_ADICIONALES,
     PATRONES_FUERA_DE_DOMINIO,
     PATRONES_FUGA_SALIDA,
@@ -215,9 +211,20 @@ def validar_entrada_segura(texto: Any) -> dict:
     if hay_inyeccion or hay_firma_compacta:
         return _resultado_validacion(False, "prompt_injection", "input")
 
+    # Comprueba si el usuario está solicitando que se revele,
+    # entregue, copie o muestre directamente algún secreto.
+    hay_solicitud_secretos = _coincide_algun_patron(texto_normalizado, PATRONES_SOLICITUD_SECRETOS)
+
+    # La solicitud explícita de un secreto siempre se bloquea,
+    # aunque también contenga vocabulario propio de una incidencia.
+    if hay_solicitud_secretos:
+        return _resultado_validacion(False, "credentials", "input")
+
     # El orden determina la causa prioritaria del rechazo.
     # detectar si hay o se quiere información sensible
     for codigo, patrones in PATRONES_SENSIBLES_POR_CODIGO.items():
+        if codigo == "credentials":
+            continue
         if _coincide_algun_patron(texto_normalizado,patrones):     # tupla que contiene los patrones para cada caso
             return _resultado_validacion(False, codigo, "input")   # si alguno coincide bloquea
             
@@ -509,6 +516,155 @@ def validar_contexto_seguro(turno_preparado: Any) -> dict:
     return _resultado_validacion(False, codigo, "context")
 
 # ============================================================
+# VALIDACIÓN ESTRUCTURAL DE LA RESPUESTA DEL MODELO
+# ============================================================
+
+def validar_respuesta_estructurada(resultado_externo: Any) -> dict:
+    """
+    Comprueba que la respuesta externa cumple el contrato JSON
+    esperado para el chat.
+
+    Esta función valida:
+
+    - que la respuesta sea un diccionario
+    - que estén presentes todos los campos obligatorios
+    - que no existan campos adicionales
+    - que cada campo tenga el tipo correcto
+    - que la categoría sea válida
+    - que la escalación sea coherente
+
+    No comprueba todavía:
+
+    - si los documentos citados estaban autorizados
+    - si la respuesta contiene una fuga de información
+    - si el contenido está respaldado documentalmente
+
+    Esas comprobaciones corresponden a validar_salida_segura().
+
+    Devuelve:
+        {
+            "valido": bool,
+            "errores": list[str]
+        }
+    """
+
+    errores: list[str] = []
+
+    # Contrato exacto que debe devolver el modelo.
+    campos_esperados = {
+        "in_scope",
+        "category",
+        "answer",
+        "document_ids",
+        "faq_ids",
+        "needs_escalation",
+        "escalation_department"
+    }
+
+    # La respuesta del modelo debe haberse convertido previamente
+    # desde JSON a un diccionario de Python.
+    if not isinstance(resultado_externo, dict):
+        return {
+            "valido": False,
+            "errores": ["La respuesta externa debe ser un diccionario."]
+        }
+
+    campos_recibidos = set(resultado_externo.keys())
+
+    campos_ausentes = (campos_esperados- campos_recibidos)
+
+    campos_adicionales = (campos_recibidos- campos_esperados)
+
+    if campos_ausentes:
+        errores.append("Faltan campos obligatorios: " + ", ".join(sorted(campos_ausentes)) + ".")
+
+    if campos_adicionales:
+        errores.append("Se han recibido campos no permitidos: " + ", ".join(sorted(campos_adicionales)) + ".")
+
+    # Si faltan campos, no se accede directamente mediante []
+    # para evitar KeyError. Se utiliza get() en todas las
+    # comprobaciones posteriores.
+    in_scope = resultado_externo.get("in_scope")
+
+    if not isinstance(in_scope, bool):
+        errores.append("'in_scope' debe ser booleano.")
+
+    categoria = resultado_externo.get("category")
+
+    if not isinstance(categoria, str):
+        errores.append("'category' debe ser un string.")
+
+    elif categoria not in VALID_CATEGORIES:
+        errores.append("'category' contiene una categoría no válida.")
+
+    respuesta = resultado_externo.get("answer")
+
+    if not isinstance(respuesta, str):
+        errores.append("'answer' debe ser un string.")
+
+    elif not respuesta.strip():
+        errores.append("'answer' no puede estar vacío.")
+
+    document_ids = resultado_externo.get("document_ids")
+
+    if not isinstance(document_ids, list):
+        errores.append("'document_ids' debe ser una lista.")
+
+    elif not all(
+        isinstance(documento_id, str)
+        and documento_id.strip()
+        for documento_id in document_ids
+    ):
+        errores.append("'document_ids' solo puede contener strings no vacíos.")
+
+    faq_ids = resultado_externo.get("faq_ids")
+
+    if not isinstance(faq_ids, list):
+        errores.append("'faq_ids' debe ser una lista.")
+
+    elif not all(
+        isinstance(faq_id, str)
+        and faq_id.strip()
+        for faq_id in faq_ids
+    ):
+        errores.append("'faq_ids' solo puede contener strings no vacíos.")
+
+    necesita_escalacion = resultado_externo.get("needs_escalation")
+
+    if not isinstance(necesita_escalacion, bool):
+        errores.append("'needs_escalation' debe ser booleano.")
+
+    departamento_escalacion = resultado_externo.get("escalation_department")
+
+    if departamento_escalacion is not None and not isinstance(departamento_escalacion, str):
+        errores.append("'escalation_department' debe ser un string o None.")
+
+    # Comprobaciones de coherencia entre los dos campos
+    # relacionados con la escalación.
+    if isinstance(necesita_escalacion, bool):
+        if (
+            necesita_escalacion
+            and (
+                not isinstance(departamento_escalacion, str)
+                or not departamento_escalacion.strip()
+            )
+        ):
+            errores.append(
+                "Si 'needs_escalation' es True, "
+                "'escalation_department' debe indicar "
+                "el destino de la escalación."
+            )
+
+        if not necesita_escalacion and departamento_escalacion is not None:
+            errores.append("Si 'needs_escalation' es False, 'escalation_department' debe ser None.")
+
+    return {
+        "valido": not errores,
+        "errores": errores
+    }
+
+
+# ============================================================
 # TERCERA VALIDACION - VALIDACION DE SALIDA/RESPUESTA
 # ============================================================
 
@@ -532,96 +688,27 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
     # comprueba que los dos argumentos son el tipo de objeto esperado
     if not isinstance(resultado_externo, dict) or not isinstance(turno_preparado, dict):
         return _resultado_validacion(False, "unsafe_output", "output")
+    
+    validacion_estructura = validar_respuesta_estructurada(resultado_externo)
 
-    # si la respuesta no tiene True en in_scope
-    # el modelo puede ser inconsistente
-    # incumplir el esquema
-    # puede haberse transformado mal la respuesta
-
-    # valor in_scope
-    in_scope = resultado_externo.get("in_scope")
-
-    # puede haber un error y registrarse mal
-    if not isinstance(in_scope, bool):
+    if not validacion_estructura["valido"]:
         return _resultado_validacion(False, "unsafe_output", "output")
     
-    # aunque pase validaciones el modelo puede considerar que no es suficiente
-    if in_scope is False:
-        return _resultado_validacion(False, "undocumented", "output")
-
-    # debe pertenecer a alguna de las categorías de VALID_CATEGORIES
-    # de no ser así se rompe el contrato
-    categoria = resultado_externo.get("category")
-
-    if categoria not in VALID_CATEGORIES or categoria == "out_of_scope":
-        return _resultado_validacion(False, "unsafe_output", "output")
-
-    # coge la respuesta
-    respuesta = resultado_externo.get("answer")
-
-    # valida que sea el objeto esperado
-    # que no sean espacios
-    # que su longitud no supere el límite de caracteres
-    if (
-        not isinstance(respuesta, str)
-        or not respuesta.strip()
-        or len(respuesta.strip()) > MAX_SAFE_OUTPUT_CHARS
-        # or len(respuesta.split()) > MAX_OUTPUT_WORDS -> comentada por si flexibilizamos lo largas
-                                                        # o cortas que pueden ser las respuestas
-                                                        # según antigüedad
-    ):
-        return _resultado_validacion(False, "unsafe_output", "output")
-
-    # normalizar para comparar con patrones de fuga
-    # que no se escape información confidencial, credenciales...
-    if _coincide_algun_patron(normalizar_texto_seguridad(respuesta), PATRONES_FUGA_SALIDA):
-        return _resultado_validacion(False, "unsafe_output", "output")
-
-    # coger el contexto
     contexto = turno_preparado.get("contexto", {})
 
-    # selecciona los ID de los docs que se han seleccionado para este turno
     ids_documentos_permitidos = set(contexto.get("document_ids", []))
 
     ids_faq_permitidas = set(contexto.get("faq_ids", []))
 
-    ids_documentos_devueltos = resultado_externo.get("document_ids")
+    ids_documentos_devueltos = set(resultado_externo["document_ids"])
 
-    # comprobación de que los ID de los documentos del modelo están
-    # entre los seleccionados antes de la llamada
-    if ids_documentos_devueltos is not None:
-        if (
-            # no es una lista
-            not isinstance(ids_documentos_devueltos, list) 
-            or not all(
-                # todos los elementos de la lista no son string
-                isinstance(documento_id, str)
-                for documento_id
-                in ids_documentos_devueltos
-            )
-            # o no todos los elementos de la respuesta del modelo
-            # están dentro de los seleccionados antes
-            or not set(ids_documentos_devueltos).issubset(ids_documentos_permitidos)):
-            
-            # rechazar
-            return _resultado_validacion(False, "unsafe_output", "output")
+    ids_faq_devueltas = set(resultado_externo["faq_ids"])
 
-    # repetir lo mismo con las faq
-    ids_faq_devuelta = resultado_externo.get("faq_ids")
+    if not ids_documentos_devueltos.issubset(ids_documentos_permitidos):
+        return _resultado_validacion(False,"unsafe_output","output")
 
-    if ids_faq_devuelta is not None:
-        if (
-            not isinstance(ids_faq_devuelta, list)
-            or not all(
-                isinstance(faq_id, str)
-                for faq_id in ids_faq_devuelta
-            )
-            or not set(ids_faq_devuelta).issubset(ids_faq_permitidas)):
-            
-            return _resultado_validacion(False, "unsafe_output", "output")
-
-    # todo superado, se aprueba
-    return _resultado_validacion(True, "valid_output", "output")
+    if not ids_faq_devueltas.issubset(ids_faq_permitidas):
+        return _resultado_validacion(False,"unsafe_output","output")
 
 # después de esta validación de respuesta queda cerrar turno
 # con finalizar_turno() para guardar la interacción en el historial
