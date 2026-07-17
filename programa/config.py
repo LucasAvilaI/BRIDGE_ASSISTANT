@@ -26,7 +26,7 @@ VULNERABLE_CONTEXT_PATHS = [
     EMPRESA_PATH,
     EMPLEADOS_PATH,
     DOCS_PATH,
-    FAQ_PATH,
+    FAQ_PATH
 ]
 
 
@@ -53,7 +53,7 @@ MODEL_2 = "gemini-2.5-pro"    # Variante B (Calidad)
 MODEL = MODEL_1
 
 TEMPERATURE_DEFAULT = 0.2
-# TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
+TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
 TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
 MAX_TOKENS_INPUT = 8_000
@@ -66,7 +66,7 @@ REQUIRED_RESPONSE_FIELDS = frozenset(
         "document_ids",
         "faq_ids",
         "needs_escalation",
-        "escalation_department",
+        "escalation_department"
     }
 )
 
@@ -98,7 +98,7 @@ ASSISTANT_CONFIG_DEFAULT = {
     "idioma_respuesta": "español",
     "max_palabras": MAX_OUTPUT_WORDS,
     "max_documentos_contexto": 3,
-    "max_faqs_contexto": 2,
+    "max_faqs_contexto": 2
 }
 
 
@@ -132,14 +132,14 @@ DOCUMENT_SCORE_WEIGHTS = {
     "title": 2,
     "body": 1,
     "employee_department": 2,
-    "global_document": 1,
+    "global_document": 1
 }
 
 # Pesos utilizados por context.py para ordenar las FAQ.
 FAQ_SCORE_WEIGHTS = {
     "tag": 3,
     "question": 2,
-    "short_answer": 1,
+    "short_answer": 1
 }
 
 # Una coincidencia basada únicamente en el departamento o en
@@ -168,7 +168,7 @@ TRANSVERSAL_DOCUMENT_IDS = frozenset(
         "doc_rrhh_03",
         "doc_cultura_01",
         "doc_beneficios_01",
-        "doc_people_01",
+        "doc_people_01"
     }
 )
 
@@ -192,7 +192,7 @@ PERFILES = {
             "Se utiliza durante los días 1 a 7 desde la fecha de "
             "incorporación, salvo que la consulta requiera un perfil "
             "funcional más específico."
-        ),
+        )
     },
     "administrativo_rrhh": {
         "rol": (
@@ -204,7 +204,7 @@ PERFILES = {
         "criterio": (
             "Se utiliza desde el octavo día o cuando la consulta sea "
             "principalmente administrativa o de RRHH."
-        ),
+        )
     },
     "it": {
         "rol": (
@@ -216,8 +216,8 @@ PERFILES = {
         "criterio": (
             "Se utiliza para consultas relacionadas con accesos, cuentas, "
             "dispositivos, herramientas o procedimientos técnicos."
-        ),
-    },
+        )
+    }
 }
 
 VALID_PROFILES = frozenset(PERFILES.keys())
@@ -303,7 +303,7 @@ VALID_CATEGORIES = frozenset(
         "sales",
         "operations",
         "general",
-        "out_of_scope",
+        "out_of_scope"
     }
 )
 
@@ -326,7 +326,7 @@ DOMAIN_KEYWORDS = {
         "checklist",
         "tareas iniciales",
         "tareas para hoy",
-        "que hago hoy",
+        "que hago hoy"
     ),
     "it": (
         "it",
@@ -347,7 +347,7 @@ DOMAIN_KEYWORDS = {
         "herramienta",
         "permisos",
         "autenticación",
-        "autenticacion",
+        "autenticacion"
     ),
     "rrhh": (
         "rrhh",
@@ -362,7 +362,7 @@ DOMAIN_KEYWORDS = {
         "contrato",
         "trabajo remoto",
         "teletrabajo",
-        "beneficios",
+        "beneficios"
     ),
     "people": (
         "people",
@@ -374,7 +374,7 @@ DOMAIN_KEYWORDS = {
         "responsable",
         "equipo",
         "integración",
-        "integracion",
+        "integracion"
     ),
     "engineering": (
         "engineering",
@@ -386,7 +386,7 @@ DOMAIN_KEYWORDS = {
         "entorno de desarrollo",
         "pull request",
         "git",
-        "github",
+        "github"
     ),
     "sales": (
         "sales",
@@ -397,7 +397,7 @@ DOMAIN_KEYWORDS = {
         "pipeline",
         "oportunidad",
         "reunión comercial",
-        "reunion comercial",
+        "reunion comercial"
     ),
     "operations": (
         "operations",
@@ -407,15 +407,15 @@ DOMAIN_KEYWORDS = {
         "proveedor",
         "logística",
         "logistica",
-        "procedimiento",
-    ),
+        "procedimiento"
+    )
 }
 
 # Para peticiones sobre días concretos
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
 PATRONES_DOMINIO_ADICIONALES = (
     r"\bdia\s+[1-5]\b",
-    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",
+    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b"
 )
 
 
@@ -434,7 +434,7 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
     "sales": "manager",
     "operations": "manager",
     "general": "people",
-    "out_of_scope": None,
+    "out_of_scope": None
 }
 
 
@@ -505,7 +505,7 @@ PATRONES_SOSPECHOSOS = (
     "mensaje del sistema",
     "prompt del sistema",
     "developer mode",
-    "jailbreak",
+    "jailbreak"
 )
 
 # Permiten detectar texto separado con espacios o signos,
@@ -521,7 +521,7 @@ FIRMAS_INYECCION_COMPACTAS = (
     "revelasystemprompt",
     "muestrapromptdelsistema",
     "developermode",
-    "jailbreak",
+    "jailbreak"
 )
 
 # Patrones con REGEX para tener más flexibilidad
@@ -569,7 +569,7 @@ PATRONES_INYECCION = (
         r"\b(copia|vuelca|exporta|imprime|revela)\b"
         r".{0,100}\b(documentos internos|base de conocimiento|"
         r"contexto completo|archivo json|faq completas)\b"
-    ),
+    )
 )
 
 # SOLICITUDES/ENVIOS DE DATOS SENSIBLES
@@ -589,7 +589,7 @@ PATRONES_SENSIBLES_POR_CODIGO = {
         (
             r"\b(cobra|gana)\b.{0,60}\b(manager|jefe|companero|"
             r"companera|empleado|empleada)\b"
-        ),
+        )
     ),
     # consultas relacionadas con contraseñas, secretos, accesos...
     "credentials": (
@@ -597,7 +597,7 @@ PATRONES_SENSIBLES_POR_CODIGO = {
             r"\b(contrasena|password|token|api key|clave de acceso|"
             r"credencial|credenciales|secreto)\b"
             r".{0,40}\b(wifi|cuenta|acceso)"
-        ),
+        )
     ),
     # solicitudes de datos personales: identificación, dirección, contacto, datos médicos...
     "personal_data": (
@@ -617,8 +617,8 @@ PATRONES_SENSIBLES_POR_CODIGO = {
             r".{0,60}\b(cliente|clientes|participante|participantes|"
             r"empleado|empleados|companero|companeros)\b"
             r".{0,100}\b(extrae|exporta|comparte|revela)\b"
-        ),
-    ),
+        )
+    )
 }
 
 # PATRONES FUERA DE DOMINIO
@@ -641,7 +641,7 @@ PATRONES_FUERA_DE_DOMINIO = (
         r"\b(escribe|redacta|genera|crea)\b.{0,60}"
         r"\b(poema|cuento|historia|cancion|codigo|programa|ensayo|receta)\b"
     ),
-    r"\b(cuentame|dime)\b.{0,30}\b(chiste|adivinanza)\b",
+    r"\b(cuentame|dime)\b.{0,30}\b(chiste|adivinanza)\b"
 )
 
 # REFERENCIAS INTERNAS
@@ -655,7 +655,7 @@ PATRONES_REFERENCIA_INTERNA = (
         # referencias a políticas, normas y procedimientos internos
         r"\b(empresa|politica interna|norma interna|"
         r"ley interna|procedimiento interno)\b"
-    ),
+    )
 )
 
 # POCA INFORMACION PARA SEGURIDAD
@@ -699,7 +699,7 @@ TERMINOS_POCO_INFORMATIVOS_SEGURIDAD = frozenset(
         "tiene",
         "todos",
         "tu",
-        "usar",
+        "usar"
     }
 )
 
@@ -724,7 +724,7 @@ PATRONES_FUGA_SALIDA = (
     # empieza por AIza
     # [0-9A-Za-z_-] cualquier caracter del 0 al 9, de la A a la Z (también en minúsculas), y _ y -
     # {20,} de ese bloque debe haber mínimo 20 caracteres
-    r"\bAIza[0-9A-Za-z_-]{20,}\b",
+    r"\bAIza[0-9A-Za-z_-]{20,}\b"
 )
 
 # ============================================================
@@ -808,5 +808,5 @@ MENSAJES_SEGURIDAD = {
     "unsafe_output": (
         "No he podido generar una respuesta verificable con la documentación "
         "autorizada. Consulta con el departamento correspondiente."
-    ),
+    )
 }
