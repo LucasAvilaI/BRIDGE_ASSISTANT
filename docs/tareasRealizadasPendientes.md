@@ -71,22 +71,22 @@ Se importa `validar_respuesta_estructurada`, pero no existe.
 | [ ] | CTX-04 | P1 | “¿Qué hago el día 3?” selecciona documentos arbitrarios por coincidencias numéricas y genéricas. | El día simulado no dirige la recuperación. | Añadir selección específica por día y departamento; no depender del número `3` como token general. |
 | [ ] | CTX-05 | P1 | No valida campos obligatorios de documentos, FAQ ni empleados. | Un JSON parcialmente mal formado puede fallar tarde o producir contexto incoherente. | Añadir validadores de fuentes al cargar: IDs únicos, strings requeridos, listas de tags y referencias `doc_id` existentes. |
 | [ ] | CTX-06 | P1 | No existe control explícito de acceso por departamento. | Una consulta puede recuperar contenido de otro departamento. | Para el reto, definir documentos globales y documentos departamentales; excluir los ajenos salvo que el caso de uso lo autorice. |
-| [ ] | CTX-07 | P2 | Duplica normalización con `validators.py`. | Posibles resultados diferentes entre recuperación y seguridad. | Mantener dos funciones solo si se documenta que la normalización de seguridad es más fuerte; compartir pruebas, no necesariamente código. |
+| [x] | CTX-07 | P2 | Duplica normalización con `validators.py`. | Posibles resultados diferentes entre recuperación y seguridad. | Mantener dos funciones solo si se documenta que la normalización de seguridad es más fuerte; compartir pruebas, no necesariamente código. **SE DECIDE UTILIZAR NORMALIZAR_TEXTO_SEGURIDAD** |
 | [ ] | CTX-08 | P2 | `cargar_JSON` es un alias temporal. | Ruido y deuda técnica. | Eliminar tras corregir consumidores. |
-| [ ] | CTX-09 | P2 | Los límites no validan tipos dentro de `seleccionar_faq`/`seleccionar_documentos`. | Un valor no entero puede lanzar error no controlado. | Validar en la frontera de configuración y conservar asserts simples en contexto. |
+| [x] | CTX-09 | P2 | Los límites no validan tipos dentro de `seleccionar_faq`/`seleccionar_documentos`. | Un valor no entero puede lanzar error no controlado. | Validar en la frontera de configuración y conservar asserts simples en contexto. |
 
 ### `validators.py`
 
 | v | ID | Severidad | Hallazgo | Consecuencia | Corrección |
 |---|---|---|---|---|---|
-| [ ] | VAL-01 | P0 | El patrón de credenciales rompe `_coincide_algun_patron`. | Ninguna entrada legítima supera la primera puerta. | Corregir config y añadir validación al importar: todos los valores deben ser `tuple[str, ...]`. |
+| [x] | VAL-01 | P0 | El patrón de credenciales rompe `_coincide_algun_patron`. | Ninguna entrada legítima supera la primera puerta. | Corregir config y añadir validación al importar: todos los valores deben ser `tuple[str, ...]`. |
 | [ ] | VAL-02 | P1 | Todos los patrones fuera de dominio se devuelven como `external_participant`. | Mensajes de rechazo incorrectos. | Clasificar por grupos y devolver `out_of_scope` para contenido general. |
 | [ ] | VAL-03 | P1 | `validar_salida_segura()` permite omitir `document_ids`, `faq_ids`, `needs_escalation` y `escalation_department`. | Una salida no cumple `REQUIRED_RESPONSE_FIELDS` pero se acepta. | Ejecutar primero una validación estructural completa; después las reglas de seguridad. |
 | [ ] | VAL-04 | P1 | Solo comprueba que IDs devueltos sean subconjunto, no que el texto esté respaldado. | El modelo puede inventar una política y citar un ID autorizado. | Mantener la comprobación de IDs y evaluar fidelidad en tests/benchmark; opcionalmente exigir al menos un ID cuando `in_scope=True`. |
 | [ ] | VAL-05 | P1 | No se valida coherencia entre `needs_escalation` y `escalation_department`. | Contratos contradictorios. | Si escala, exigir departamento permitido; si no escala, exigir `None` o cadena vacía acordada. |
 | [ ] | VAL-06 | P1 | No se valida coherencia entre categoría externa y contexto/categoría preliminar. | El modelo puede devolver una categoría válida pero incongruente. | Definir una regla tolerante: categoría externa debe ser la preliminar o una categoría compatible. |
 | [ ] | VAL-07 | P1 | El rechazo `in_scope=False` se etiqueta siempre `undocumented`. | Puede ocultar un `out_of_scope` real del modelo. | Usar la categoría y un campo de motivo estructurado; no inferir todo desde un booleano. |
-| [ ] | VAL-08 | P2 | Importa constantes no usadas: `DOMINIO_KEYWORDS`, `MAX_OUTPUT_WORDS`, modos. | Ruido y acoplamiento. | Eliminar imports no utilizados. |
+| [x] | VAL-08 | P2 | Importa constantes no usadas: `DOMINIO_KEYWORDS`, `MAX_OUTPUT_WORDS`, modos. | Ruido y acoplamiento. | Eliminar imports no utilizados. |
 | [ ] | VAL-09 | P2 | `_resultado_validacion()` accede a `MENSAJES_SEGURIDAD[codigo]`. | Un código nuevo no registrado provoca `KeyError`. | Validar códigos en tests y usar un mensaje interno de fallback solo para error de programación. |
 | [ ] | VAL-10 | P1 | Cobertura de inyección reducida respecto al documento original: faltan varias variantes inglesas y etiquetas. | Falsos negativos evitables en los casos del benchmark. | Recuperar los patrones previstos, pero respaldarlos con tests; no aumentar regex sin casos verificables. |
 | [ ] | VAL-11 | P1 | La detección de datos sensibles no distingue consulta de soporte de solicitud de secreto. | “¿Cómo recupero mi contraseña de Slack?” puede pasar o bloquear según redacción, sin política clara. | Definir intención: revelar/mostrar secreto se bloquea; recuperar/restablecer se deriva a IT. |
@@ -421,10 +421,7 @@ Tareas:
 5. Añadir `build_secure_system_instruction()` y `build_secure_turn_contents()` en colaboración con Ale.
 6. Completar validación de salida sobre un schema ya validado.
 7. Validar fuentes de chat y checklist.
-8. Crear cinco casos trampa propios.
-9. Crear demo seguro vs vulnerable y contador de invocaciones.
-10. Añadir pruebas de que una entrada/salida bloqueada no entra en historial.
-11. Documentar límites reales y falsos positivos conocidos.
+8. Crear demo seguro vs vulnerable y contador de invocaciones.
 
 **Criterio de aceptación:** todos los casos trampa bloquean antes de `count_tokens()` en seguro y autorizan una llamada en vulnerable.
 
