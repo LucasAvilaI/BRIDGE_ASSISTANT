@@ -5,7 +5,7 @@ Responde a: ¿Cómo se consultan y validan esos modelos?
 Proporciona el puente de lógica sin duplicidades de constantes ni lógica compleja.
 """
 
-from programa.model_registry import MODELS
+from model_registry import MODELS
 
 
 def obtener_modelo(model_key: str) -> dict:

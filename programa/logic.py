@@ -924,17 +924,21 @@ def preparar_turno_con_modo(
 
         # si no se autoriza
         if not validacion_entrada["permitido"]:
+            # PRINT DEBUG PARA BENCHMARK
+            print(
+                f"DEBUG: Bloqueado. Código: {validacion_entrada.get('codigo')}")
+
             _registrar_evento_seguridad(
                 estado=estado,
                 validacion=validacion_entrada,
                 consulta=consulta,
             )
 
-            return crear_respuesta_controlada(
-                validacion=validacion_entrada,
-                modo_seguridad=modo_seguridad,
-                modelo_invocado=False,
-            )
+        return crear_respuesta_controlada(
+            validacion=validacion_entrada,
+            modo_seguridad=modo_seguridad,
+            modelo_invocado=False,
+        )
 
     # 3. Preparación del turno (Común para ambos modos)
     # si autoriza (o modo vulnerable)

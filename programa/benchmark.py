@@ -5,21 +5,32 @@ Este script automatiza el paso de baterías de prueba (incluyendo casos trampa)
 bajo diferentes condiciones, midiendo latencia, costos y calidad de respuesta.
 """
 
-import json
-import time
-
-# 1. Rutas e inicializaciones desde la única fuente de verdad (config.py)
-from programa.config import (
+from model_utils import obtener_modelo
+from model_registry import MODELS
+from logic import preparar_turno_con_modo
+from config import (
+    OUTPUT_DIR,
     PREGUNTAS_BENCHMARK_PATH,
     RESULTADOS_BENCHMARK_PATH,
     REQUIRED_RESPONSE_FIELDS
 )
-from programa.model_registry import MODELS
-from programa.model_utils import obtener_modelo
+from utils.console import log_test_header, log_result
+import json
+import time
+import sys
+import os  # <-- Importante para os.path y os.makedirs
+from datetime import date
+from pathlib import Path
 
-# Importación preventiva y segura de los validadores de Modo Seguro
+# Añadimos la carpeta 'programa' al path de búsqueda de Python
+# Esto permite que los otros scripts dentro de 'programa' se encuentren entre sí
+sys.path.append(str(Path(__file__).resolve().parent))
+
+# Los imports que dependen de esa estructura:
+
+# Importación segura de validadores
 try:
-    from programa.validators import validar_respuesta_estructurada
+    from validators import validar_respuesta_estructurada
     ROBUSTEZ_DISPONIBLE = True
 except ImportError:
     ROBUSTEZ_DISPONIBLE = False
@@ -42,6 +53,7 @@ def calcular_costo(tokens_input: int, tokens_output: int, model_key: str) -> flo
 
 def estructurar_resultado_benchmark(
     pregunta_id: int,
+    categoria_esperada: str,
     model_key: str,
     latencia: float,
     costo: float,
@@ -55,6 +67,7 @@ def estructurar_resultado_benchmark(
     """
     return {
         "pregunta_id": pregunta_id,
+        "categoria": categoria_esperada,
         "modelo": model_key,
         "latencia_segundos": latencia,
         "costo_dolares": costo,
@@ -75,26 +88,87 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
     for item in preguntas:
         # Extraemos el prompt y gestionamos casos donde el campo sea None o falte
         prompt = item.get("prompt")
+        pregunta_id = item.get("id")
+        categoria_esperada = item.get("categoria_esperada")
         if not prompt:  # Si el prompt es None o está vacío, saltamos esta iteración
             print(
                 f"⚠️ Saltando pregunta ID {item.get('id', 'desconocido')} por falta de contenido.")
             continue
 
-        pregunta_id = item.get("id")
-        categoria_esperada = item.get("categoria_esperada")
+        # 1. Visualización del inicio de prueba
+        log_test_header(f"Pregunta {item.get('id')}", model_key)
 
-        # Simulación del tiempo de respuesta del LLM
+        # 2. Llamada REAL al orquestador
         inicio = time.time()
-        # TO_DO
-        # (Aquí se integrará la llamada real a gemini_client en el futuro)
+
+        # Preparar los datos mínimos necesarios para que la función no falle
+        # Si son pruebas, puedes usar diccionarios vacíos o de prueba:
+        estado_mock = {"historial": []}
+        empleado_mock = {"id": 1, "nombre": "Test"}
+        empresa_mock = {"id": 1, "nombre": "Bridge"}
+        documentos_mock = []
+        faqs_mock = []
+
+        # Aquí invocamos al orquestador preparar_turno_con_modo
+        resultado_orquestador = preparar_turno_con_modo(
+            estado=estado_mock,
+            consulta=prompt,
+            empleado=empleado_mock,
+            empresa=empresa_mock,
+            documentos=documentos_mock,
+            faqs=faqs_mock,
+            fecha_referencia=date(2026, 7, 17),  # Fecha fija para consistencia
+            modo_seguridad="seguro"
+        )
         latencia = round(time.time() - inicio, 4)
+
+       # 3. Mapeo de resultados
+        # Primero verificamos si el orquestador permitió la llamada
+        permitido_por_orquestador = resultado_orquestador.get(
+            "llamar_modelo", False)
+
+        # Inicializamos variables de control
+        valida_robustez = permitido_por_orquestador
+        cumple_esquema = permitido_por_orquestador
+
+        if ROBUSTEZ_DISPONIBLE and permitido_por_orquestador:
+            try:
+                # Validamos solo si el orquestador permitió pasar
+                validar_respuesta_estructurada(resultado_orquestador)
+                cumple_esquema = True
+            except Exception as e:
+                print(f"❌ Error de validación de esquema: {e}")
+                cumple_esquema = False
+                # Si falla el esquema, marcamos la robustez como False
+                valida_robustez = False
 
         # Simulación del volumen de tokens procesados
         tokens_in = len(prompt.split()) * 2
         tokens_out = 150
-
         costo_estimado = calcular_costo(tokens_in, tokens_out, model_key)
 
+        # 4. Registro y Feedback visual
+        log_result("PASS" if valida_robustez else "FAIL",
+                   f"Latencia: {latencia}s")
+
+        resultado_normalizado = estructurar_resultado_benchmark(
+            pregunta_id=pregunta_id,
+            categoria_esperada=categoria_esperada,
+            model_key=model_key,
+            latencia=latencia,
+            costo=costo_estimado,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            valida_robustez=valida_robustez,
+            cumple_esquema=cumple_esquema
+        )
+        resultados.append(resultado_normalizado)
+
+    return resultados
+
+
+"""    
+        RESPUESTA MOCK ELIMINADA TRAS APLICAR RESPUESTA ORQUESTADOR
         # 2. Esquema de respuesta dinámico a partir de config.py (Single Source of Truth)
         respuesta_mock = {campo: None for campo in REQUIRED_RESPONSE_FIELDS}
         respuesta_mock["in_scope"] = True
@@ -115,21 +189,7 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
             except Exception:
                 valida_robustez = False
                 cumple_esquema = False  # Ajustable según el tipo de excepción lanzada
-
-        # 4. Estructuración y registro del resultado
-        resultado_normalizado = estructurar_resultado_benchmark(
-            pregunta_id=pregunta_id,
-            model_key=model_key,
-            latencia=latencia,
-            costo=costo_estimado,
-            tokens_in=tokens_in,
-            tokens_out=tokens_out,
-            valida_robustez=valida_robustez,
-            cumple_esquema=cumple_esquema
-        )
-        resultados.append(resultado_normalizado)
-
-    return resultados
+"""
 
 
 def ejecutar_benchmark():
@@ -175,4 +235,13 @@ def ejecutar_benchmark():
 
 
 if __name__ == "__main__":
+    # 1. Asegurar la existencia del directorio de salida para los reportes
+    if not OUTPUT_DIR.exists():
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 2. Ejecutar el proceso de evaluación comparativa del benchmark
+    # Esta función iterará sobre los modelos registrados y los casos de prueba
     ejecutar_benchmark()
+
+    # 3. El informe consolidado se guardará automáticamente en RESULTADOS_BENCHMARK_PATH
+    # (definido en config.py dentro de /programa/output/)
