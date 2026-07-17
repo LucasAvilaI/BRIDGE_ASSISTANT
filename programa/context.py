@@ -305,6 +305,16 @@ def seleccionar_faq(faqs: list[dict], consulta: str, max_entradas: int = MAX_CON
     al documento principal mediante el campo doc_id.
     """
 
+    # Contrato interno:
+    # logic.py debe haber validado este límite antes de llegar
+    # a la capa de contexto.
+    assert (
+        isinstance(max_entradas, int)
+        and not isinstance(max_entradas, bool)
+        and max_entradas >= 0
+    ), ("'max_entradas' debe ser un entero no negativo.")
+
+
     validar_lista_diccionarios(faqs, "faq_onboarding.json")
 
     if (not isinstance(consulta, str) or not consulta.strip()):
@@ -442,6 +452,14 @@ def seleccionar_documentos(
     Los documentos constituyen la fuente principal y autorizada
     para construir la respuesta.
     """
+    # Contrato interno:
+    # logic.py debe haber validado este límite antes de llegar
+    # a la capa de contexto.
+    assert (
+        isinstance(max_documentos, int)
+        and not isinstance(max_documentos, bool)
+        and max_documentos >= 0
+    ), ("max_documentos debe ser un entero no negativo.")
 
     validar_lista_diccionarios(documentos, "onboarding_docs.json")
 
@@ -517,6 +535,13 @@ def combinar_documentos(
     Los documentos asociados a una FAQ tienen prioridad para
     evitar que desaparezcan al aplicar el límite máximo.
     """
+
+    assert (
+        isinstance(limite, int)
+        and not isinstance(limite, bool)
+        and limite >= 0
+    ), ("'limite' debe ser un entero no negativo.")
+
 
     if limite <= 0:
         return []

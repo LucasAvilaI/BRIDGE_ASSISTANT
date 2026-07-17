@@ -58,6 +58,18 @@ TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
 MAX_TOKENS_INPUT = 8_000
 
+REQUIRED_RESPONSE_FIELDS = frozenset(
+    {
+        "in_scope",
+        "category",
+        "answer",
+        "document_ids",
+        "faq_ids",
+        "needs_escalation",
+        "escalation_department"
+    }
+)
+
 JSON_SCHEMA_HINT = """
 Devuelve exclusivamente un objeto JSON válido con esta estructura:
 
