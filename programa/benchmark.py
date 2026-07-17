@@ -78,7 +78,7 @@ def estructurar_resultado_benchmark(
     }
 
 
-def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
+def ejecutar_evaluacion_modelo(model_key: str, preguntas: list, modo_seguridad: str = "vulnerable") -> list:
     """
     Simula la ejecución de la batería de pruebas para un modelo específico,
     calculando costos, latencias y validaciones.
@@ -103,23 +103,42 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list) -> list:
 
         # Preparar los datos mínimos necesarios para que la función no falle
         # Si son pruebas, puedes usar diccionarios vacíos o de prueba:
-        estado_mock = {"historial": []}
-        empleado_mock = {"id": 1, "nombre": "Test"}
+        estado_mock = {"historial": [], "messages": [], "turnos": 0}
+        empleado_mock = {"id": 1, "nombre": "Test",
+                         "fecha_inicio": "2026-01-01"}
         empresa_mock = {"id": 1, "nombre": "Bridge"}
-        documentos_mock = []
-        faqs_mock = []
+        documentos_mock = [
+            {"titulo": "Manual de Bienvenida", "contenido": "Bienvenido a Bridge."},
+            {"titulo": "Política de Seguridad",
+                "contenido": "No compartir contraseñas."}
+        ]
+        faq_onboarding_mock = [
+            {"pregunta": "¿Cómo accedo a GitHub?",
+                "respuesta": "Usa tu cuenta corporativa."},
+            {"pregunta": "¿Qué hacer el día 1?",
+                "respuesta": "Revisar el manual de bienvenida."}
+        ]
 
-        # Aquí invocamos al orquestador preparar_turno_con_modo
-        resultado_orquestador = preparar_turno_con_modo(
-            estado=estado_mock,
-            consulta=prompt,
-            empleado=empleado_mock,
-            empresa=empresa_mock,
-            documentos=documentos_mock,
-            faqs=faqs_mock,
-            fecha_referencia=date(2026, 7, 17),  # Fecha fija para consistencia
-            modo_seguridad="seguro"
-        )
+        print(f"DEBUG: Intentando ejecutar turno con modo: {modo_seguridad}")
+        try:
+            print(f"DEBUG: Llamando al orquestador con modo: {modo_seguridad}")
+            resultado_orquestador = preparar_turno_con_modo(
+                estado=estado_mock,
+                consulta=prompt,
+                empleado=empleado_mock,
+                empresa=empresa_mock,
+                documentos=documentos_mock,
+                faqs=faq_onboarding_mock,
+                fecha_referencia=date(2026, 7, 17),
+                modo_seguridad=modo_seguridad
+            )
+            # <-- Esto nos dirá si es None
+            print(f"DEBUG: Resultado recibido: {resultado_orquestador}")
+        except Exception as e:
+            import traceback
+            print("--- ERROR DETECTADO ---")
+            traceback.print_exc()
+            resultado_orquestador = {}
         latencia = round(time.time() - inicio, 4)
 
        # 3. Mapeo de resultados

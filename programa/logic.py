@@ -717,9 +717,9 @@ def finalizar_turno(
 
         respuesta = resultado_validado["answer"].strip()
 
-        append_user(estado, consulta,)
+        append_user(estado, consulta)
 
-        append_assistant(estado, respuesta,)
+        append_assistant(estado, respuesta)
 
     except (TypeError, ValueError) as error:
         return respuesta_error(
@@ -744,56 +744,31 @@ def finalizar_turno(
 # ROBUSTEZ Y SEGURIDAD
 # ============================================================
 
-# añade al diccionario del estado los "eventos_seguridad"
+
 def _registrar_evento_seguridad(
     estado: dict,
-    validacion: dict,   # resultado devuelto por las funciones validar_entrada_segura() | validar_contexto_seguro() | validar_salida_segura()
-    consulta: Any,      # input del usuario
+    validacion: dict,
+    consulta: Any,
 ) -> None:
-    """
-    Registra metadatos mínimos sin conservar el ataque completo.
+    """Registra metadatos del evento sin conservar la consulta."""
 
-    Esta lista no forma parte de state["messages"] y, por tanto,
-    nunca entra en el historial enviado al modelo.
-
-    Parámetros:
-    - estado: diccionario del estado de la sesión
-    - validacion: resultado de las funciones `validar_entrada_segura()` |
-                  `validar_contexto_seguro()` | `validar_salida_segura()`
-    - consulta: input del usuario
-
-    Tiene como objetivo modificar directamente el diccionario del estado.
-    """
     if not isinstance(estado, dict):
         return
 
-    # si no existe crea la lista vacía y la devuelve
-    # si existe no sustituye, recupera la lista existente
-    eventos = estado.setdefault("eventos_seguridad", [],)
+    eventos = estado.get("eventos_seguridad")
 
-    # comprobar que realmente es una lista y si no
-    # se reemplaza lo inválido por una lista
     if not isinstance(eventos, list):
-        estado["eventos_seguridad"] = []
+        eventos = []
 
-    longitud_consulta = 0
+    nuevo_evento = {
+        "fase": validacion.get("fase"),
+        "codigo": validacion.get("codigo"),
+        "longitud_consulta": (
+            len(consulta) if isinstance(consulta, str) else 0
+        ),
+    }
 
-    # calcula la longitud del input si es una cadena de texto
-    if isinstance(consulta, str):
-        longitud_consulta = len(consulta)
-
-    # añade el evento a una lista sin guardar el texto del input
-    # si es un ataque o introducción de información sensible
-    # se evita guardarlo
-    eventos.append(
-        {
-            "fase": validacion.get("fase"),
-            "codigo": validacion.get("codigo"),
-            "longitud_consulta": longitud_consulta,
-        }
-    )
-
-    # Evita que el registro crezca sin límite almacenando los últimos 20.
+    eventos.append(nuevo_evento)
     estado["eventos_seguridad"] = eventos[-20:]
 
 
@@ -820,13 +795,13 @@ def crear_respuesta_controlada(
 
     Args:
         - validacion: resultado producido por las funciones de validación
-                      validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
+        validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
 
         - modo_seguridad: modo activo al producirse la respuesta
-                          seguro | vulnerable
+        seguro | vulnerable
 
         - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
-                           por defecto `False`. Los bloqueos deben producirse antes
+        por defecto `False`. Los bloqueos deben producirse antes
 
     Devuelve un diccionario con el contrato estándar.
     No modifica directamente el estado.
@@ -922,11 +897,11 @@ def preparar_turno_con_modo(
     if modo_seguridad == "seguro":
         validacion_entrada = validar_entrada_segura(consulta)
 
-        # si no se autoriza
         if not validacion_entrada["permitido"]:
-            # PRINT DEBUG PARA BENCHMARK
             print(
-                f"DEBUG: Bloqueado. Código: {validacion_entrada.get('codigo')}")
+                "DEBUG: Bloqueado. "
+                f"Código: {validacion_entrada.get('codigo')}"
+            )
 
             _registrar_evento_seguridad(
                 estado=estado,
@@ -934,11 +909,11 @@ def preparar_turno_con_modo(
                 consulta=consulta,
             )
 
-        return crear_respuesta_controlada(
-            validacion=validacion_entrada,
-            modo_seguridad=modo_seguridad,
-            modelo_invocado=False,
-        )
+            return crear_respuesta_controlada(
+                validacion=validacion_entrada,
+                modo_seguridad=modo_seguridad,
+                modelo_invocado=False,
+            )
 
     # 3. Preparación del turno (Común para ambos modos)
     # si autoriza (o modo vulnerable)

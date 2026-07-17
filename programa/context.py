@@ -375,7 +375,7 @@ def seleccionar_faq(
         )
 
         if puntuacion >= MIN_FAQ_SCORE:
-            faqs_puntuadas.append(puntuacion, faq)
+            faqs_puntuadas.append((puntuacion, faq))
 
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
@@ -520,7 +520,7 @@ def seleccionar_documentos(
         )
 
         if puntuacion >= MIN_DOCUMENT_SCORE:
-            documentos_puntuados.append(puntuacion, documento)
+            documentos_puntuados.append((puntuacion, documento))
 
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
