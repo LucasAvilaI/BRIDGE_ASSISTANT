@@ -147,3 +147,95 @@ Se añade una sección para implementar la capa robusta y de seguridad en la que
 - Función `crear_respuesta_controlada()`. Al bloquearse un input antes de hacer la llamada al modelo se le devuelve al usuario un mensaje en función del motivo por el que ha sido bloqueado. Adapta el diccionario de todo el flujo a otro diseño en el que se maneja información necesaria para mostrar al usuario y dar el permiso para poder hacer, o no, la llamada al modelo. También se puede bloquear la respuesta que da el modelo por diferentes motivos y esta función es la encargada de transformar el diccionario para dar el mensaje al usuario.
 - Funciones para preparar y finalizar turno. Ya están en la lógica como `preparar_turno()` y `finalizar_turno()`, pero se les añade una función envolvente para poderlo con diferentes modos (seguridad activada o no). `preparar_turno_con_modo()` recibe la información necesaria y utiliza las funciones de validaciones para comprobar el input del usuario y el contexto antes de hacer la llamada. Estas validaciones sin la seguridad activa directamente se las salta y se queda únicamente con las validaciones básicas. `finalizar_turno_con_modo()` envuelve a `finalizar_turno()` para validar la respuesta antes de mostrársela al usuario. En modo vulnerable no hace esa validación extra.
 
+## AÑADIDO A `prompts.py`
+
+- build_secure_prompt
+- build_secure_system_instruction
+- build_secure_turn_contents
+
+## AÑADIDO A `gemini_client.py`
+
+- safe_generate_with_system_instruction
+
+## ADAPTACIONES EN `main.py`
+
+- Cambios en `ejecutar_sesion()` para utilizar las funciones envolventes de preparar y finalizar turno.
+- demo_vulnerable_vs_seguro -> funición para ejecutar llamada con ambos modos en las mismas condiciones.
+
+## COMO FUNCIONA CADA MODO
+
+### Modo vulnerable
+
+El modo vulnerable es deliberadamente inseguro, pero conserva la arquitectura común:
+
+1. recibe la misma consulta;
+2. llama a `preparar_turno()`;
+3. omite `validar_entrada_segura()` y `validar_contexto_seguro()`;
+4. devuelve `llamar_modelo = True` incluso si el contexto está vacío o la consulta es sensible;
+5. el adaptador utiliza `build_vulnerable_prompt()`;
+6. no aplica la puerta de salida.
+
+No debe inventarse una vulnerabilidad absurda como incluir una contraseña real. El fallo demostrable es confiar en la entrada, mezclarla con las instrucciones y enviar preguntas no autorizadas al modelo.
+
+### Modo seguro
+
+1. valida antes de preparar;
+2. prepara sin LLM solo cuando el texto supera la primera puerta;
+3. comprueba que las fuentes seleccionadas sostienen el tema;
+4. devuelve mensajes fijos ante un bloqueo;
+5. llama a Gemini solo con `llamar_modelo is True`;
+6. separa `system_instruction` de `contents`;
+7. valida la respuesta antes de guardarla.
+
+### Quién puede elegir el modo
+
+El empleado no debe poder escribir un comando para cambiar a vulnerable. `MODO_SEGURIDAD_DEFAULT` debe quedar en `"seguro"`. El modo vulnerable solo se pasa explícitamente desde una demo o una prueba controlada.
+
+## CREADO `casos_trampa.json`
+
+## Riesgos y límites reales
+
+### No existe una expresión regular que bloquee toda inyección posible
+
+La petición “evitar cualquier tipo de prompt injection” no puede garantizarse matemáticamente solo con una lista de frases. Un atacante puede usar sinónimos, otros idiomas, caracteres homógrafos, texto codificado o instrucciones indirectas.
+
+La defensa propuesta es por capas:
+
+1. patrones y normalización Unicode;
+2. allowlist de dominio;
+3. selección limitada de contexto;
+4. rechazo de información no documentada;
+5. separación real mediante `system_instruction`;
+6. ausencia de secretos y herramientas peligrosas en el prompt;
+7. validación de salida;
+8. pruebas adversarias repetibles.
+
+Para el Team Challenge cubre de forma determinista las categorías exigidas. Para producción habría que añadir autenticación, autorización por rol, control de acceso a documentos, rate limiting, observabilidad, revisión periódica de falsos positivos y pruebas de red team.
+
+### Regex no sustituye al control de acceso
+
+Aunque el empleado formule una pregunta interna, no debería recibir automáticamente cualquier documento interno. El proyecto actual solo selecciona documentación común de onboarding. Si en el futuro se añaden documentos restringidos por departamento, `context.py` deberá filtrar primero por permisos del empleado y después por relevancia.
+
+### Los filtros de seguridad del proveedor no resuelven este dominio
+
+Los filtros generales de contenido del modelo están orientados a categorías de daño. No sustituyen las reglas empresariales de salario, credenciales, participantes externos o políticas no documentadas. Esas decisiones deben permanecer en Python.
+
+## PROCESO DE IMPLEMENTACION
+
+La implementación puede considerarse terminada cuando se cumpla todo lo siguiente:
+
+- [x] El modo por defecto es `seguro`.
+- [x] El usuario final no puede activar el modo vulnerable.
+- [x] Una entrada vacía no llega a `count_tokens()`.
+- [x] Una inyección no llega a `count_tokens()` ni a `generate_content()`.
+- [x] Salarios, bonus, nóminas y credenciales reciben respuestas fijas.
+- [ ] Un participante externo recibe la derivación correcta.
+- [ ] Una política sin apoyo documental no se inventa.
+- [ ] La baja ambigua explica los dos caminos sin mezclarlos.
+- [ ] Una entrada bloqueada no entra en `state["messages"]`.
+- [x] El prompt seguro utiliza como máximo tres documentos y dos FAQ.
+- [ ] Sistema y usuario se envían por canales separados del SDK.
+- [ ] La salida no puede citar fuentes ajenas al contexto seleccionado.
+- [ ] Los cinco casos propios prueban `llamar_modelo == False`.
+- [ ] El mismo input, en vulnerable, prueba `llamar_modelo == True`.
+- [x] No existen `main_seguro.py`, `main_vulnerable.py`, `logic_seguro.py` ni `logic_vulnerable.py`.
