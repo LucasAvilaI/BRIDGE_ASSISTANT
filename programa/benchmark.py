@@ -11,8 +11,7 @@ from logic import preparar_turno_con_modo
 from config import (
     OUTPUT_DIR,
     PREGUNTAS_BENCHMARK_PATH,
-    RESULTADOS_BENCHMARK_PATH,
-    REQUIRED_RESPONSE_FIELDS
+    RESULTADOS_BENCHMARK_PATH
 )
 from utils.console import log_test_header, log_result
 import json
@@ -184,31 +183,6 @@ def ejecutar_evaluacion_modelo(model_key: str, preguntas: list, modo_seguridad: 
         resultados.append(resultado_normalizado)
 
     return resultados
-
-
-"""    
-        RESPUESTA MOCK ELIMINADA TRAS APLICAR RESPUESTA ORQUESTADOR
-        # 2. Esquema de respuesta dinámico a partir de config.py (Single Source of Truth)
-        respuesta_mock = {campo: None for campo in REQUIRED_RESPONSE_FIELDS}
-        respuesta_mock["in_scope"] = True
-        respuesta_mock["category"] = categoria_esperada
-        respuesta_mock["answer"] = "Respuesta estructurada de simulación."
-        respuesta_mock["document_ids"] = []
-        respuesta_mock["faq_ids"] = []
-        respuesta_mock["needs_escalation"] = False
-
-        # 3. Validación de Robustez preventiva
-        valida_robustez = True
-        cumple_esquema = True
-
-        if ROBUSTEZ_DISPONIBLE:
-            try:
-                # Se asume que el validador analiza el dict de salida estructurada
-                validar_respuesta_estructurada(respuesta_mock)
-            except Exception:
-                valida_robustez = False
-                cumple_esquema = False  # Ajustable según el tipo de excepción lanzada
-"""
 
 
 def ejecutar_benchmark():

@@ -4,6 +4,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+from validators import normalizar_texto_seguridad
+
 from config import (
     DOCUMENT_SCORE_WEIGHTS,
     FAQ_SCORE_WEIGHTS,
@@ -11,7 +13,7 @@ from config import (
     MAX_CONTEXT_FAQS,
     MIN_DOCUMENT_SCORE,
     MIN_FAQ_SCORE,
-    TRANSVERSAL_DOCUMENT_IDS,
+    TRANSVERSAL_DOCUMENT_IDS
 )
 
 
@@ -19,9 +21,7 @@ from config import (
 # CARGA Y VALIDACIÓN DE DATOS
 # ============================================================
 
-def cargar_json(
-    ruta: Path | str,
-) -> list[dict] | dict:
+def cargar_json(ruta: Path | str) -> list[dict] | dict:
     """
     Carga un archivo JSON desde disco.
 
@@ -30,38 +30,23 @@ def cargar_json(
     ruta_normalizada = Path(ruta)
 
     if not ruta_normalizada.exists():
-        raise FileNotFoundError(
-            "No se ha encontrado el archivo JSON: "
-            f"{ruta_normalizada}"
-        )
+        raise FileNotFoundError(f"No se ha encontrado el archivo JSON: {ruta_normalizada}")
 
     if not ruta_normalizada.is_file():
-        raise ValueError(
-            "La ruta indicada no corresponde a un archivo: "
-            f"{ruta_normalizada}"
-        )
+        raise ValueError(f"La ruta indicada no corresponde a un archivo: {ruta_normalizada}")
 
     try:
         with ruta_normalizada.open("r",encoding="utf-8") as archivo:
             datos = json.load(archivo)
 
     except json.JSONDecodeError as error:
-        raise ValueError(
-            "El archivo contiene un JSON no válido: "
-            f"{ruta_normalizada}"
-        ) from error
+        raise ValueError(f"El archivo contiene un JSON no válido: {ruta_normalizada}") from error
 
     except OSError as error:
-        raise OSError(
-            "No se ha podido leer el archivo JSON: "
-            f"{ruta_normalizada}"
-        ) from error
+        raise OSError(f"No se ha podido leer el archivo JSON: {ruta_normalizada}") from error
 
     if not isinstance(datos, (list, dict)):
-        raise ValueError(
-            "El JSON debe contener una lista o un diccionario: "
-            f"{ruta_normalizada}"
-        )
+        raise ValueError(f"El JSON debe contener una lista o un diccionario: {ruta_normalizada}")
 
     return datos
 
@@ -71,11 +56,7 @@ def cargar_json(
 cargar_JSON = cargar_json
 
 
-def validar_lista_diccionarios(
-    datos: Any,
-    nombre_fuente: str,
-    permitir_vacia: bool = False,
-) -> list[dict]:
+def validar_lista_diccionarios(datos: Any, nombre_fuente: str, permitir_vacia: bool = False) -> list[dict]:
     """
     Comprueba que una fuente contiene una lista de diccionarios.
 
@@ -88,10 +69,7 @@ def validar_lista_diccionarios(
         raise ValueError(f"{nombre_fuente} no puede estar vacío.")
 
     if not all(isinstance(entrada, dict) for entrada in datos):
-        raise ValueError(
-            f"Todas las entradas de {nombre_fuente} "
-            "deben ser diccionarios."
-        )
+        raise ValueError(f"Todas las entradas de {nombre_fuente} deben ser diccionarios.")
 
     return datos
 
@@ -155,21 +133,19 @@ STOPWORDS = frozenset(
         "buenas",
         "dias",
         "tardes",
-        "favor",
+        "favor"
     }
 )
 
-
-def normalizar_texto(
-    texto: str | None,
-) -> str:
-    """
+"""
+def normalizar_texto(texto: str | None) -> str:
+    
     Normaliza un texto para facilitar las comparaciones.
 
     Convierte el texto a minúsculas, elimina acentos,
     sustituye separadores por espacios y elimina espacios
     duplicados.
-    """
+    
     if texto is None:
         return ""
 
@@ -183,30 +159,19 @@ def normalizar_texto(
         if unicodedata.category(caracter) != "Mn"
     )
 
-    texto_normalizado = re.sub(
-        r"[_\-/]+",
-        " ",
-        texto_normalizado,
-    )
-
-    texto_normalizado = re.sub(
-        r"\s+",
-        " ",
-        texto_normalizado,
-    )
+    texto_normalizado = re.sub(r"[_\-/\s]+", " ", texto_normalizado)
 
     return texto_normalizado.strip()
+"""
 
 
-def extraer_palabras(
-    texto: str | None,
-) -> set[str]:
+def extraer_palabras(texto: str | None) -> set[str]:
     """
     Extrae las palabras relevantes de un texto normalizado.
     """
-    texto_normalizado = normalizar_texto(texto)
+    texto_normalizado = normalizar_texto_seguridad(texto)
 
-    palabras = re.findall(r"\b[a-z0-9]+\b", texto_normalizado,)
+    palabras = re.findall(r"\b[a-z0-9]+\b", texto_normalizado)
 
     return {
         palabra
@@ -216,9 +181,7 @@ def extraer_palabras(
     }
 
 
-def normalizar_tags(
-    tags: Any,
-) -> set[str]:
+def normalizar_tags(tags: Any) -> set[str]:
     """
     Normaliza una colección de tags.
 
@@ -233,7 +196,7 @@ def normalizar_tags(
         if not isinstance(tag, str):
             continue
 
-        tag_normalizado = normalizar_texto(tag)
+        tag_normalizado = normalizar_texto_seguridad(tag)
 
         if tag_normalizado:
             tags_normalizados.add(tag_normalizado)
@@ -241,9 +204,7 @@ def normalizar_tags(
     return tags_normalizados
 
 
-def extraer_palabras_tags(
-    tags: Any,
-) -> set[str]:
+def extraer_palabras_tags(tags: Any) -> set[str]:
     """
     Convierte una lista de tags en un conjunto de palabras útiles.
 
@@ -262,10 +223,7 @@ def extraer_palabras_tags(
 # BÚSQUEDA DE EMPLEADOS
 # ============================================================
 
-def buscar_empleado(
-    empleados: list[dict],
-    empleado_id: str,
-) -> dict | None:
+def buscar_empleado(empleados: list[dict], empleado_id: str) -> dict | None:
     """
     Busca un empleado por su identificador.
 
@@ -274,13 +232,13 @@ def buscar_empleado(
     """
     validar_lista_diccionarios(empleados, "empleados_demo.json")
 
-    empleado_id_normalizado = normalizar_texto(empleado_id)
+    empleado_id_normalizado = normalizar_texto_seguridad(empleado_id)
 
     if not empleado_id_normalizado:
         return None
 
     for empleado in empleados:
-        identificador = normalizar_texto(empleado.get("id", ""))
+        identificador = normalizar_texto_seguridad(empleado.get("id", ""))
 
         if identificador == empleado_id_normalizado:
             return empleado
@@ -292,11 +250,7 @@ def buscar_empleado(
 # PUNTUACIÓN Y SELECCIÓN DE FAQ
 # ============================================================
 
-def puntuar_faq(
-    faq: dict,
-    palabras_pregunta: set[str],
-    pregunta_normalizada: str,
-) -> int:
+def puntuar_faq(faq: dict, palabras_pregunta: set[str], pregunta_normalizada: str) -> int:
     """
     Calcula la relevancia de una FAQ respecto a una consulta.
 
@@ -306,9 +260,10 @@ def puntuar_faq(
     - coincidencias con la respuesta corta;
     - coincidencias literales con tags compuestos.
     """
-    pregunta_faq = normalizar_texto(faq.get("pregunta", ""))
+    
+    pregunta_faq = normalizar_texto_seguridad(faq.get("pregunta", ""))
 
-    respuesta_corta = normalizar_texto(faq.get("respuesta_corta", ""))
+    respuesta_corta = normalizar_texto_seguridad(faq.get("respuesta_corta", ""))
 
     tags_normalizados = normalizar_tags(faq.get("tags", []))
 
@@ -342,17 +297,24 @@ def puntuar_faq(
     return puntuacion
 
 
-def seleccionar_faq(
-    faqs: list[dict],
-    consulta: str,
-    max_entradas: int = MAX_CONTEXT_FAQS,
-) -> list[dict]:
+def seleccionar_faq(faqs: list[dict], consulta: str, max_entradas: int = MAX_CONTEXT_FAQS) -> list[dict]:
     """
     Selecciona las FAQ más relevantes para una consulta.
 
     Las FAQ funcionan como índice de búsqueda y pueden apuntar
     al documento principal mediante el campo doc_id.
     """
+
+    # Contrato interno:
+    # logic.py debe haber validado este límite antes de llegar
+    # a la capa de contexto.
+    assert (
+        isinstance(max_entradas, int)
+        and not isinstance(max_entradas, bool)
+        and max_entradas >= 0
+    ), ("'max_entradas' debe ser un entero no negativo.")
+
+
     validar_lista_diccionarios(faqs, "faq_onboarding.json")
 
     if (not isinstance(consulta, str) or not consulta.strip()):
@@ -363,16 +325,12 @@ def seleccionar_faq(
 
     palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto(consulta)
+    pregunta_normalizada = normalizar_texto_seguridad(consulta)
 
     faqs_puntuadas: list[tuple[int, dict]] = []
 
     for faq in faqs:
-        puntuacion = puntuar_faq(
-            faq=faq,
-            palabras_pregunta=palabras_pregunta,
-            pregunta_normalizada=pregunta_normalizada,
-        )
+        puntuacion = puntuar_faq(faq, palabras_pregunta, pregunta_normalizada)
 
         if puntuacion >= MIN_FAQ_SCORE:
             faqs_puntuadas.append((puntuacion, faq))
@@ -396,7 +354,7 @@ def puntuar_documento(
     documento: dict,
     empleado: dict,
     palabras_pregunta: set[str],
-    pregunta_normalizada: str,
+    pregunta_normalizada: str
 ) -> int:
     """
     Calcula la relevancia de un documento para una consulta.
@@ -407,19 +365,19 @@ def puntuar_documento(
     El departamento y el carácter transversal solo actúan
     como factores de personalización o desempate.
     """
-    departamento_empleado = normalizar_texto(
+    departamento_empleado = normalizar_texto_seguridad(
         empleado.get("departamento", "")
     )
 
-    departamento_documento = normalizar_texto(
+    departamento_documento = normalizar_texto_seguridad(
         documento.get("departamento", "")
     )
 
-    titulo = normalizar_texto(
+    titulo = normalizar_texto_seguridad(
         documento.get("titulo", "")
     )
 
-    cuerpo = normalizar_texto(
+    cuerpo = normalizar_texto_seguridad(
         documento.get("cuerpo", "")
     )
 
@@ -486,7 +444,7 @@ def seleccionar_documentos(
     documentos: list[dict],
     consulta: str,
     empleado: dict,
-    max_documentos: int = MAX_CONTEXT_DOCUMENTS,
+    max_documentos: int = MAX_CONTEXT_DOCUMENTS
 ) -> list[dict]:
     """
     Selecciona los documentos más relevantes para la consulta.
@@ -494,7 +452,16 @@ def seleccionar_documentos(
     Los documentos constituyen la fuente principal y autorizada
     para construir la respuesta.
     """
-    validar_lista_diccionarios(documentos,"onboarding_docs.json")
+    # Contrato interno:
+    # logic.py debe haber validado este límite antes de llegar
+    # a la capa de contexto.
+    assert (
+        isinstance(max_documentos, int)
+        and not isinstance(max_documentos, bool)
+        and max_documentos >= 0
+    ), ("max_documentos debe ser un entero no negativo.")
+
+    validar_lista_diccionarios(documentos, "onboarding_docs.json")
 
     if not isinstance(empleado, dict):
         raise ValueError("El empleado debe ser un diccionario.")
@@ -507,17 +474,12 @@ def seleccionar_documentos(
 
     palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto(consulta)
+    pregunta_normalizada = normalizar_texto_seguridad(consulta)
 
     documentos_puntuados: list[tuple[int, dict]] = []
 
     for documento in documentos:
-        puntuacion = puntuar_documento(
-            documento=documento,
-            empleado=empleado,
-            palabras_pregunta=palabras_pregunta,
-            pregunta_normalizada=pregunta_normalizada,
-        )
+        puntuacion = puntuar_documento(documento, empleado, palabras_pregunta, pregunta_normalizada)
 
         if puntuacion >= MIN_DOCUMENT_SCORE:
             documentos_puntuados.append((puntuacion, documento))
@@ -537,22 +499,18 @@ def seleccionar_documentos(
 # BÚSQUEDA DE DOCUMENTOS
 # ============================================================
 
-def obtener_documento_por_id(
-    documentos: list[dict],
-    doc_id: str | None,
-) -> dict | None:
+def obtener_documento_por_id(documentos: list[dict], doc_id: str | None) -> dict | None:
     """
     Busca un documento por su identificador.
     """
+
     if not doc_id:
         return None
 
-    doc_id_normalizado = normalizar_texto(doc_id)
+    doc_id_normalizado = normalizar_texto_seguridad(doc_id)
 
     for documento in documentos:
-        identificador = normalizar_texto(
-            documento.get("id", "")
-        )
+        identificador = normalizar_texto_seguridad(documento.get("id", ""))
 
         if identificador == doc_id_normalizado:
             return documento
@@ -568,7 +526,7 @@ def combinar_documentos(
     documentos_seleccionados: list[dict],
     faqs_seleccionadas: list[dict],
     todos_documentos: list[dict],
-    limite: int = MAX_CONTEXT_DOCUMENTS,
+    limite: int = MAX_CONTEXT_DOCUMENTS
 ) -> list[dict]:
     """
     Combina los documentos seleccionados directamente y los
@@ -577,6 +535,14 @@ def combinar_documentos(
     Los documentos asociados a una FAQ tienen prioridad para
     evitar que desaparezcan al aplicar el límite máximo.
     """
+
+    assert (
+        isinstance(limite, int)
+        and not isinstance(limite, bool)
+        and limite >= 0
+    ), ("'limite' debe ser un entero no negativo.")
+
+
     if limite <= 0:
         return []
 
@@ -585,13 +551,9 @@ def combinar_documentos(
 
     # Primero se añaden los documentos referenciados por FAQ.
     for faq in faqs_seleccionadas:
-        doc_id = faq.get("doc_id"
-        )
+        doc_id = faq.get("doc_id")
 
-        documento = obtener_documento_por_id(
-            documentos=todos_documentos,
-            doc_id=doc_id,
-        )
+        documento = obtener_documento_por_id(todos_documentos, doc_id)
 
         if documento is None:
             continue
@@ -601,7 +563,7 @@ def combinar_documentos(
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto(documento_id)
+        documento_id_normalizado = normalizar_texto_seguridad(documento_id)
 
         if documento_id_normalizado in ids_incluidos:
             continue
@@ -610,7 +572,7 @@ def combinar_documentos(
 
         ids_incluidos.add(documento_id_normalizado)
 
-        if len(documentos_finales)>= limite:
+        if len(documentos_finales) >= limite:
             return documentos_finales
 
     # Después se completan las posiciones restantes con los
@@ -621,7 +583,7 @@ def combinar_documentos(
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto(documento_id)
+        documento_id_normalizado = normalizar_texto_seguridad(documento_id)
 
         if documento_id_normalizado in ids_incluidos:
             continue
@@ -630,7 +592,7 @@ def combinar_documentos(
 
         ids_incluidos.add(documento_id_normalizado)
 
-        if len(documentos_finales)>= limite:
+        if len(documentos_finales) >= limite:
             break
 
     return documentos_finales
@@ -646,7 +608,7 @@ def construir_contexto(
     documentos: list[dict],
     faqs: list[dict],
     limite_documentos: int = MAX_CONTEXT_DOCUMENTS,
-    limite_faqs: int = MAX_CONTEXT_FAQS,
+    limite_faqs: int = MAX_CONTEXT_FAQS
 ) -> dict:
     """
     Construye el contexto documental final de una interacción.
@@ -658,6 +620,7 @@ def construir_contexto(
     4. Desduplica y limita las fuentes.
     5. Devuelve las fuentes y sus metadatos.
     """
+
     validar_lista_diccionarios(documentos, "onboarding_docs.json")
 
     validar_lista_diccionarios(faqs, "faq_onboarding.json")
@@ -668,37 +631,15 @@ def construir_contexto(
     if not isinstance(consulta, str):
         raise ValueError("La consulta debe ser un string.")
 
-    faqs_seleccionadas = seleccionar_faq(
-        faqs=faqs,
-        consulta=consulta,
-        max_entradas=limite_faqs,
-    )
+    faqs_seleccionadas = seleccionar_faq(faqs, consulta, limite_faqs)
 
-    documentos_seleccionados = seleccionar_documentos(
-        documentos=documentos,
-        consulta=consulta,
-        empleado=empleado,
-        max_documentos=limite_documentos,
-    )
+    documentos_seleccionados = seleccionar_documentos(documentos, consulta, empleado, limite_documentos)
 
-    documentos_finales = combinar_documentos(
-        documentos_seleccionados=(
-            documentos_seleccionados
-        ),
-        faqs_seleccionadas=faqs_seleccionadas,
-        todos_documentos=documentos,
-        limite=limite_documentos,
-    )
+    documentos_finales = combinar_documentos(documentos_seleccionados, faqs_seleccionadas, documentos, limite_documentos)
 
-    document_ids = [
-        documento["id"] for documento in documentos_finales
-        if documento.get("id")
-    ]
+    document_ids = [documento["id"] for documento in documentos_finales if documento.get("id")]
 
-    faq_ids = [
-        faq["id"] for faq in faqs_seleccionadas
-        if faq.get("id")
-    ]
+    faq_ids = [faq["id"] for faq in faqs_seleccionadas if faq.get("id")]
 
     return {
         "empleado": empleado,
@@ -706,10 +647,7 @@ def construir_contexto(
         "faqs": faqs_seleccionadas,
         "document_ids": document_ids,
         "faq_ids": faq_ids,
-        "hay_contexto": bool(
-            documentos_finales
-            or faqs_seleccionadas
-        ),
+        "hay_contexto": bool(documentos_finales or faqs_seleccionadas)
     }
 
 

@@ -1,5 +1,6 @@
 
-from config import JSON_SCHEMA_HINT, PERFILES, SYSTEM_PROMPT
+import json
+from config import PERFILES, SYSTEM_PROMPT, JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS
 
 
 def resolver_perfil(assistant_config: dict) -> dict:
@@ -92,6 +93,8 @@ Consulta la información disponible y responde a la siguiente solicitud:
 Usuario: {user_message.strip()}
 """.strip()
 
+
+
 def build_secure_prompt(user_message: str) -> str:
     """Prompt seguro con SYSTEM fijo y delimitadores de usuario (Fase 2)."""
     return f"""{SYSTEM_PROMPT}
@@ -102,3 +105,39 @@ def build_secure_prompt(user_message: str) -> str:
 {user_message.strip()}
 --- FIN MENSAJE USUARIO ---
 """.strip()
+
+
+
+def build_secure_system_instruction() -> str:
+    """
+    Construye la instrucción privilegiada que se enviará mediante
+    system_instruction, separada de contents.
+    """
+    return f"""
+{SYSTEM_PROMPT}
+
+{REGLAS_SISTEMA_SEGURAS}
+
+Contrato de salida:
+{JSON_SCHEMA_HINT}
+""".strip()
+
+
+def build_secure_turn_contents(turno_preparado: dict) -> str:
+    """
+    Serializa únicamente el contexto seleccionado para el turno.
+
+    Todo este payload se trata como datos no privilegiados.
+    """
+
+    payload = {
+        "empleado": turno_preparado["empleado"],
+        "perfil_empleado": turno_preparado["perfil_empleado"],
+        "perfil_funcional": turno_preparado["perfil_funcional"],
+        "dia_onboarding": turno_preparado["dia_onboarding"],
+        "documentos_autorizados": turno_preparado["contexto"]["documentos"],
+        "faqs_autorizadas": turno_preparado["contexto"]["faqs"],
+        "historial_no_confiable": turno_preparado["historial"],
+        "pregunta_usuario_no_confiable": turno_preparado["consulta"]
+    }
+    return json.dumps(payload, ensure_ascii=False)
