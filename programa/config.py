@@ -37,9 +37,11 @@ VULNERABLE_CONTEXT_PATHS = [
 PREGUNTAS_BENCHMARK_PATH = DATA_DIR / "preguntas_benchmark.json"
 
 # El reporte final generado por el script (Salida)
-# Lo guardamos en la carpeta de entregables para que sea visible en la entrega final
-RESULTADOS_BENCHMARK_PATH = BASE_DIR / "entregables" / "resultados_benchmark.json"
-
+# Define output siempre en relación a la raíz
+# output está dentro de /programa
+# Rutas de salida (dentro de 'programa/output')
+OUTPUT_DIR = BASE_DIR / "programa" / "output"
+RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 
 # ============================================================
 # LLM Y BENCHMARK

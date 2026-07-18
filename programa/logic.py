@@ -559,22 +559,13 @@ def finalizar_turno(estado: dict, turno_preparado: dict, resultado_externo: dict
 # ROBUSTEZ Y SEGURIDAD
 # ============================================================
 
-# añade al diccionario del estado los "eventos_seguridad"
-def _registrar_evento_seguridad(estado: dict, validacion: dict, consulta: Any) -> None:
-    """
-    Registra metadatos mínimos sin conservar el ataque completo.
+def _registrar_evento_seguridad(
+    estado: dict,
+    validacion: dict,
+    consulta: Any,
+) -> None:
+    """Registra metadatos del evento sin conservar la consulta."""
 
-    Esta lista no forma parte de state["messages"] y, por tanto,
-    nunca entra en el historial enviado al modelo.
-
-    Parámetros:
-    - estado: diccionario del estado de la sesión
-    - validacion: resultado de las funciones `validar_entrada_segura()` |
-                  `validar_contexto_seguro()` | `validar_salida_segura()`
-    - consulta: input del usuario
-
-    Tiene como objetivo modificar directamente el diccionario del estado.
-    """
     if not isinstance(estado, dict):
         return
 
@@ -582,29 +573,18 @@ def _registrar_evento_seguridad(estado: dict, validacion: dict, consulta: Any) -
     # si existe no sustituye, recupera la lista existente
     eventos = estado.setdefault("eventos_seguridad", [])
 
-    # comprobar que realmente es una lista y si no
-    # se reemplaza lo inválido por una lista
     if not isinstance(eventos, list):
-        estado["eventos_seguridad"] = []
+        eventos = []
 
-    longitud_consulta = 0
+    nuevo_evento = {
+        "fase": validacion.get("fase"),
+        "codigo": validacion.get("codigo"),
+        "longitud_consulta": (
+            len(consulta) if isinstance(consulta, str) else 0
+        ),
+    }
 
-    # calcula la longitud del input si es una cadena de texto
-    if isinstance(consulta, str):
-        longitud_consulta = len(consulta)
-
-    # añade el evento a una lista sin guardar el texto del input
-    # si es un ataque o introducción de información sensible
-    # se evita guardarlo
-    eventos.append(
-        {
-            "fase": validacion.get("fase"),
-            "codigo": validacion.get("codigo"),
-            "longitud_consulta": longitud_consulta
-        }
-    )
-
-    # Evita que el registro crezca sin límite almacenando los últimos 20.
+    eventos.append(nuevo_evento)
     estado["eventos_seguridad"] = eventos[-20:]
 
 
@@ -627,13 +607,13 @@ def crear_respuesta_controlada(validacion: dict, modo_seguridad: str, modelo_inv
 
     Args:
         - validacion: resultado producido por las funciones de validación
-                      validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
+        validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
 
         - modo_seguridad: modo activo al producirse la respuesta
-                          seguro | vulnerable
+        seguro | vulnerable
 
         - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
-                           por defecto `False`. Los bloqueos deben producirse antes
+        por defecto `False`. Los bloqueos deben producirse antes
 
     Devuelve un diccionario con el contrato estándar.
     No modifica directamente el estado.
@@ -726,7 +706,6 @@ def preparar_turno_con_modo(
     if modo_seguridad == "seguro":
         validacion_entrada = validar_entrada_segura(consulta)
 
-        # si no se autoriza
         if not validacion_entrada["permitido"]:
             _registrar_evento_seguridad(estado, validacion_entrada, consulta)
 

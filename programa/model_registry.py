@@ -6,7 +6,7 @@ declaradas en config.py de manera limpia y sin importaciones circulares.
 """
 
 from typing import Final
-from programa.config import (
+from config import (
     MODEL_1,
     MODEL_2,
     MODEL,
