@@ -687,11 +687,6 @@ def _validar_turno_preparado(
         raise TypeError("La empresa del turno preparado debe formar parte de un diccionario."
         )
 
-        raise ValueError(
-            "Faltan campos obligatorios en el turno "
-            f"preparado: {campos}."
-        )
-
     _validar_consulta(
         turno_preparado["consulta"]
     )
