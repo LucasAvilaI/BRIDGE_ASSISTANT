@@ -426,9 +426,7 @@ def preparar_turno(
             "empresa": deepcopy(empresa_validada),
             "perfil_empleado": empleado_validado["perfil"],
             "perfil_funcional": perfil_activo,
-            "configuracion_perfil_funcional": deepcopy(
-                PERFILES[perfil_activo]
-            ),
+            "configuracion_perfil_funcional": deepcopy(PERFILES[perfil_activo]),
             "categoria_preliminar": categoria_preliminar,
             "dia_onboarding": dia_onboarding,
             "contexto": deepcopy(contexto),
@@ -476,22 +474,6 @@ def _validar_turno_preparado(
         campos = ", ".join(sorted(campos_ausentes))
 
         raise ValueError(f"Faltan campos obligatorios en el turno preparado: {campos}.")
-
-    consulta = turno_preparado.get("consulta")
-
-    _validar_consulta(consulta)
-
-    perfil_activo = turno_preparado.get("perfil_activo")
-
-    if perfil_activo not in VALID_PROFILES:
-        raise ValueError(f"Perfil activo desconocido: {perfil_activo!r}.")
-
-    categoria = turno_preparado.get("categoria_preliminar")
-
-    if categoria not in VALID_CATEGORIES:
-        raise ValueError(f"Categoría preliminar desconocida: {categoria!r}.")
-
-    dia_onboarding = turno_preparado.get("dia_onboarding")
 
     consulta = turno_preparado["consulta"]
     _validar_consulta(consulta)
@@ -630,7 +612,7 @@ def finalizar_turno(estado: dict, turno_preparado: dict, resultado_externo: dict
         {
             "respuesta": respuesta,
             "resultado": deepcopy(resultado_validado),
-            "perfil_activo": turno_validado["perfil_activo"],
+            "perfil_activo": turno_validado["perfil_funcional"],
             "categoria": resultado_validado["category"],
             "categoria_preliminar": turno_validado["categoria_preliminar"],
             "dia_onboarding": turno_validado["dia_onboarding"]

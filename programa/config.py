@@ -467,11 +467,7 @@ DOMAIN_KEYWORDS = {
 
 # Para peticiones sobre días concretos
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
-PATRONES_DOMINIO_ADICIONALES = (
-    r"\bdia\s+[1-5]\b",
-    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",
-)
-
+PATRONES_DOMINIO_ADICIONALES = (r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
 
 # ============================================================
 # ESCALACIÓN

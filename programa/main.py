@@ -5,6 +5,7 @@ from config import (
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
+    MODO_SEGURIDAD_DEFAULT
 )
 from context import buscar_empleado, cargar_json
 from logic import preparar_turno_con_modo, finalizar_turno_con_modo
