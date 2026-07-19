@@ -30,6 +30,7 @@ from model_utils import (
     obtener_modelo,
     validar_modelos_benchmark,
 )
+from metrics import calcular_costo, resumir_resultados_benchmark
 from prompts import build_secure_system_instruction
 from validators import validar_respuesta_estructurada
 
@@ -83,25 +84,8 @@ def cargar_casos(
     return casos
 
 
-def calcular_costo(
-    *,
-    model_key: str,
-    tokens_input: int | None,
-    tokens_output: int | None,
-    thinking_tokens: int | None,
-) -> float | None:
-    """Estima el coste; los tokens de pensamiento se cobran como salida."""
-    if tokens_input is None or tokens_output is None:
-        return None
-
-    modelo = obtener_modelo(model_key)
-    salida_facturable = tokens_output + (thinking_tokens or 0)
-
-    return round(
-        (tokens_input / 1_000_000) * modelo["cost_input_per_m"]
-        + (salida_facturable / 1_000_000) * modelo["cost_output_per_m"],
-        8,
-    )
+# calcular_costo() se importa desde metrics.py para evitar mantener
+# la misma fórmula duplicada en el chat y en el benchmark.
 
 
 def crear_resultado_base(
@@ -281,3 +265,15 @@ if __name__ == "__main__":
         f"JSON: {RESULTADOS_BENCHMARK_PATH}\n"
         f"CSV: {CSV_RESULTADOS_PATH}"
     )
+
+    resumen_por_modelo = resumir_resultados_benchmark(filas)
+
+    print("\nResumen por modelo:")
+    for model_key, resumen in resumen_por_modelo.items():
+        print(
+            f"- {model_key}: "
+            f"éxito_schema={resumen['tasa_exito_schema']} "
+            f"latencia_modelo_media_ms={resumen['latencia_modelo_ms']['media']} "
+            f"coste_total_usd={resumen['coste_total_usd']} "
+            f"ratio_thinking_medio={resumen['ratio_thinking_medio']}"
+        )
