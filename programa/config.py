@@ -126,6 +126,67 @@ Reglas del formato:
 
 
 # ============================================================
+# CONTRATO DE RESPUESTA LLM — CHECKLIST DÍA N
+# ============================================================
+#
+# El chat (REQUIRED_RESPONSE_FIELDS / JSON_SCHEMA_HINT) y el checklist
+# son dos capacidades distintas del producto (ver InstruccionesTeamChallenge.md,
+# "Capacidades del asistente", punto 2) y por tanto necesitan su propio
+# contrato de salida. Antes de esta corrección, este contrato no existía
+# en ningún módulo compartido.
+
+REQUIRED_CHECKLIST_FIELDS = frozenset(
+    {
+        "empleado_id",
+        "dia",
+        "tareas",
+        "mensaje_resumen",
+    }
+)
+
+REQUIRED_TAREA_FIELDS = frozenset(
+    {
+        "id",
+        "titulo",
+        "completada",
+        "fuente_doc",
+    }
+)
+
+CHECKLIST_JSON_SCHEMA_HINT = """
+Devuelve exclusivamente un objeto JSON válido con esta estructura:
+
+{
+  "empleado_id": "emp_01",
+  "dia": 1,
+  "tareas": [
+    {
+      "id": "t01",
+      "titulo": "Descripción clara de la tarea",
+      "completada": false,
+      "fuente_doc": "doc_id_utilizado"
+    }
+  ],
+  "mensaje_resumen": "Frase corta de orientación para el día"
+}
+
+Reglas del formato:
+
+- "empleado_id" debe coincidir exactamente con el id del empleado indicado.
+- "dia" debe ser el entero de día de onboarding indicado (1-5).
+- "tareas" debe ser una lista no vacía de objetos con "id", "titulo",
+  "completada" y "fuente_doc".
+- "completada" debe ser siempre false: el plan se genera, no se marca
+  como hecho.
+- "fuente_doc" debe ser el id de uno de los documentos autorizados
+  incluidos en el turno. No inventes ids de documentos.
+- "mensaje_resumen" debe ser un texto breve, no vacío.
+- No añadas texto, explicaciones ni bloques Markdown fuera del JSON.
+- No añadas propiedades distintas de las indicadas.
+""".strip()
+
+
+# ============================================================
 # LÍMITES DE CONTEXTO Y ONBOARDING
 # ============================================================
 
@@ -524,12 +585,9 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
 # ROBUSTEZ — CONFIGURACIÓN ACTIVA (Alex)
 # ============================================================
 
-# Para poder compartir contexto entre el vulnerable y el seguro
-# Variable con ambos modos para poder alternar cómodamente
-MODOS_SEGURIDAD = frozenset({"seguro", "vulnerable"})
-
-# En producción siempre debe arrancar en modo seguro.
-MODO_SEGURIDAD_DEFAULT = "seguro"
+# El producto opera siempre en modo seguro. El pipeline vulnerable
+# solo existe de forma aislada en demos/demo5_vulnerable_vs_seguro.py
+# y no se selecciona mediante configuración ni switches.
 MAX_SAFE_OUTPUT_CHARS = 4_000
 
 # ============================================================

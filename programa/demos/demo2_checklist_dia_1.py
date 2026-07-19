@@ -1,77 +1,142 @@
 """
 Demo 2, obligatoria · Checklist del día 1.
+
+Objetivo
+--------
+- Indicar al asistente quién es el empleado y qué día de onboarding
+  le toca (día 1).
+- Generar el plan del día en JSON, con tareas respaldadas por
+  documentación autorizada (ver contrato en
+  config.CHECKLIST_JSON_SCHEMA_HINT).
+
+Usa preparar_checklist_seguro() / finalizar_checklist_seguro() de
+logic.py, añadidas para dar soporte a esta capacidad (antes no existía
+ningún punto de entrada de checklist conectado de extremo a extremo).
 """
 
-"""
-AVISO DE INTEGRACIÓN
---------------------
-Este archivo está pendiente de consolidación con la implementación real
-existente en el proyecto.
+from __future__ import annotations
 
-No crear, renombrar ni duplicar funciones únicamente para adaptarlas al menú.
-La función pública de entrada debe determinarse a partir del código real de
-esta demo y de los contratos ya utilizados por main.py, logic.py y los tests.
-
-Hasta confirmar ese contrato:
-
-- conservar las funciones existentes;
-- conservar sus parámetros y valores de retorno;
-- no modificar llamadas a Robustez ni a Validadores;
-- no trasladar lógica de negocio al menú;
-- marcar integraciones pendientes con TODO-INTEGRACIÓN;
-- actualizar menu.py solo cuando se conozca el nombre real de la función
-  pública de entrada.
-
-TODO-INTEGRACIÓN:
-Confirmar la función real que ejecutará esta demo y registrar ese nombre
-en menu.py sin alterar su implementación interna.
-"""
+from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from context import buscar_empleado, cargar_json
+from gemini_client import (
+    GeminiClientError,
+    parsear_json,
+    safe_generate_with_system_instruction,
+)
+from logic import finalizar_checklist_seguro, preparar_checklist_seguro
+from metrics import formatear_metricas_turno
+from prompts import (
+    build_checklist_system_instruction,
+    build_checklist_turno_contents,
+)
+from state import inicializar_estado
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
 
-...
+EMPLEADO_ID_DEMO = "emp_01"
+DIA_DEMO = 1
+
 
 # ============================================================
 # DATOS DE DEMOSTRACIÓN
 # ============================================================
 
 def obtener_empleado_demo() -> dict:
-    ...
+    """Carga el empleado de demostración (Laura, dev junior, emp_01)."""
+    empleados = cargar_json(EMPLEADOS_PATH)
+    empleado = buscar_empleado(empleados, EMPLEADO_ID_DEMO)
+
+    if empleado is None:
+        raise ValueError(
+            f"No se encontró el empleado de demo '{EMPLEADO_ID_DEMO}' "
+            "en empleados_demo.json."
+        )
+
+    return empleado
+
 
 def obtener_dia_demo() -> int:
-    ...
+    return DIA_DEMO
+
 
 # ============================================================
 # EJECUCIÓN
 # ============================================================
 
 def ejecutar_demo_checklist_dia_1() -> None:
-    """
-    Genera el checklist estructurado del día 1.
-    """
-    
+    """Genera el checklist estructurado del día 1."""
+    empresa = cargar_json(EMPRESA_PATH)
+    documentos = cargar_json(DOCS_PATH)
+    faqs = cargar_json(FAQ_PATH)
 
-"""
-AVISO DE INTEGRACIÓN
+    empleado = obtener_empleado_demo()
+    dia = obtener_dia_demo()
 
-Este archivo implementa únicamente la lógica de demostración.
+    estado = inicializar_estado()
 
-No debe modificar ni sustituir el comportamiento de:
+    print(f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
+    print(f"Día de onboarding solicitado: {dia}\n")
 
-- logic.py
-- context.py
-- validators.py
-- robustez
-- preparación de contexto
-- pipeline del asistente
+    preparacion = preparar_checklist_seguro(
+        estado=estado,
+        empleado=empleado,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        dia_onboarding=dia,
+    )
 
-Las llamadas a dichos módulos deben realizarse utilizando sus interfaces
-públicas.
+    if preparacion.get("status") != "ok":
+        print("[ERROR]", preparacion.get("mensaje"))
+        for error in preparacion.get("data", {}).get("errores", []):
+            print("-", error)
+        return
 
-TODO-INTEGRACIÓN:
-Cuando el equipo publique la versión definitiva del flujo, sustituir
-únicamente las llamadas marcadas como provisionales, sin modificar la
-estructura de esta demo.
-"""
+    datos = preparacion["data"]
+
+    if not datos.get("llamar_modelo", False):
+        print("No se ha podido generar el checklist (respuesta controlada):")
+        print(datos.get("respuesta", ""))
+        return
+
+    turno_preparado = datos["turno_preparado"]
+
+    try:
+        texto_modelo, metricas = safe_generate_with_system_instruction(
+            build_checklist_turno_contents(turno_preparado),
+            system_instruction=build_checklist_system_instruction(),
+            json_mode=True,
+        )
+        resultado_externo = parsear_json(texto_modelo)
+    except (GeminiClientError, ValueError, TypeError) as error:
+        print("[ERROR] No se pudo completar la llamada al modelo:", error)
+        return
+
+    resultado_final = finalizar_checklist_seguro(
+        estado=estado,
+        turno_preparado=turno_preparado,
+        resultado_externo=resultado_externo,
+    )
+
+    if resultado_final.get("status") != "ok":
+        print("[ERROR]", resultado_final.get("mensaje"))
+        for error in resultado_final.get("data", {}).get("errores", []):
+            print("-", error)
+        return
+
+    checklist = resultado_final["data"]["checklist"]
+
+    print(f"Checklist día {checklist.get('dia')} — {checklist.get('empleado_id')}")
+    print(f"Resumen: {checklist.get('mensaje_resumen')}\n")
+
+    for tarea in checklist.get("tareas", []):
+        print(f"[ ] {tarea.get('id')}: {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
+
+    print()
+    print(formatear_metricas_turno(metricas))
+
+
+if __name__ == "__main__":
+    ejecutar_demo_checklist_dia_1()

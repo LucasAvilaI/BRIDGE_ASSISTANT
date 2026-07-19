@@ -1,3 +1,6 @@
+"""
+Menú principal de demostraciones del asistente de onboarding.
+"""
 from __future__ import annotations
 from typing import Any, Callable
 from demos.demo1_chat_onboarding import ejecutar_demo_chat_onboarding
@@ -12,11 +15,6 @@ from demos.demo5_vulnerable_vs_seguro import (
 from demos.demo6_casos_trampa import ejecutar_demo_casos_trampa
 from config import EMPLEADOS_PATH, EMPRESA_PATH, DOCS_PATH, FAQ_PATH
 from context import cargar_json, buscar_empleado
-Python
-"""
-Menú principal de demostraciones del asistente de onboarding.
-"""
-
 
 # Importaciones de las demostraciones del proyecto
 
