@@ -21,17 +21,23 @@ dataset de demo mantenga siempre el mismo orden o los mismos IDs.
 """
 
 from __future__ import annotations
-
-from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
-from context import cargar_json, normalizar_texto
+from state import inicializar_estado
+from prompts import build_secure_system_instruction, build_secure_turn_contents
+from logic import finalizar_turno_seguro, preparar_turno_seguro
 from gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from logic import finalizar_turno_seguro, preparar_turno_seguro
-from prompts import build_secure_system_instruction, build_secure_turn_contents
-from state import inicializar_estado
+from context import cargar_json, normalizar_texto
+from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+
+import sys
+import os
+
+# Esto añade la carpeta 'programa' al PATH de forma automática al ejecutar el script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # ============================================================
 # CONFIGURACIÓN
@@ -63,8 +69,10 @@ def obtener_perfiles_demo() -> tuple[dict, dict]:
     """Devuelve un empleado Comercial y un empleado Remoto UE de la demo."""
     empleados = cargar_json(EMPLEADOS_PATH)
 
-    empleado_comercial = _buscar_empleado_por_perfil(empleados, PALABRA_CLAVE_PERFIL_1)
-    empleado_remoto_ue = _buscar_empleado_por_perfil(empleados, PALABRA_CLAVE_PERFIL_2)
+    empleado_comercial = _buscar_empleado_por_perfil(
+        empleados, PALABRA_CLAVE_PERFIL_1)
+    empleado_remoto_ue = _buscar_empleado_por_perfil(
+        empleados, PALABRA_CLAVE_PERFIL_2)
 
     if empleado_comercial is None or empleado_remoto_ue is None:
         raise ValueError(
@@ -167,7 +175,8 @@ def ejecutar_demo_comparativa_perfiles() -> None:
         faqs=faqs,
         consulta=consulta,
     )
-    _mostrar_resultado("PERFIL COMERCIAL", empleado_comercial, resultado_comercial)
+    _mostrar_resultado("PERFIL COMERCIAL",
+                       empleado_comercial, resultado_comercial)
 
     resultado_remoto_ue = _ejecutar_consulta(
         empleado=empleado_remoto_ue,
@@ -176,7 +185,8 @@ def ejecutar_demo_comparativa_perfiles() -> None:
         faqs=faqs,
         consulta=consulta,
     )
-    _mostrar_resultado("PERFIL REMOTO UE", empleado_remoto_ue, resultado_remoto_ue)
+    _mostrar_resultado("PERFIL REMOTO UE",
+                       empleado_remoto_ue, resultado_remoto_ue)
 
 
 if __name__ == "__main__":

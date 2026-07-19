@@ -23,13 +23,18 @@ interna pero no encuentra respaldo documental; si el equipo cambia el
 dataset de demo puede acabar en 'out_of_scope' en su lugar, y seguiría
 siendo un bloqueo correcto).
 """
-
 from __future__ import annotations
-
-from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
-from context import buscar_empleado, cargar_json
-from logic import preparar_turno_seguro
 from state import inicializar_estado
+from logic import preparar_turno_seguro
+from context import buscar_empleado, cargar_json
+from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+
+import sys
+import os
+
+# Esto añade la carpeta 'programa' al PATH de forma automática al ejecutar el script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # ============================================================
 # CONFIGURACIÓN
@@ -90,7 +95,8 @@ def ejecutar_demo_casos_trampa() -> None:
     empleado = buscar_empleado(empleados, EMPLEADO_ID_DEMO)
 
     if empleado is None:
-        print(f"[ERROR] No se encontró el empleado de demo '{EMPLEADO_ID_DEMO}'.")
+        print(
+            f"[ERROR] No se encontró el empleado de demo '{EMPLEADO_ID_DEMO}'.")
         return
 
     aprobados = 0
@@ -109,7 +115,8 @@ def ejecutar_demo_casos_trampa() -> None:
             configuracion=ASSISTANT_CONFIG_DEFAULT,
         )
 
-        datos = resultado.get("data", {}) if isinstance(resultado, dict) else {}
+        datos = resultado.get("data", {}) if isinstance(
+            resultado, dict) else {}
         llamo_al_modelo = bool(datos.get("llamar_modelo", False))
         codigo_obtenido = datos.get("motivo_bloqueo")
 

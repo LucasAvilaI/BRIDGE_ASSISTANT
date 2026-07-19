@@ -9,23 +9,28 @@ para comparar ambos comportamientos con exactamente el mismo escenario.
 """
 
 from __future__ import annotations
-
-import json
-from copy import deepcopy
-from typing import Any
-
-from config import JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
-from gemini_client import (
-    parsear_json,
-    safe_generate,
-    safe_generate_with_system_instruction,
-)
 from logic import (
     finalizar_turno,
     preparar_turno,
     finalizar_turno_seguro,
     preparar_turno_seguro,
 )
+from gemini_client import (
+    parsear_json,
+    safe_generate,
+    safe_generate_with_system_instruction,
+)
+from config import JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
+from typing import Any
+from copy import deepcopy
+import json
+
+import sys
+import os
+
+# Esto añade la carpeta 'programa' al PATH de forma automática al ejecutar el script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 Resultado = dict[str, Any]
 
@@ -270,7 +275,8 @@ def _adjuntar_metricas(resultado: Resultado, metricas: Any) -> Resultado:
         return _resultado_error("La ruta devolvió un resultado no válido.")
 
     salida = deepcopy(resultado)
-    salida.setdefault("data", {})["metricas_llm"] = _normalizar_metricas(metricas)
+    salida.setdefault("data", {})[
+        "metricas_llm"] = _normalizar_metricas(metricas)
     return salida
 
 

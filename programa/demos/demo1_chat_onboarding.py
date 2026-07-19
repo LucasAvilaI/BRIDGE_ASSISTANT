@@ -16,23 +16,25 @@ contexto, validaciones ni construcción de prompts.
 
 from __future__ import annotations
 
-from config import (
+# Obtiene la ruta de la carpeta raíz del proyecto (BRIDGE_ASSISTANT)
+# Esto hace que el código sea 100% portátil en cualquier PC
+from programa.state import inicializar_estado
+from programa.prompts import build_secure_system_instruction, build_secure_turn_contents
+from programa.metrics import formatear_metricas_turno
+from programa.logic import finalizar_turno_seguro, preparar_turno_seguro
+from programa.gemini_client import (
+    GeminiClientError,
+    parsear_json,
+    safe_generate_with_system_instruction,
+)
+from programa.context import buscar_empleado, cargar_json
+from programa.config import (
     ASSISTANT_CONFIG_DEFAULT,
     DOCS_PATH,
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
 )
-from context import buscar_empleado, cargar_json
-from gemini_client import (
-    GeminiClientError,
-    parsear_json,
-    safe_generate_with_system_instruction,
-)
-from logic import finalizar_turno_seguro, preparar_turno_seguro
-from metrics import formatear_metricas_turno
-from prompts import build_secure_system_instruction, build_secure_turn_contents
-from state import inicializar_estado
 
 # ============================================================
 # CONFIGURACIÓN
@@ -80,7 +82,8 @@ def ejecutar_demo_chat_onboarding() -> None:
 
     estado = inicializar_estado()
 
-    print(f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
+    print(
+        f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
     print(f"Consulta: {consulta}\n")
 
     preparacion = preparar_turno_seguro(

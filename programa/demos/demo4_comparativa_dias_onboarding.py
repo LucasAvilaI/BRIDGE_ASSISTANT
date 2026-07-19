@@ -15,22 +15,27 @@ de abrir el menú de demostraciones fallaba con ImportError.
 """
 
 from __future__ import annotations
-
-from typing import Any
-
-from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
-from context import buscar_empleado, cargar_json
+from state import inicializar_estado
+from prompts import (
+    build_checklist_system_instruction,
+    build_checklist_turno_contents,
+)
+from logic import finalizar_checklist_seguro, preparar_checklist_seguro
 from gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from logic import finalizar_checklist_seguro, preparar_checklist_seguro
-from prompts import (
-    build_checklist_system_instruction,
-    build_checklist_turno_contents,
-)
-from state import inicializar_estado
+from context import buscar_empleado, cargar_json
+from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from typing import Any
+
+import sys
+import os
+
+# Esto añade la carpeta 'programa' al PATH de forma automática al ejecutar el script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # ============================================================
 # CONFIGURACIÓN
@@ -123,7 +128,8 @@ def ejecutar_demo_comparativa_dias_onboarding() -> None:
     faqs = cargar_json(FAQ_PATH)
     empleado = obtener_empleado_demo()
 
-    print(f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})\n")
+    print(
+        f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})\n")
 
     for dia in obtener_dias_demo():
         print(f"=== DÍA {dia} ===")
@@ -155,7 +161,8 @@ def ejecutar_demo_comparativa_dias_onboarding() -> None:
         print(f"Resumen: {checklist.get('mensaje_resumen')}")
 
         for tarea in checklist.get("tareas", []):
-            print(f"  [ ] {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
+            print(
+                f"  [ ] {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
 
         print()
 

@@ -16,7 +16,6 @@ from config import (
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
-    MODO_SEGURIDAD_DEFAULT
 )
 from context import buscar_empleado, cargar_json
 from gemini_auth import GeminiAuthError, configurar_gemini_api_key

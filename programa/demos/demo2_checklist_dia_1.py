@@ -13,23 +13,21 @@ Usa preparar_checklist_seguro() / finalizar_checklist_seguro() de
 logic.py, añadidas para dar soporte a esta capacidad (antes no existía
 ningún punto de entrada de checklist conectado de extremo a extremo).
 """
-
 from __future__ import annotations
-
-from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
-from context import buscar_empleado, cargar_json
-from gemini_client import (
+from programa.state import inicializar_estado
+from programa.prompts import (
+    build_checklist_system_instruction,
+    build_checklist_turno_contents,
+)
+from programa.metrics import formatear_metricas_turno
+from programa.logic import finalizar_checklist_seguro, preparar_checklist_seguro
+from programa.gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from logic import finalizar_checklist_seguro, preparar_checklist_seguro
-from metrics import formatear_metricas_turno
-from prompts import (
-    build_checklist_system_instruction,
-    build_checklist_turno_contents,
-)
-from state import inicializar_estado
+from programa.context import buscar_empleado, cargar_json
+from programa.config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
 
 # ============================================================
 # CONFIGURACIÓN
@@ -76,7 +74,8 @@ def ejecutar_demo_checklist_dia_1() -> None:
 
     estado = inicializar_estado()
 
-    print(f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
+    print(
+        f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
     print(f"Día de onboarding solicitado: {dia}\n")
 
     preparacion = preparar_checklist_seguro(
@@ -128,11 +127,13 @@ def ejecutar_demo_checklist_dia_1() -> None:
 
     checklist = resultado_final["data"]["checklist"]
 
-    print(f"Checklist día {checklist.get('dia')} — {checklist.get('empleado_id')}")
+    print(
+        f"Checklist día {checklist.get('dia')} — {checklist.get('empleado_id')}")
     print(f"Resumen: {checklist.get('mensaje_resumen')}\n")
 
     for tarea in checklist.get("tareas", []):
-        print(f"[ ] {tarea.get('id')}: {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
+        print(
+            f"[ ] {tarea.get('id')}: {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
 
     print()
     print(formatear_metricas_turno(metricas))

@@ -603,8 +603,8 @@ def preparar_turno(
             "empleado": deepcopy(empleado_validado),
             "empresa": deepcopy(empresa_validada),
             "perfil_empleado": empleado_validado["perfil"],
-            "perfil_funcional": perfil_activo,
-            "configuracion_perfil_funcional": deepcopy(PERFILES[perfil_activo]),
+            "perfil_funcional": perfil_funcional,
+            "configuracion_perfil_funcional": deepcopy(PERFILES[perfil_funcional]),
             "categoria_preliminar": categoria_preliminar,
             "dia_onboarding": dia_onboarding,
             "contexto": deepcopy(contexto),
@@ -671,7 +671,8 @@ def _validar_turno_preparado(
     if campos_ausentes:
         campos = ", ".join(sorted(campos_ausentes))
 
-        raise ValueError(f"Faltan campos obligatorios en el turno preparado: {campos}.")
+        raise ValueError(
+            f"Faltan campos obligatorios en el turno preparado: {campos}.")
 
     consulta = turno_preparado["consulta"]
     _validar_consulta(consulta)
@@ -679,13 +680,14 @@ def _validar_turno_preparado(
     empleado = turno_preparado["empleado"]
 
     if not isinstance(empleado, dict):
-        raise TypeError("El empleado del turno preparado debe ser parte un diccionario.")
+        raise TypeError(
+            "El empleado del turno preparado debe ser parte un diccionario.")
 
     empresa = turno_preparado["empresa"]
 
     if not isinstance(empresa, dict):
         raise TypeError("La empresa del turno preparado debe formar parte de un diccionario."
-        )
+                        )
 
     _validar_consulta(
         turno_preparado["consulta"]
