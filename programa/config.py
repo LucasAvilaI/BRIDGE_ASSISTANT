@@ -57,7 +57,6 @@ MODEL = MODEL_1
 # Parámetros de generación
 TEMPERATURE_DEFAULT = 0.2
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
-TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
 # Límites funcionales y técnicos
 MAX_TOKENS_INPUT = 8_000
@@ -127,6 +126,24 @@ Reglas del formato:
 
 
 # ============================================================
+# LÍMITES DE CONTEXTO Y ONBOARDING
+# ============================================================
+
+# Número máximo de fuentes que context.py puede seleccionar
+# para una interacción.
+# Necesitan estar antes de ASSISTANT_CONFIG_DEFAULT
+MAX_CONTEXT_DOCUMENTS = 3
+MAX_CONTEXT_FAQS = 2
+
+# Durante los días 1 a 7, ambos incluidos, se utiliza
+# el perfil funcional de onboarding salvo que la categoría
+# de la consulta requiera un perfil más específico.
+ONBOARDING_PROFILE_DAYS = 7
+
+# El acompañamiento inicial se considera comprendido dentro
+# de los primeros 30 días.
+
+# ============================================================
 # CONFIGURACIÓN GENERAL DEL ASISTENTE
 # ============================================================
 
@@ -146,24 +163,6 @@ ASSISTANT_CONFIG_DEFAULT = {
     "max_documentos_contexto": MAX_CONTEXT_DOCUMENTS,
     "max_faqs_contexto": MAX_CONTEXT_FAQS,
 }
-
-
-# ============================================================
-# LÍMITES DE CONTEXTO Y ONBOARDING
-# ============================================================
-
-# Número máximo de fuentes que context.py puede seleccionar
-# para una interacción.
-MAX_CONTEXT_DOCUMENTS = 3
-MAX_CONTEXT_FAQS = 2
-
-# Durante los días 1 a 7, ambos incluidos, se utiliza
-# el perfil funcional de onboarding salvo que la categoría
-# de la consulta requiera un perfil más específico.
-ONBOARDING_PROFILE_DAYS = 7
-
-# El acompañamiento inicial se considera comprendido dentro
-# de los primeros 30 días.
 
 
 # ============================================================

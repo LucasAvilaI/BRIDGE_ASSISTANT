@@ -43,7 +43,6 @@ from config import (
     MODEL,
     TEMPERATURE_DEFAULT,
     TEMPERATURE_SAFE,
-    TEMPERATURE_VULNERABLE,
     THINKING_BUDGET_CHAT,
 )
 from gemini_auth import configurar_gemini_api_key
@@ -612,7 +611,7 @@ def llamar_gemini_json(
 def safe_generate(
     prompt: str,
     *,
-    temperature: float = TEMPERATURE_VULNERABLE,
+    temperature: float = TEMPERATURE_DEFAULT,
     json_mode: bool = False,
     model_id: str = MODEL,
     fallback_model_id: str | None = None,
@@ -660,7 +659,9 @@ def safe_generate_with_system_instruction(
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
-    """Wrapper del flujo seguro con canales separados.
+    """Genera contenido separando system_instruction de contents.
+    No valida la seguridad de la entrada, el contexto ni la salida.
+    Esas comprobaciones corresponden a validators.py y logic.py.
 
     system_instruction:
         Contiene reglas funcionales y de seguridad con prioridad de sistema.
@@ -690,11 +691,14 @@ def parsear_json(texto: str) -> dict[str, Any]:
     """Convierte una salida JSON en un diccionario Python.
 
     Esta función comprueba únicamente:
-    - que el texto sea JSON válido;
-    - que la raíz sea un objeto.
+        - que el texto sea JSON válido;
+        - que la raíz sea un objeto.
 
-    La comprobación de campos, tipos, categorías y reglas del
-    producto corresponde a validators.py.
+    No valida el contrato funcional de la respuesta.
+
+    La comprobación de campos, tipos, categorías, fuentes
+    autorizadas y reglas del producto corresponde a
+    validators.py.
     """
 
     texto_limpio = _validar_texto(texto, "texto")

@@ -1,13 +1,3 @@
-# Integración del Módulo de Autenticación (`gemini_auth.py`)
-"""NOTAS PARA EL EQUIPO (Integración):
-1. **Pasividad:** El módulo no hace nada al importar. No imprime, no pide clave, no falla al cargar.
-2. **Uso:** Importad `configurar_gemini_api_key` y llamadlo en `main.py` antes de inicializar cualquier otra parte del sistema.
-3. **Flujo de datos:** El valor devuelto (API_KEY) es el que debéis pasar a los constructores de los clientes o funciones de LLM.
-4. **Benchmark:** Para automatizar las 10 pruebas, usad siempre `interactivo=False` para evitar bloqueos en la terminal.
-5. **Robustez:** Si falta la clave, el módulo lanzará un `GeminiAuthError`. Capturadlo en `main.py` para cerrar el sistema de forma controlada ("fail-closed").
-BORRAR NOTAS EN CUANTO SE IMPLEMENTEN
-"""
-
 """
 Carga explícita de la credencial de Gemini.
 
@@ -16,7 +6,11 @@ No importa el SDK ni realiza ninguna acción al importar el módulo.
 
 
 from __future__ import annotations
+
 import getpass
+import os
+
+from dotenv import load_dotenv
 
 
 _ENV_KEY = "GEMINI_API_KEY"
@@ -55,3 +49,14 @@ def configurar_gemini_api_key(
         )
 
     return api_key
+
+
+# Integración del Módulo de Autenticación (`gemini_auth.py`)
+# NOTAS PARA EL EQUIPO (Integración):
+# 1. **Pasividad:** El módulo no hace nada al importar. No imprime, no pide clave, no falla al cargar.
+# 2. **Uso:** Importad `configurar_gemini_api_key` y llamadlo en `main.py` antes de inicializar cualquier otra parte del sistema.
+# 3. **Flujo de datos:** El valor devuelto (API_KEY) es el que debéis pasar a los constructores de los clientes o funciones de LLM.
+# 4. **Benchmark:** Para automatizar las 10 pruebas, usad siempre `interactivo=False` para evitar bloqueos en la terminal.
+# 5. **Robustez:** Si falta la clave, el módulo lanzará un `GeminiAuthError`. Capturadlo en `main.py` para cerrar el sistema de forma controlada ("fail-closed").
+# BORRAR NOTAS EN CUANTO SE IMPLEMENTEN
+
