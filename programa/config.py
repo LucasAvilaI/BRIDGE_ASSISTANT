@@ -48,8 +48,8 @@ RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 # ============================================================
 
 # Modelos disponibles
-MODEL_1 = "gemini-2.5-flash"  # Variante A: eficiencia
-MODEL_2 = "gemini-2.5-pro"    # Variante B: calidad
+MODEL_1 = "gemini-1.5-flash"  # Variante A: eficiencia
+MODEL_2 = "gemini-1.5-pro"    # Variante B: calidad
 
 # Modelo por defecto del asistente
 MODEL = MODEL_1
@@ -528,7 +528,8 @@ DOMAIN_KEYWORDS = {
 
 # Para peticiones sobre días concretos
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
-PATRONES_DOMINIO_ADICIONALES = (r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
+PATRONES_DOMINIO_ADICIONALES = (
+    r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
 
 # ============================================================
 # ESCALACIÓN

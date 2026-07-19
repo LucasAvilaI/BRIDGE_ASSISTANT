@@ -8,6 +8,11 @@ integración vulnerable está aislada exclusivamente en la Demo 5.
 from __future__ import annotations
 
 import sys
+import os
+
+# Añade la carpeta padre (la raíz 'BRIDGE_ASSISTANT') al path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from typing import Any
 
 from config import (
