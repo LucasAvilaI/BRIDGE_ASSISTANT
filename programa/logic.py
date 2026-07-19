@@ -1,3 +1,15 @@
+"""
+Lógica de negocio del asistente de onboarding.
+
+El producto opera siempre mediante el pipeline seguro:
+preparar_turno_seguro() y finalizar_turno_seguro().
+
+Las funciones preparar_turno() y finalizar_turno() conservan el núcleo
+estructural común para integraciones, pruebas y la demo 5 aislada.
+Este módulo no expone ningún selector ni modo vulnerable.
+"""
+
+from __future__ import annotations
 
 import re
 from copy import deepcopy
@@ -9,8 +21,6 @@ from config import (
     DOMAIN_KEYWORDS,
     MAX_CONTEXT_DOCUMENTS,
     MAX_CONTEXT_FAQS,
-    MODO_SEGURIDAD_DEFAULT,
-    MODOS_SEGURIDAD,
     ONBOARDING_PROFILE_DAYS,
     PERFILES,
     VALID_CATEGORIES,
@@ -85,8 +95,8 @@ def _validar_consulta(consulta: Any) -> str:
     """
     Valida y normaliza superficialmente la consulta.
 
-    Las validaciones de seguridad y robustez no corresponden
-    a este módulo.
+    Las validaciones específicas de seguridad se aplican en
+    preparar_turno_seguro().
     """
     if not isinstance(consulta, str):
         raise TypeError("La consulta debe ser un string.")
@@ -364,6 +374,9 @@ def preparar_turno(
     Prepara un turno completo sin construir prompts ni invocar
     ningún proveedor LLM.
 
+    Esta función contiene el núcleo estructural común. El producto
+    debe utilizar preparar_turno_seguro() como entrada normal.
+
     Devuelve el paquete de interacción que deberá consumir el
     adaptador implementado por el área LLM y Benchmark.
     """
@@ -523,6 +536,9 @@ def finalizar_turno(estado: dict, turno_preparado: dict, resultado_externo: dict
 
     La función valida el contrato mínimo, actualiza el historial
     y devuelve la envolvente estándar del proyecto.
+
+    Esta función contiene el núcleo estructural común. El producto
+    debe utilizar finalizar_turno_seguro() como salida normal.
     """
     try:
         _validar_estado(estado)
@@ -554,7 +570,6 @@ def finalizar_turno(estado: dict, turno_preparado: dict, resultado_externo: dict
         }
     )
 
-
 # ============================================================
 # ROBUSTEZ Y SEGURIDAD
 # ============================================================
@@ -564,13 +579,12 @@ def _registrar_evento_seguridad(
     validacion: dict,
     consulta: Any,
 ) -> None:
-    """Registra metadatos del evento sin conservar la consulta."""
-
+    """
+    Registra metadatos del evento sin conservar la consulta.
+    """
     if not isinstance(estado, dict):
         return
 
-    # si no existe crea la lista vacía y la devuelve
-    # si existe no sustituye, recupera la lista existente
     eventos = estado.setdefault("eventos_seguridad", [])
 
     if not isinstance(eventos, list):
@@ -588,66 +602,54 @@ def _registrar_evento_seguridad(
     estado["eventos_seguridad"] = eventos[-20:]
 
 
-# RESPUESTAS CONTROLADAS DE SEGURIDAD
-# ============================================================
-
-# después de un bloqueo es necesario generar la respuesta para el usuario
-# se adapta aquí el diccionario que generan las funciones de validaciones
-# al diccionario que espera recibir `main.py`
-
-def crear_respuesta_controlada(validacion: dict, modo_seguridad: str, modelo_invocado: bool = False) -> dict:
+def crear_respuesta_controlada(
+    validacion: dict,
+    *,
+    modelo_invocado: bool = False,
+) -> dict:
     """
-    Adapta el resultado interno de las validaciones al contrato estándar
-    de logic.py, para que pueda ser procesado por imprimir_respuesta_final().
+    Adapta una validación rechazada al contrato estándar de logic.py.
 
-    Un input bloqueado es una respuesta funcional, no un error técnico.
-    Por eso la wrapper del modo seguro mantiene status="ok", pero
-    llamar_modelo=False para impedir que el flujo siga y se produzca
-    la llamada al modelo.
+    Un bloqueo de seguridad es una respuesta funcional, no un error
+    técnico. Por eso mantiene status="ok" y señala que el flujo debe
+    detenerse.
 
-    Args:
-        - validacion: resultado producido por las funciones de validación
-        validar_respuesta_segura() | validar_contexto_seguro() | validar_salida_segura()
-
-        - modo_seguridad: modo activo al producirse la respuesta
-        seguro | vulnerable
-
-        - modelo_invocado: indica si el modelo se ha invocado antes del bloqueo
-        por defecto `False`. Los bloqueos deben producirse antes
-
-    Devuelve un diccionario con el contrato estándar.
-    No modifica directamente el estado.
-
+    No recibe ni devuelve un modo de seguridad porque el producto
+    funciona siempre mediante el pipeline seguro.
     """
+    if not isinstance(validacion, dict):
+        return respuesta_error(
+            "No se ha podido construir la respuesta controlada.",
+            ["La validación debe ser un diccionario."],
+        )
 
-    # status:ok -> un bloqueo de seguridad es un comportamiento esperado
+    mensaje_usuario = validacion.get("mensaje_usuario")
+    codigo = validacion.get("codigo")
+
+    if not isinstance(mensaje_usuario, str) or not mensaje_usuario.strip():
+        return respuesta_error(
+            "No se ha podido construir la respuesta controlada.",
+            ["La validación no contiene un mensaje de usuario válido."],
+        )
+
+    if not isinstance(codigo, str) or not codigo.strip():
+        return respuesta_error(
+            "No se ha podido construir la respuesta controlada.",
+            ["La validación no contiene un código válido."],
+        )
+
     return respuesta_ok(
         "Consulta atendida de forma controlada.",
         {
-            # texto que verá el usuario
-            "respuesta": validacion["mensaje_usuario"],
-            # indica a main.py que el flujo se detiene antes de la llamada
+            "respuesta": mensaje_usuario.strip(),
             "llamar_modelo": False,
-            "modelo_invocado": modelo_invocado,         # True si llamada
-            "modo_seguridad": modo_seguridad,           # modo que estaba activo
-            # se guarda el ID de rechazo
-            "motivo_bloqueo": validacion["codigo"]
-        }
+            "modelo_invocado": modelo_invocado,
+            "motivo_bloqueo": codigo.strip(),
+        },
     )
 
-# ORQUESTADOR DE CUALQUIER MODO (SEGURO | VULNERABLE)
-# ============================================================
 
-# Envuelve preparar_turno() para añadir controles de seguridad
-# antes y después, sin duplicar la lógica ya existente.
-
-# Le añade:
-# - Selección de modo
-# - validación de entrada y contexto
-# - autorización para llamar al modelo
-
-
-def preparar_turno_con_modo(
+def preparar_turno_seguro(
     estado: dict,
     consulta: str,
     empleado: dict,
@@ -656,192 +658,172 @@ def preparar_turno_con_modo(
     faqs: list[dict],
     configuracion: dict | None = None,
     fecha_referencia: date | None = None,
-    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT,
 ) -> dict:
     """
-    Envuelve preparar_turno() sin duplicar su lógica.
+    Punto de entrada normal y seguro del producto.
 
-    Args:
-        estado:
-            El estado de la sesión.
-        consulta:
-            input del usuario.
-        empleado | empresa | documentos | faqs:
-            datos necesarios para el perfil, cálculo de día
-            selección de documentación y construcción de
-            contexto.
-        configuracion:
-            usar la default o una parcial.
-        fecha_referencia:
-            principalmente para pruebas. Si `None` se usa la
-            fecha actual.
-            date(yyyy, m, d)
-        modo_seguridad:
-            qué flujo va a ejecutar ("seguro" | "vulnerable")
-            por defecto el más restrictivo: seguro.
-
-    Modo seguro:
-    1. valida el input;
-    2. prepara el turno sin LLM;
-    3. valida el contexto;
-    4. autoriza o bloquea la futura llamada.
-
-    Modo vulnerable:
-    conserva las validaciones estructurales de preparar_turno(),
-    pero omite las defensas de seguridad a propósito.
+    Secuencia:
+    1. valida la entrada antes de preparar el contexto;
+    2. reutiliza preparar_turno() para el núcleo estructural;
+    3. valida el contexto resultante;
+    4. autoriza o bloquea la futura llamada al modelo.
 
     Puede devolver:
-    - Error estructural
-    - Respuesta bloqueada
-    - Turno autorizado -> "llamar_modelo": True
+    - un error estructural;
+    - una respuesta controlada con llamar_modelo=False;
+    - un turno autorizado con llamar_modelo=True.
+
+    Esta función no invoca al modelo.
     """
+    validacion_entrada = validar_entrada_segura(consulta)
 
-    # 1. Validación de existencia del modo
-    # comprobar modo
-    if modo_seguridad not in MODOS_SEGURIDAD:
-        return respuesta_error("Modo de seguridad no válido.", [f"Modo desconocido: {modo_seguridad!r}."])
+    if not validacion_entrada["permitido"]:
+        _registrar_evento_seguridad(
+            estado,
+            validacion_entrada,
+            consulta,
+        )
 
-    # 2. Lógica del MODO SEGURO (Validación de entrada)
-    # primera validación
-    if modo_seguridad == "seguro":
-        validacion_entrada = validar_entrada_segura(consulta)
+        return crear_respuesta_controlada(
+            validacion_entrada,
+            modelo_invocado=False,
+        )
 
-        if not validacion_entrada["permitido"]:
-            _registrar_evento_seguridad(estado, validacion_entrada, consulta)
+    resultado = preparar_turno(
+        estado=estado,
+        consulta=consulta,
+        empleado=empleado,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
+    )
 
-            return crear_respuesta_controlada(validacion_entrada, modo_seguridad, False)
-
-    # 3. Preparación del turno (Común para ambos modos)
-    # si autoriza (o modo vulnerable)
-    resultado = preparar_turno(estado, consulta, empleado, empresa, documentos, faqs, configuracion, fecha_referencia)
-
-    # si no es OK problema estructural
     if resultado.get("status") != "ok":
         return resultado
 
-    # si todo OK se prepara turno
-    turno_preparado = resultado.get("data", {}).get("turno_preparado")
+    turno_preparado = (
+        resultado.get("data", {}).get("turno_preparado")
+    )
 
-    # 4. Lógica del MODO SEGURO (Validación de contexto)
-    # segunda validación
-    if modo_seguridad == "seguro":
-        # si turno preparado no existe será None y se rechazará
-        validacion_contexto = validar_contexto_seguro(turno_preparado)
+    validacion_contexto = validar_contexto_seguro(
+        turno_preparado
+    )
 
-        # si no la permite se registra el rechazo
-        if not validacion_contexto["permitido"]:
-            _registrar_evento_seguridad(estado, validacion_contexto, consulta)
+    if not validacion_contexto["permitido"]:
+        _registrar_evento_seguridad(
+            estado,
+            validacion_contexto,
+            consulta,
+        )
 
-            return crear_respuesta_controlada(validacion_contexto, modo_seguridad, False)
+        return crear_respuesta_controlada(
+            validacion_contexto,
+            modelo_invocado=False,
+        )
 
-    # 5. Autorización para LLM (Llega aquí tanto en seguro como en vulnerable)
-    # llega hasta aquí modo vulnerable
-    # modo seguro ha pasado todas las validaciones
-    # ESTO LE VA A LLEGAR AL MODELO
     resultado["data"]["llamar_modelo"] = True
     resultado["data"]["modelo_invocado"] = False
-    resultado["data"]["modo_seguridad"] = (modo_seguridad)
 
     return resultado
 
 
-# tercera validación
-# ya se ha llamado al modelo y se va a validar su respuesta
-# se valida ANTES de guardarla en el historial
-def finalizar_turno_con_modo(
+def finalizar_turno_seguro(
     estado: dict,
     turno_preparado: dict,
     resultado_externo: dict,
-    modo_seguridad: str = MODO_SEGURIDAD_DEFAULT
 ) -> dict:
     """
-    Envuelve `finalizar_turno()` para añadir otra capa de seguridad
-    antes de guardar el input y la respuesta del modelo en el 
-    historial.
+    Punto de finalización normal y seguro del producto.
 
-    Args:
-        estado:
-            estado actual de la conversación.
-        turno_preparado:
-            diccionario producido por `preparar_turno()`
-        resultado_externo:
-            respuesta generada por el modelo.
-            (modo seguro: lo revisa antes de que se guarde)
-        modo_seguridad:
-            determina si se aplica la validación de salida.
-            ("seguro" | "vulnerable") por defecto seguro.
+    Antes de persistir la respuesta:
+    1. valida la estructura y el contenido;
+    2. comprueba posibles fugas de información;
+    3. verifica las fuentes respecto al contexto del turno;
+    4. bloquea una salida insegura;
+    5. reutiliza finalizar_turno() cuando la salida es válida.
 
-    En modo seguro:
-    1. valida la estructura y el contenido de la respuesta.
-    2. comprueba que no hay fugas de inforamción.
-    3. verifica que las fuentes pertenecen al contexto del turno.
-    4. bloquea la respuesta si no es validada.
-    5. usa finalizar_turno() cuando la salida es válida.
-
-    En modo vulnerable:
-    omite las validaciones y va directamente a `finalizar_turno()`.
-    se conservan las validaciones básicas de finalizar_turno().
+    Esta función presupone que el modelo ya fue invocado. Por ello,
+    un bloqueo de salida devuelve modelo_invocado=True.
     """
+    validacion_salida = validar_salida_segura(
+        resultado_externo,
+        turno_preparado,
+    )
 
-    # comprobar modo
-    if modo_seguridad not in MODOS_SEGURIDAD:
-        return respuesta_error("Modo de seguridad no válido.", [f"Modo desconocido: {modo_seguridad!r}."])
+    if not validacion_salida["permitido"]:
+        consulta = (
+            turno_preparado.get("consulta", "")
+            if isinstance(turno_preparado, dict)
+            else ""
+        )
 
-    # con modo seguro activo se valida la salida
-    if modo_seguridad == "seguro":
-        validacion_salida = validar_salida_segura(resultado_externo, turno_preparado)
+        _registrar_evento_seguridad(
+            estado,
+            validacion_salida,
+            consulta,
+        )
 
-        # si se rechaza la respuesta del modelo
-        # no se ejecuta finalizar_turno()
-        if not validacion_salida["permitido"]:
-            consulta = turno_preparado.get("consulta", "")
+        return crear_respuesta_controlada(
+            validacion_salida,
+            modelo_invocado=True,
+        )
 
-            _registrar_evento_seguridad(estado, validacion_salida, consulta)
+    resultado = finalizar_turno(
+        estado=estado,
+        turno_preparado=turno_preparado,
+        resultado_externo=resultado_externo,
+    )
 
-            return crear_respuesta_controlada(validacion_salida, modo_seguridad, True)
+    if resultado.get("status") == "ok":
+        resultado.setdefault("data", {})["modelo_invocado"] = True
 
-    # se llega directamente en modo vulnerable
-    # se ha superado la validación de la respuesta
-    return finalizar_turno(estado, turno_preparado, resultado_externo)
-
-# ============================================================
-# LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# Punto de integración previsto:
-#
-# turno = preparar_turno(...)
-# resultado_externo = adaptador_llm(
-#     turno["data"]["turno_preparado"]
-# )
-# resultado = finalizar_turno(
-#     estado,
-#     turno["data"]["turno_preparado"],
-#     resultado_externo,
-# )
-#
-# El área LLM y Benchmark deberá implementar:
-#
-# - Construcción del prompt.
-# - Selección del modelo.
-# - Selección de temperatura.
-# - Llamada al proveedor.
-# - Control de tokens.
-# - Generación estructurada.
-# - Métricas y benchmarking.
+    return resultado
 
 
 # ============================================================
-# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
+# PUNTOS DE INTEGRACIÓN
 # ============================================================
 
-# El área de Robustez podrá intervenir antes del adaptador LLM
-# o envolver el flujo completo sin duplicar este archivo.
+# Flujo normal del producto:
 #
-# No deben crearse variantes como:
+# preparacion = preparar_turno_seguro(...)
 #
-# - logic_seguro.py
-# - logic_vulnerable.py
+# if preparacion["status"] != "ok":
+#     resultado_final = preparacion
 #
-# Las variantes deberán reutilizar preparar_turno() y
-# finalizar_turno() mediante funciones, adaptadores o estrategias.
+# elif not preparacion["data"]["llamar_modelo"]:
+#     resultado_final = preparacion
+#
+# else:
+#     turno_preparado = preparacion["data"]["turno_preparado"]
+#     resultado_externo = adaptador_llm(turno_preparado)
+#     resultado_final = finalizar_turno_seguro(
+#         estado,
+#         turno_preparado,
+#         resultado_externo,
+#     )
+#
+#
+# El área LLM y Benchmark mantiene sus responsabilidades:
+#
+# - construcción del prompt;
+# - selección del modelo;
+# - temperatura y parámetros;
+# - llamada al proveedor;
+# - control de tokens;
+# - generación estructurada;
+# - métricas y benchmarking.
+#
+#
+# Excepción controlada para demo5_vulnerable_vs_seguro.py:
+#
+# La ruta vulnerable no debe añadirse aquí ni exponerse como modo.
+# La demo puede reutilizar explícitamente:
+#
+#     preparar_turno(...)
+#     finalizar_turno(...)
+#
+# para reproducir una integración insegura aislada, sin alterar el
+# pipeline normal del producto ni ofrecer un selector global.

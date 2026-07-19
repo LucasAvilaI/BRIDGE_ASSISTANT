@@ -11,6 +11,7 @@ from logic import preparar_turno_con_modo, finalizar_turno_con_modo
 from state import inicializar_estado
 from config import MODO_SEGURIDAD_DEFAULT
 from logic import preparar_turno_con_modo
+from menu import ejecutar_menu
 
 
 # ============================================================
@@ -432,4 +433,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    print("1. Aplicación principal")
+    print("2. Menú de demostraciones")
+
+    opcion = input("Selecciona una opción: ").strip()
+
+    if opcion == "2":
+        ejecutar_menu()
+    else:
+        main()
