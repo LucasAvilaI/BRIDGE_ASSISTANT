@@ -20,7 +20,7 @@ from gemini_client import (
     safe_generate,
     safe_generate_with_system_instruction,
 )
-from logic_refactor_segurosiempre import (
+from logic import (
     finalizar_turno,
     preparar_turno,
     finalizar_turno_seguro,
