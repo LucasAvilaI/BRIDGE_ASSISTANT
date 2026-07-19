@@ -462,22 +462,6 @@ def _validar_turno_preparado(
 
         raise ValueError(f"Faltan campos obligatorios en el turno preparado: {campos}.")
 
-    consulta = turno_preparado.get("consulta")
-
-    _validar_consulta(consulta)
-
-    perfil_activo = turno_preparado.get("perfil_activo")
-
-    if perfil_activo not in VALID_PROFILES:
-        raise ValueError(f"Perfil activo desconocido: {perfil_funcional!r}.")
-
-    categoria = turno_preparado.get("categoria_preliminar")
-
-    if categoria not in VALID_CATEGORIES:
-        raise ValueError(f"Categoría preliminar desconocida: {categoria!r}.")
-
-    dia_onboarding = turno_preparado.get("dia_onboarding")
-
     consulta = turno_preparado["consulta"]
     _validar_consulta(consulta)
 
