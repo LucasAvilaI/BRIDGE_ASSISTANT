@@ -19,6 +19,7 @@ from config import (
     PREGUNTAS_BENCHMARK_PATH,
     RESULTADOS_BENCHMARK_PATH,
 )
+from gemini_auth import configurar_gemini_api_key, GeminiAuthError
 from gemini_client import (
     GeminiClientError,
     ejecutar_caso_benchmark,
@@ -120,7 +121,9 @@ def crear_resultado_base(
         "model_id": model_id,
         "temperature": BENCHMARK_TEMPERATURE,
         "thinking_budget": BENCHMARK_THINKING_BUDGET,
-        "modo": caso.get("modo", "seguro"),
+        # CORRECCIÓN DE ROBUSTEZ: Forzamos 'seguro' por diseño del producto
+        # independientemente de lo que venga escrito en la semilla JSON.
+        "modo": "seguro",
         "tipo": caso.get("tipo", "chat"),
         "categoria_esperada": caso.get("categoria_esperada"),
         "empleado_id": caso.get("empleado_id"),
@@ -167,6 +170,7 @@ def ejecutar_caso(
     inicio_total = datetime.now(timezone.utc)
 
     try:
+        # Aquí se fuerza de manera inmutable el flujo de la instrucción de sistema segura
         texto, metricas = ejecutar_caso_benchmark(
             caso["prompt"],
             model_id=model_id,
@@ -211,6 +215,13 @@ def ejecutar_caso(
 
 def ejecutar_benchmark() -> list[dict[str, Any]]:
     """Ejecuta todos los casos con los dos modelos y exporta los resultados."""
+    
+    # CORRECCIÓN DE ROBUSTEZ: Asegurar la API Key sin interactividad para procesos desasistidos
+    try:
+        configurar_gemini_api_key(interactivo=False)
+    except GeminiAuthError as e:
+        raise RuntimeError(f"No se pudo iniciar el benchmark debido a credenciales: {e}")
+
     validar_modelos_benchmark()
     casos = cargar_casos()
     modelos = listar_modelos_benchmark()
