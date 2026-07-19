@@ -424,37 +424,50 @@ def preparar_turno(
             "consulta": consulta_limpia,
             "empleado": deepcopy(empleado_validado),
             "empresa": deepcopy(empresa_validada),
-            "perfil_activo": perfil_activo,
-            "perfil": deepcopy(PERFILES[perfil_activo]),
-            "categoria_preliminar": (categoria_preliminar),
+            "perfil_empleado": empleado_validado["perfil"],
+            "perfil_funcional": perfil_activo,
+            "configuracion_perfil_funcional": deepcopy(
+                PERFILES[perfil_activo]
+            ),
+            "categoria_preliminar": categoria_preliminar,
             "dia_onboarding": dia_onboarding,
             "contexto": deepcopy(contexto),
             "historial": deepcopy(historial),
             "configuracion": deepcopy(configuracion_final)
         }
 
-    except (TypeError, ValueError) as error:
-        return respuesta_error("No se ha podido preparar el turno.", [str(error)])
+    except (KeyError, TypeError, ValueError) as error:
+        return respuesta_error("No se ha podido preparar el turno.",[str(error)])
 
-    return respuesta_ok("Turno preparado", {"turno_preparado": turno_preparado})
+    return respuesta_ok("Turno preparado",{"turno_preparado": turno_preparado})
 
 
 # ============================================================
 # FINALIZACIÓN DEL TURNO
 # ============================================================
 
-def _validar_turno_preparado(turno_preparado: Any) -> dict:
+def _validar_turno_preparado(
+    turno_preparado: Any
+) -> dict:
     """
-    Valida la estructura mínima necesaria para finalizar el turno.
+    Valida el contrato público del turno preparado antes de
+    continuar con la finalización del turno.
     """
     if not isinstance(turno_preparado, dict):
         raise TypeError("El turno preparado debe ser un diccionario.")
 
     campos_requeridos = {
         "consulta",
-        "perfil_activo",
+        "empleado",
+        "empresa",
+        "perfil_empleado",
+        "perfil_funcional",
+        "configuracion_perfil_funcional",
         "categoria_preliminar",
-        "dia_onboarding"
+        "dia_onboarding",
+        "contexto",
+        "historial",
+        "configuracion"
     }
 
     campos_ausentes = campos_requeridos.difference(turno_preparado)
@@ -480,12 +493,66 @@ def _validar_turno_preparado(turno_preparado: Any) -> dict:
 
     dia_onboarding = turno_preparado.get("dia_onboarding")
 
+    consulta = turno_preparado["consulta"]
+    _validar_consulta(consulta)
+
+    empleado = turno_preparado["empleado"]
+
+    if not isinstance(empleado, dict):
+        raise TypeError("El empleado del turno preparado debe ser parte un diccionario.")
+
+    empresa = turno_preparado["empresa"]
+
+    if not isinstance(empresa, dict):
+        raise TypeError("La empresa del turno preparado debe formar parte de un diccionario."
+        )
+
+    perfil_empleado = turno_preparado["perfil_empleado"]
+
+    if (not isinstance(perfil_empleado, str) or not perfil_empleado.strip()):
+        raise ValueError("El perfil del empleado debe ser una cadena no vacía.")
+
+    perfil_funcional = turno_preparado["perfil_funcional"]
+
+    if perfil_funcional not in VALID_PROFILES:
+        raise ValueError("Perfil funcional desconocido: "
+            f"{perfil_funcional!r}.")
+
+    configuracion_perfil = turno_preparado["configuracion_perfil_funcional"]
+
+    if not isinstance(configuracion_perfil, dict):
+        raise TypeError("La configuración del perfil funcional debe ser un diccionario.")
+
+    categoria = turno_preparado["categoria_preliminar"]
+
+    if categoria not in VALID_CATEGORIES:
+        raise ValueError("Categoría preliminar desconocida: "
+            f"{categoria!r}.")
+
+    dia_onboarding = turno_preparado["dia_onboarding"]
+
     if (
         not isinstance(dia_onboarding, int)
         or isinstance(dia_onboarding, bool)
         or dia_onboarding < 1
     ):
-        raise ValueError("El día de onboarding del turno preparado debe ser un entero igual o superior a 1.")
+        raise ValueError("El día de onboarding del turno preparado "
+            "debe ser un entero igual o superior a 1.")
+
+    contexto = turno_preparado["contexto"]
+
+    if not isinstance(contexto, dict):
+        raise TypeError("El contexto del turno preparado debe ser un diccionario.")
+
+    historial = turno_preparado["historial"]
+
+    if not isinstance(historial, list):
+        raise TypeError("El historial del turno preparado debe ser una lista.")
+
+    configuracion = turno_preparado["configuracion"]
+
+    if not isinstance(configuracion, dict):
+        raise TypeError("La configuración del turno preparado debe ser un diccionario.")
 
     return turno_preparado
 
