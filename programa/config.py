@@ -139,9 +139,6 @@ MAX_CONTEXT_FAQS = 2
 # de la consulta requiera un perfil más específico.
 ONBOARDING_PROFILE_DAYS = 7
 
-# El acompañamiento inicial se considera comprendido dentro
-# de los primeros 30 días.
-
 
 # ============================================================
 # CONFIGURACIÓN DE PUNTUACIÓN DEL CONTEXTO
@@ -445,11 +442,7 @@ DOMAIN_KEYWORDS = {
 
 # Para peticiones sobre días concretos
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
-PATRONES_DOMINIO_ADICIONALES = (
-    r"\bdia\s+[1-5]\b",
-    r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",
-)
-
+PATRONES_DOMINIO_ADICIONALES = (r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
 
 # ============================================================
 # ESCALACIÓN

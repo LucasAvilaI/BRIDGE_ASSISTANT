@@ -647,31 +647,3 @@ def construir_contexto(
         "faq_ids": faq_ids,
         "hay_contexto": bool(documentos_finales or faqs_seleccionadas)
     }
-
-
-# ============================================================
-# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# La variante vulnerable deberá respetar el mismo contrato
-# de entrada y salida que construir_contexto().
-#
-# No debe devolver una lista genérica ni crear módulos
-# paralelos como:
-#
-# - context_vulnerable.py
-# - context_seguro.py
-#
-# Las variantes deberán reutilizar este módulo mediante
-# estrategias, adaptadores o funciones específicas.
-
-
-# ============================================================
-# LLM Y BENCHMARK — SIN INTEGRACIÓN DIRECTA
-# ============================================================
-
-# Este módulo no construye prompts, no selecciona modelos y
-# no registra métricas.
-#
-# El área LLM y Benchmark consume únicamente el contexto
-# documental generado por construir_contexto().
