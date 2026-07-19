@@ -4,11 +4,11 @@ from config import (
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
+    MODO_SEGURIDAD_DEFAULT
 )
 from context import buscar_empleado, cargar_json
 from logic import preparar_turno_con_modo, finalizar_turno_con_modo
 from state import inicializar_estado
-from config import MODO_SEGURIDAD_DEFAULT
 
 
 # ============================================================
@@ -92,7 +92,7 @@ def seleccionar_empleado(empleados: list[dict]) -> dict | None:
         if empleado_id.lower() in COMANDOS_SALIDA:
             return None
 
-        empleado = buscar_empleado(empleados, empleado_id,)
+        empleado = buscar_empleado(empleados, empleado_id)
 
         if empleado is not None:
             return empleado
