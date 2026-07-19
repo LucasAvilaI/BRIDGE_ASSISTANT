@@ -9,9 +9,12 @@ from model_utils import obtener_modelo
 from model_registry import MODELS
 from logic import preparar_turno_con_modo
 from config import (
-    OUTPUT_DIR,
-    PREGUNTAS_BENCHMARK_PATH,
-    RESULTADOS_BENCHMARK_PATH
+    BENCHMARK_MAX_CASES,
+    BENCHMARK_MAX_OUTPUT_TOKENS,
+    BENCHMARK_MIN_CASES,
+    BENCHMARK_MODELS,
+    BENCHMARK_TEMPERATURE,
+    BENCHMARK_THINKING_BUDGET,
 )
 from utils.console import log_test_header, log_result
 import json

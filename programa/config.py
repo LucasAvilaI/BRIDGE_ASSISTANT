@@ -44,21 +44,48 @@ OUTPUT_DIR = BASE_DIR / "programa" / "output"
 RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 
 # ============================================================
-# LLM Y BENCHMARK
+# LLM
 # ============================================================
 
-# Modelos reales disponibles en tu API para el test A/B
-MODEL_1 = "gemini-2.5-flash"  # Variante A (Eficiencia)
-MODEL_2 = "gemini-2.5-pro"    # Variante B (Calidad)
+# Modelos disponibles
+MODEL_1 = "gemini-2.5-flash"  # Variante A: eficiencia
+MODEL_2 = "gemini-2.5-pro"    # Variante B: calidad
 
-# Selección de modelo por defecto para el asistente en producción
+# Modelo por defecto del asistente
 MODEL = MODEL_1
 
+# Parámetros de generación
 TEMPERATURE_DEFAULT = 0.2
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
 TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
+# Límites funcionales y técnicos
 MAX_TOKENS_INPUT = 8_000
+MAX_OUTPUT_WORDS = 200
+MAX_OUTPUT_TOKENS = 800
+
+# Presupuesto de razonamiento
+THINKING_BUDGET_CHAT = 512
+THINKING_BUDGET_SMOKE_TEST = 0  # solo compatible con Flash
+
+
+# ============================================================
+# BENCHMARK
+# ============================================================
+
+BENCHMARK_MODELS = (MODEL_1, MODEL_2)
+
+BENCHMARK_MIN_CASES = 10
+BENCHMARK_MAX_CASES = 14
+
+BENCHMARK_TEMPERATURE = TEMPERATURE_DEFAULT
+BENCHMARK_THINKING_BUDGET = 512
+BENCHMARK_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
+
+
+# ============================================================
+# CONTRATO DE RESPUESTA LLM
+# ============================================================
 
 REQUIRED_RESPONSE_FIELDS = frozenset(
     {
@@ -68,7 +95,7 @@ REQUIRED_RESPONSE_FIELDS = frozenset(
         "document_ids",
         "faq_ids",
         "needs_escalation",
-        "escalation_department"
+        "escalation_department",
     }
 )
 
@@ -103,15 +130,11 @@ Reglas del formato:
 # CONFIGURACIÓN GENERAL DEL ASISTENTE
 # ============================================================
 
-# Número máximo de mensajes recientes incluidos en el historial.
+# Número máximo de mensajes recientes incluidos en el historial
 WINDOW = 4
 
-# Número máximo de caracteres que puede tener un input
+# Número máximo de caracteres del input del usuario
 MAX_INPUT_CHARS = 2_500
-
-# Extensión máxima aproximada de la respuesta final.
-# En la parte de robustez para modo seguro añado restricción aquí
-MAX_OUTPUT_WORDS = 200
 
 ASSISTANT_CONFIG_DEFAULT = {
     "model": MODEL,
@@ -120,8 +143,8 @@ ASSISTANT_CONFIG_DEFAULT = {
     "max_turnos_historial": WINDOW,
     "idioma_respuesta": "español",
     "max_palabras": MAX_OUTPUT_WORDS,
-    "max_documentos_contexto": 3,
-    "max_faqs_contexto": 2
+    "max_documentos_contexto": MAX_CONTEXT_DOCUMENTS,
+    "max_faqs_contexto": MAX_CONTEXT_FAQS,
 }
 
 
@@ -285,7 +308,7 @@ Reglas funcionales:
 """.strip()
 
 # ============================================================
-# REGLAS DE SEGURIDAD 
+# REGLAS DE SEGURIDAD
 # ============================================================
 
 # Reglas que se enviarán como instrucción de sistema real al SDK.
@@ -790,7 +813,7 @@ PATRONES_FUGA_SALIDA = (
 )
 
 # ============================================================
-# MENSAJES DE SEGURIDAD 
+# MENSAJES DE SEGURIDAD
 # ============================================================
 
 MENSAJES_SEGURIDAD = {
