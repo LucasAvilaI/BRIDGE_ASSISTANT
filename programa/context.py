@@ -28,23 +28,28 @@ def cargar_json(ruta: Path | str) -> list[dict] | dict:
     ruta_normalizada = Path(ruta)
 
     if not ruta_normalizada.exists():
-        raise FileNotFoundError(f"No se ha encontrado el archivo JSON: {ruta_normalizada}")
+        raise FileNotFoundError(
+            f"No se ha encontrado el archivo JSON: {ruta_normalizada}")
 
     if not ruta_normalizada.is_file():
-        raise ValueError(f"La ruta indicada no corresponde a un archivo: {ruta_normalizada}")
+        raise ValueError(
+            f"La ruta indicada no corresponde a un archivo: {ruta_normalizada}")
 
     try:
-        with ruta_normalizada.open("r",encoding="utf-8") as archivo:
+        with ruta_normalizada.open("r", encoding="utf-8") as archivo:
             datos = json.load(archivo)
 
     except json.JSONDecodeError as error:
-        raise ValueError(f"El archivo contiene un JSON no válido: {ruta_normalizada}") from error
+        raise ValueError(
+            f"El archivo contiene un JSON no válido: {ruta_normalizada}") from error
 
     except OSError as error:
-        raise OSError(f"No se ha podido leer el archivo JSON: {ruta_normalizada}") from error
+        raise OSError(
+            f"No se ha podido leer el archivo JSON: {ruta_normalizada}") from error
 
     if not isinstance(datos, (list, dict)):
-        raise ValueError(f"El JSON debe contener una lista o un diccionario: {ruta_normalizada}")
+        raise ValueError(
+            f"El JSON debe contener una lista o un diccionario: {ruta_normalizada}")
 
     return datos
 
@@ -61,13 +66,15 @@ def validar_lista_diccionarios(datos: Any, nombre_fuente: str, permitir_vacia: b
     Por defecto, una lista vacía se considera una fuente no válida.
     """
     if not isinstance(datos, list):
-        raise ValueError(f"{nombre_fuente} debe contener una lista de entradas.")
+        raise ValueError(
+            f"{nombre_fuente} debe contener una lista de entradas.")
 
     if not datos and not permitir_vacia:
         raise ValueError(f"{nombre_fuente} no puede estar vacío.")
 
     if not all(isinstance(entrada, dict) for entrada in datos):
-        raise ValueError(f"Todas las entradas de {nombre_fuente} deben ser diccionarios.")
+        raise ValueError(
+            f"Todas las entradas de {nombre_fuente} deben ser diccionarios.")
 
     return datos
 
@@ -136,6 +143,7 @@ STOPWORDS = frozenset(
     }
 )
 
+
 def normalizar_texto(texto: str | None) -> str:
     """
     Normaliza un texto para facilitar las comparaciones.
@@ -147,20 +155,20 @@ def normalizar_texto(texto: str | None) -> str:
     if texto is None:
         return ""
 
-    texto_normalizado = unicodedata.normalize("NFKC",str(texto))
+    texto_normalizado = unicodedata.normalize("NFKC", str(texto))
 
-    texto_normalizado = unicodedata.normalize("NFKD",texto_normalizado)
+    texto_normalizado = unicodedata.normalize("NFKD", texto_normalizado)
 
     texto_normalizado = "".join(caracter
-        for caracter in texto_normalizado
-        if unicodedata.category(caracter) != "Mn"
-    )
+                                for caracter in texto_normalizado
+                                if unicodedata.category(caracter) != "Mn"
+                                )
 
     texto_normalizado = texto_normalizado.casefold()
 
-    texto_normalizado = re.sub(r"[_/\\-]+"," ",texto_normalizado)
+    texto_normalizado = re.sub(r"[_/\\-]+", " ", texto_normalizado)
 
-    return re.sub(r"\s+"," ",texto_normalizado).strip()
+    return re.sub(r"\s+", " ", texto_normalizado).strip()
 
 
 def extraer_palabras(texto: str | None) -> set[str]:
@@ -258,7 +266,7 @@ def puntuar_faq(faq: dict, palabras_pregunta: set[str], pregunta_normalizada: st
     - coincidencias con la respuesta corta;
     - coincidencias literales con tags compuestos.
     """
-    
+
     pregunta_faq = normalizar_texto(faq.get("pregunta", ""))
 
     respuesta_corta = normalizar_texto(faq.get("respuesta_corta", ""))
@@ -273,9 +281,11 @@ def puntuar_faq(faq: dict, palabras_pregunta: set[str], pregunta_normalizada: st
 
     coincidencias_tags = (palabras_pregunta.intersection(palabras_tags))
 
-    coincidencias_pregunta = (palabras_pregunta.intersection(palabras_pregunta_faq))
+    coincidencias_pregunta = (
+        palabras_pregunta.intersection(palabras_pregunta_faq))
 
-    coincidencias_respuesta = (palabras_pregunta.intersection(palabras_respuesta))
+    coincidencias_respuesta = (
+        palabras_pregunta.intersection(palabras_respuesta))
 
     puntuacion = 0
 
@@ -283,7 +293,8 @@ def puntuar_faq(faq: dict, palabras_pregunta: set[str], pregunta_normalizada: st
 
     puntuacion += (len(coincidencias_pregunta) * FAQ_SCORE_WEIGHTS["question"])
 
-    puntuacion += (len(coincidencias_respuesta) * FAQ_SCORE_WEIGHTS["short_answer"])
+    puntuacion += (len(coincidencias_respuesta) *
+                   FAQ_SCORE_WEIGHTS["short_answer"])
 
     # Una coincidencia literal con un tag compuesto recibe
     # una bonificación adicional porque representa una
@@ -312,7 +323,6 @@ def seleccionar_faq(faqs: list[dict], consulta: str, max_entradas: int = MAX_CON
         and max_entradas >= 0
     ), ("'max_entradas' debe ser un entero no negativo.")
 
-
     validar_lista_diccionarios(faqs, "faq_onboarding.json")
 
     if (not isinstance(consulta, str) or not consulta.strip()):
@@ -336,9 +346,9 @@ def seleccionar_faq(faqs: list[dict], consulta: str, max_entradas: int = MAX_CON
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
     faqs_puntuadas.sort(key=lambda elemento: (
-            -elemento[0],
-            str(elemento[1].get("id", ""))
-        )
+        -elemento[0],
+        str(elemento[1].get("id", ""))
+    )
     )
 
     return [faq for _, faq in faqs_puntuadas[:max_entradas]]
@@ -384,7 +394,7 @@ def puntuar_documento(
     )
 
     palabras_tags = extraer_palabras_tags(
-        documento.get("tags",[])
+        documento.get("tags", [])
     )
 
     palabras_titulo = extraer_palabras(titulo)
@@ -399,11 +409,14 @@ def puntuar_documento(
 
     puntuacion_intencion = 0
 
-    puntuacion_intencion += (len(coincidencias_tags) * DOCUMENT_SCORE_WEIGHTS["tag"])
+    puntuacion_intencion += (len(coincidencias_tags)
+                             * DOCUMENT_SCORE_WEIGHTS["tag"])
 
-    puntuacion_intencion += (len(coincidencias_titulo) * DOCUMENT_SCORE_WEIGHTS["title"])
+    puntuacion_intencion += (len(coincidencias_titulo)
+                             * DOCUMENT_SCORE_WEIGHTS["title"])
 
-    puntuacion_intencion += (len(coincidencias_cuerpo) * DOCUMENT_SCORE_WEIGHTS["body"])
+    puntuacion_intencion += (len(coincidencias_cuerpo)
+                             * DOCUMENT_SCORE_WEIGHTS["body"])
 
     # Los tags compuestos obtienen una bonificación adicional
     # cuando aparecen literalmente en la consulta.
@@ -422,7 +435,6 @@ def puntuar_documento(
         == departamento_empleado
     ):
         puntuacion += DOCUMENT_SCORE_WEIGHTS["employee_department"]
-        
 
     # Un documento transversal no entra únicamente por serlo.
     # Solo recibe bonificación si ya es relevante por contenido.
@@ -477,7 +489,8 @@ def seleccionar_documentos(
     documentos_puntuados: list[tuple[int, dict]] = []
 
     for documento in documentos:
-        puntuacion = puntuar_documento(documento, empleado, palabras_pregunta, pregunta_normalizada)
+        puntuacion = puntuar_documento(
+            documento, empleado, palabras_pregunta, pregunta_normalizada)
 
         if puntuacion >= MIN_DOCUMENT_SCORE:
             documentos_puntuados.append((puntuacion, documento))
@@ -485,9 +498,9 @@ def seleccionar_documentos(
     # En caso de empate se ordena también por ID
     # para obtener resultados deterministas.
     documentos_puntuados.sort(key=lambda elemento: (
-            -elemento[0],
-            str(elemento[1].get("id", ""))
-        )
+        -elemento[0],
+        str(elemento[1].get("id", ""))
+    )
     )
 
     return [documento for _, documento in documentos_puntuados[:max_documentos]]
@@ -539,7 +552,6 @@ def combinar_documentos(
         and not isinstance(limite, bool)
         and limite >= 0
     ), ("'limite' debe ser un entero no negativo.")
-
 
     if limite <= 0:
         return []
@@ -631,11 +643,14 @@ def construir_contexto(
 
     faqs_seleccionadas = seleccionar_faq(faqs, consulta, limite_faqs)
 
-    documentos_seleccionados = seleccionar_documentos(documentos, consulta, empleado, limite_documentos)
+    documentos_seleccionados = seleccionar_documentos(
+        documentos, consulta, empleado, limite_documentos)
 
-    documentos_finales = combinar_documentos(documentos_seleccionados, faqs_seleccionadas, documentos, limite_documentos)
+    documentos_finales = combinar_documentos(
+        documentos_seleccionados, faqs_seleccionadas, documentos, limite_documentos)
 
-    document_ids = [documento["id"] for documento in documentos_finales if documento.get("id")]
+    document_ids = [documento["id"]
+                    for documento in documentos_finales if documento.get("id")]
 
     faq_ids = [faq["id"] for faq in faqs_seleccionadas if faq.get("id")]
 
