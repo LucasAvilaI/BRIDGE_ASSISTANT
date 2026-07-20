@@ -4,13 +4,11 @@ from config import (
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
+    MODO_SEGURIDAD_DEFAULT
 )
 from context import buscar_empleado, cargar_json
-# from logic import preparar_turno
 from logic import preparar_turno_con_modo, finalizar_turno_con_modo
 from state import inicializar_estado
-from config import MODO_SEGURIDAD_DEFAULT
-from logic import preparar_turno_con_modo
 
 
 # ============================================================
@@ -94,7 +92,7 @@ def seleccionar_empleado(empleados: list[dict]) -> dict | None:
         if empleado_id.lower() in COMANDOS_SALIDA:
             return None
 
-        empleado = buscar_empleado(empleados, empleado_id,)
+        empleado = buscar_empleado(empleados, empleado_id)
 
         if empleado is not None:
             return empleado
@@ -122,35 +120,6 @@ def imprimir_errores(resultado: dict) -> None:
 
     for error in errores:
         print(f"- {error}")
-
-
-def imprimir_turno_preparado(resultado: dict) -> None:
-    """
-    Muestra únicamente el estado general del turno preparado.
-
-    Esta salida es temporal mientras no exista integración
-    con el área LLM y Benchmark.
-    """
-    if resultado.get("status") != "ok":
-        imprimir_errores(resultado)
-        return
-
-    turno_preparado = resultado.get("data", {}).get("turno_preparado")
-
-    if not isinstance(turno_preparado, dict):
-        imprimir_errores(
-            {
-                "mensaje": "El resultado no contiene un turno preparado válido.",
-                "data": {
-                    "errores": ["Falta el campo 'data.turno_preparado'."],
-                }
-            }
-        )
-        return
-
-    print("\n[OK] Turno preparado.")
-
-    print("Pendiente de integración con ""el área LLM y Benchmark.")
 
 
 def imprimir_respuesta_final(resultado: dict) -> None:
@@ -192,8 +161,9 @@ def ejecutar_sesion(
     """
     Ejecuta el ciclo interactivo de la Arquitectura Base.
 
-    El flujo activo prepara los turnos, pero no genera respuestas
-    porque el adaptador LLM pertenece a otra área del proyecto.
+    Prepara el turno mediante el orquestador, simula temporalmente
+    la respuesta del adaptador LLM y finaliza la interacción según
+    el modo de seguridad configurado.
     """
     estado = inicializar_estado()
 
@@ -227,7 +197,7 @@ def ejecutar_sesion(
             documentos=documentos,
             faqs=faqs,
             configuracion=ASSISTANT_CONFIG_DEFAULT,
-            modo_seguridad="seguro" # MODO_SEGURIDAD_DEFAULT # Aquí se alternan modos "seguro" o "vulnerable"
+            modo_seguridad=MODO_SEGURIDAD_DEFAULT  # Aquí se alternan modos "seguro" o "vulnerable"
         )
 
         datos_resultado = resultado.get("data", {})
@@ -236,115 +206,44 @@ def ejecutar_sesion(
             imprimir_respuesta_final(resultado)
             continue
 
-        # 2. DECISIÓN DE FLUJO (Aquí integramos el flag de seguridad)
+        # 2. DECISIÓN DE FLUJO
         if resultado.get("status") == "ok":
-            data = resultado.get("data", {})
+            turno_preparado = datos_resultado["turno_preparado"]
 
-            # Si el orquestador autoriza la llamada al modelo
-            if data.get("llamar_modelo"):
-                turno_preparado = data["turno_preparado"]
+            # SIMULACIÓN DEL ADAPTADOR LLM
+            # resultado_externo = adaptador_llm(turno_preparado)
+            resultado_externo = {
+                "in_scope": True,
+                "category": "general",
+                "answer": "Respuesta simulada",
+                "document_ids": turno_preparado["contexto"].get("document_ids", []),
+                "faq_ids": turno_preparado["contexto"].get("faq_ids", []),
+                "needs_escalation": False,
+                "escalation_department": None
+            }
 
-                # SIMULACIÓN DEL ADAPTADOR LLM (Aquí iría tu llamada al modelo real)
-                # resultado_externo = adaptador_llm(turno)
-                resultado_externo = {"in_scope": True, "category": "general", "answer": "Respuesta simulada"}
+            # 3. FINALIZACIÓN
+            resultado_final = finalizar_turno_con_modo(
+                estado=estado,
+                turno_preparado=turno_preparado,
+                resultado_externo=resultado_externo,
+                modo_seguridad=MODO_SEGURIDAD_DEFAULT
+            )
 
-                # 3. FINALIZACIÓN (Validación de salida)
-                resultado_final = finalizar_turno_con_modo(
-                    estado=estado,
-                    turno_preparado=turno_preparado,
-                    resultado_externo=resultado_externo,
-                    modo_seguridad="seguro"
-                )
-                imprimir_respuesta_final(resultado_final)
-            else:
-                # Si llamar_modelo es False, el orquestador ya bloqueó la consulta
-                imprimir_respuesta_final(resultado)
+            imprimir_respuesta_final(resultado_final)
+
         else:
             imprimir_errores(resultado)
 
-# ejecutar_sesion se tiene que refactorizar y sustituir la de abajo
-# por la de arriba con preparar_turno_con_modo
-        """
-        resultado = preparar_turno(
-            estado=estado,
-            consulta=consulta,
-            empleado=empleado,
-            empresa=empresa,
-            documentos=documentos,
-            faqs=faqs,
-            configuracion=ASSISTANT_CONFIG_DEFAULT,
-        )
 
-        imprimir_turno_preparado(
-            resultado
-        )"""
-
-        # ====================================================
-        # INTEGRACIÓN PENDIENTE: ROBUSTEZ
-        # ====================================================
-        #
-        # El área de Robustez podrá intervenir antes de llamar
-        # a preparar_turno(), validando la entrada del usuario,
-        # o después de preparar el turno y antes de enviarlo al
-        # adaptador LLM.
-        #
-        # No deben crearse flujos paralelos ni archivos como:
-        #
-        # - main_seguro.py
-        # - main_vulnerable.py
-        #
-        # Las variantes deberán reutilizar esta sesión y los
-        # contratos definidos por logic.py.
-
-        # ====================================================
-        # INTEGRACIÓN PENDIENTE: LLM Y BENCHMARK
-        # ====================================================
-        #
-        # Flujo futuro previsto:
-        #
-        # if resultado["status"] == "ok":
-        #     turno_preparado = resultado[
-        #         "data"
-        #     ]["turno_preparado"]
-        #
-        #     resultado_externo = adaptador_llm(
-        #         turno_preparado
-        #     )
-        #
-        #     resultado_final = finalizar_turno(
-        #         estado=estado,
-        #         turno_preparado=turno_preparado,
-        #         resultado_externo=resultado_externo,
-        #     )
-        #
-        #     imprimir_respuesta_final(
-        #         resultado_final
-        #     )
-        #
-        # El área LLM y Benchmark deberá implementar:
-        #
-        # - Construcción del prompt.
-        # - Selección del proveedor y modelo.
-        # - Temperatura.
-        # - Generación estructurada.
-        # - Control de tokens.
-        # - Métricas.
-        # - Benchmarking.
-        #
-        # La salida final de consola deberá limitarse a:
-        #
-        # Asistente:
-        # <respuesta>
-        #
-        # Los perfiles, categorías, documentos, FAQ, historial
-        # y métricas no deben mostrarse al usuario final.
-        #
-        # Mientras esa integración no exista, el estado no se
-        # actualiza porque preparar_turno() no representa todavía
-        # una interacción finalizada.
+    # =================================================================================================     
+    # INTEGRACIÓN PENDIENTE: LLM Y BENCHMARK
+    # La respuesta simulada deberá sustituirse por la llamada
+    # al adaptador LLM implementado por el área responsable.
+    # =================================================================================================
 
 # ============================================================
-# DEMO VULNERABLE VS SEGURO
+# PUNTO DE ENTRADA / DEMOSTRACIÓN DE MODOS
 # ============================================================
 
 def demo_vulnerable_vs_seguro(
@@ -395,37 +294,20 @@ def main() -> None:
     try:
         datos = cargar_datos()
 
-    except (
-        FileNotFoundError,
-        ValueError,
-        OSError,
-    ) as error:
-        print(
-            "\nNo se ha podido iniciar la aplicación."
-        )
+    except (FileNotFoundError, ValueError, OSError) as error:
+        print("\nNo se ha podido iniciar la aplicación.")
 
-        print(
-            f"- {error}"
-        )
+        print(f"- {error}")
 
         return
 
-    empleado = seleccionar_empleado(
-        datos["empleados"]
-    )
+    empleado = seleccionar_empleado(datos["empleados"])
 
     if empleado is None:
-        print(
-            "\nAplicación finalizada."
-        )
+        print("\nAplicación finalizada.")
         return
 
-    ejecutar_sesion(
-        empleado=empleado,
-        empresa=datos["empresa"],
-        documentos=datos["documentos"],
-        faqs=datos["faqs"],
-    )
+    ejecutar_sesion(empleado, datos["empresa"], datos["documentos"], datos["faqs"])
 
     # comparar vulnerable vs seguro, si se quiere ejecutar DESCOMENTAR
     # demo_vulnerable_vs_seguro(empleado, datos["empresa"], datos["documentos"], datos["faqs"])

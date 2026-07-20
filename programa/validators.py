@@ -642,13 +642,7 @@ def validar_respuesta_estructurada(resultado_externo: Any) -> dict:
     # Comprobaciones de coherencia entre los dos campos
     # relacionados con la escalación.
     if isinstance(necesita_escalacion, bool):
-        if (
-            necesita_escalacion
-            and (
-                not isinstance(departamento_escalacion, str)
-                or not departamento_escalacion.strip()
-            )
-        ):
+        if (necesita_escalacion and (not isinstance(departamento_escalacion, str) or not departamento_escalacion.strip())):
             errores.append(
                 "Si 'needs_escalation' es True, "
                 "'escalation_department' debe indicar "
@@ -676,7 +670,7 @@ def validar_respuesta_estructurada(resultado_externo: Any) -> dict:
 # No revela información confidencial
 # No cita documentos distintos a los autorizados
 
-def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:   # respuesta del modelo # return de preparar_turno()
+def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
     """
     Tercera capa de validación, antes de finalizar_turno().
 
@@ -685,16 +679,15 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
     en el historial.
     """
 
-    # comprueba que los dos argumentos son el tipo de objeto esperado
-    if not isinstance(resultado_externo, dict) or not isinstance(turno_preparado, dict):
+    if (not isinstance(resultado_externo, dict) or not isinstance(turno_preparado, dict)):
         return _resultado_validacion(False, "unsafe_output", "output")
-    
+
     validacion_estructura = validar_respuesta_estructurada(resultado_externo)
 
     if not validacion_estructura["valido"]:
-        return _resultado_validacion(False, "unsafe_output", "output")
-    
-    contexto = turno_preparado.get("contexto", {})
+        return _resultado_validacion(False,"unsafe_output","output")
+
+    contexto = turno_preparado.get("contexto",{})
 
     ids_documentos_permitidos = set(contexto.get("document_ids", []))
 
@@ -709,6 +702,18 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
 
     if not ids_faq_devueltas.issubset(ids_faq_permitidas):
         return _resultado_validacion(False,"unsafe_output","output")
+
+    respuesta_normalizada = normalizar_texto_seguridad(resultado_externo["answer"])
+
+    if len(resultado_externo["answer"]) > MAX_SAFE_OUTPUT_CHARS:
+        return _resultado_validacion(False,"unsafe_output","output")
+
+    if _coincide_algun_patron(respuesta_normalizada,PATRONES_FUGA_SALIDA):
+        return _resultado_validacion(False,"unsafe_output","output")
+
+    return _resultado_validacion(True,"valid_output","output")
+
+
 
 # después de esta validación de respuesta queda cerrar turno
 # con finalizar_turno() para guardar la interacción en el historial

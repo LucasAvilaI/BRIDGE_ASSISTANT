@@ -411,37 +411,48 @@ def preparar_turno(
             "consulta": consulta_limpia,
             "empleado": deepcopy(empleado_validado),
             "empresa": deepcopy(empresa_validada),
-            "perfil_activo": perfil_activo,
-            "perfil": deepcopy(PERFILES[perfil_activo]),
-            "categoria_preliminar": (categoria_preliminar),
+            "perfil_empleado": empleado_validado["perfil"],
+            "perfil_funcional": perfil_activo,
+            "configuracion_perfil_funcional": deepcopy(PERFILES[perfil_activo]),
+            "categoria_preliminar": categoria_preliminar,
             "dia_onboarding": dia_onboarding,
             "contexto": deepcopy(contexto),
             "historial": deepcopy(historial),
             "configuracion": deepcopy(configuracion_final)
         }
 
-    except (TypeError, ValueError) as error:
-        return respuesta_error("No se ha podido preparar el turno.", [str(error)])
+    except (KeyError, TypeError, ValueError) as error:
+        return respuesta_error("No se ha podido preparar el turno.",[str(error)])
 
-    return respuesta_ok("Turno preparado", {"turno_preparado": turno_preparado})
+    return respuesta_ok("Turno preparado",{"turno_preparado": turno_preparado})
 
 
 # ============================================================
 # FINALIZACIÓN DEL TURNO
 # ============================================================
 
-def _validar_turno_preparado(turno_preparado: Any) -> dict:
+def _validar_turno_preparado(
+    turno_preparado: Any
+) -> dict:
     """
-    Valida la estructura mínima necesaria para finalizar el turno.
+    Valida el contrato público del turno preparado antes de
+    continuar con la finalización del turno.
     """
     if not isinstance(turno_preparado, dict):
         raise TypeError("El turno preparado debe ser un diccionario.")
 
     campos_requeridos = {
         "consulta",
-        "perfil_activo",
+        "empleado",
+        "empresa",
+        "perfil_empleado",
+        "perfil_funcional",
+        "configuracion_perfil_funcional",
         "categoria_preliminar",
-        "dia_onboarding"
+        "dia_onboarding",
+        "contexto",
+        "historial",
+        "configuracion"
     }
 
     campos_ausentes = campos_requeridos.difference(turno_preparado)
@@ -451,28 +462,66 @@ def _validar_turno_preparado(turno_preparado: Any) -> dict:
 
         raise ValueError(f"Faltan campos obligatorios en el turno preparado: {campos}.")
 
-    consulta = turno_preparado.get("consulta")
-
+    consulta = turno_preparado["consulta"]
     _validar_consulta(consulta)
 
-    perfil_activo = turno_preparado.get("perfil_activo")
+    empleado = turno_preparado["empleado"]
 
-    if perfil_activo not in VALID_PROFILES:
-        raise ValueError(f"Perfil activo desconocido: {perfil_activo!r}.")
+    if not isinstance(empleado, dict):
+        raise TypeError("El empleado del turno preparado debe ser parte un diccionario.")
 
-    categoria = turno_preparado.get("categoria_preliminar")
+    empresa = turno_preparado["empresa"]
+
+    if not isinstance(empresa, dict):
+        raise TypeError("La empresa del turno preparado debe formar parte de un diccionario."
+        )
+
+    perfil_empleado = turno_preparado["perfil_empleado"]
+
+    if (not isinstance(perfil_empleado, str) or not perfil_empleado.strip()):
+        raise ValueError("El perfil del empleado debe ser una cadena no vacía.")
+
+    perfil_funcional = turno_preparado["perfil_funcional"]
+
+    if perfil_funcional not in VALID_PROFILES:
+        raise ValueError("Perfil funcional desconocido: "
+            f"{perfil_funcional!r}.")
+
+    configuracion_perfil = turno_preparado["configuracion_perfil_funcional"]
+
+    if not isinstance(configuracion_perfil, dict):
+        raise TypeError("La configuración del perfil funcional debe ser un diccionario.")
+
+    categoria = turno_preparado["categoria_preliminar"]
 
     if categoria not in VALID_CATEGORIES:
-        raise ValueError(f"Categoría preliminar desconocida: {categoria!r}.")
+        raise ValueError("Categoría preliminar desconocida: "
+            f"{categoria!r}.")
 
-    dia_onboarding = turno_preparado.get("dia_onboarding")
+    dia_onboarding = turno_preparado["dia_onboarding"]
 
     if (
         not isinstance(dia_onboarding, int)
         or isinstance(dia_onboarding, bool)
         or dia_onboarding < 1
     ):
-        raise ValueError("El día de onboarding del turno preparado debe ser un entero igual o superior a 1.")
+        raise ValueError("El día de onboarding del turno preparado "
+            "debe ser un entero igual o superior a 1.")
+
+    contexto = turno_preparado["contexto"]
+
+    if not isinstance(contexto, dict):
+        raise TypeError("El contexto del turno preparado debe ser un diccionario.")
+
+    historial = turno_preparado["historial"]
+
+    if not isinstance(historial, list):
+        raise TypeError("El historial del turno preparado debe ser una lista.")
+
+    configuracion = turno_preparado["configuracion"]
+
+    if not isinstance(configuracion, dict):
+        raise TypeError("La configuración del turno preparado debe ser un diccionario.")
 
     return turno_preparado
 
@@ -547,7 +596,7 @@ def finalizar_turno(estado: dict, turno_preparado: dict, resultado_externo: dict
         {
             "respuesta": respuesta,
             "resultado": deepcopy(resultado_validado),
-            "perfil_activo": turno_validado["perfil_activo"],
+            "perfil_activo": turno_validado["perfil_funcional"],
             "categoria": resultado_validado["category"],
             "categoria_preliminar": turno_validado["categoria_preliminar"],
             "dia_onboarding": turno_validado["dia_onboarding"]
@@ -803,45 +852,3 @@ def finalizar_turno_con_modo(
     # se llega directamente en modo vulnerable
     # se ha superado la validación de la respuesta
     return finalizar_turno(estado, turno_preparado, resultado_externo)
-
-# ============================================================
-# LLM Y BENCHMARK — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# Punto de integración previsto:
-#
-# turno = preparar_turno(...)
-# resultado_externo = adaptador_llm(
-#     turno["data"]["turno_preparado"]
-# )
-# resultado = finalizar_turno(
-#     estado,
-#     turno["data"]["turno_preparado"],
-#     resultado_externo,
-# )
-#
-# El área LLM y Benchmark deberá implementar:
-#
-# - Construcción del prompt.
-# - Selección del modelo.
-# - Selección de temperatura.
-# - Llamada al proveedor.
-# - Control de tokens.
-# - Generación estructurada.
-# - Métricas y benchmarking.
-
-
-# ============================================================
-# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# El área de Robustez podrá intervenir antes del adaptador LLM
-# o envolver el flujo completo sin duplicar este archivo.
-#
-# No deben crearse variantes como:
-#
-# - logic_seguro.py
-# - logic_vulnerable.py
-#
-# Las variantes deberán reutilizar preparar_turno() y
-# finalizar_turno() mediante funciones, adaptadores o estrategias.

@@ -4,8 +4,6 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from validators import normalizar_texto_seguridad
-
 from config import (
     DOCUMENT_SCORE_WEIGHTS,
     FAQ_SCORE_WEIGHTS,
@@ -118,6 +116,7 @@ STOPWORDS = frozenset(
         "saber",
         "se",
         "si",
+        "stop",
         "sin",
         "sobre",
         "tengo",
@@ -137,39 +136,38 @@ STOPWORDS = frozenset(
     }
 )
 
-"""
 def normalizar_texto(texto: str | None) -> str:
-    
+    """
     Normaliza un texto para facilitar las comparaciones.
 
     Convierte el texto a minúsculas, elimina acentos,
     sustituye separadores por espacios y elimina espacios
     duplicados.
-    
+    """
     if texto is None:
         return ""
 
-    texto_normalizado = str(texto).lower().strip()
+    texto_normalizado = unicodedata.normalize("NFKC",str(texto))
 
-    texto_normalizado = unicodedata.normalize("NFD", texto_normalizado)
+    texto_normalizado = unicodedata.normalize("NFKD",texto_normalizado)
 
-    texto_normalizado = "".join(
-        caracter
+    texto_normalizado = "".join(caracter
         for caracter in texto_normalizado
         if unicodedata.category(caracter) != "Mn"
     )
 
-    texto_normalizado = re.sub(r"[_\-/\s]+", " ", texto_normalizado)
+    texto_normalizado = texto_normalizado.casefold()
 
-    return texto_normalizado.strip()
-"""
+    texto_normalizado = re.sub(r"[_/\\-]+"," ",texto_normalizado)
+
+    return re.sub(r"\s+"," ",texto_normalizado).strip()
 
 
 def extraer_palabras(texto: str | None) -> set[str]:
     """
     Extrae las palabras relevantes de un texto normalizado.
     """
-    texto_normalizado = normalizar_texto_seguridad(texto)
+    texto_normalizado = normalizar_texto(texto)
 
     palabras = re.findall(r"\b[a-z0-9]+\b", texto_normalizado)
 
@@ -196,7 +194,7 @@ def normalizar_tags(tags: Any) -> set[str]:
         if not isinstance(tag, str):
             continue
 
-        tag_normalizado = normalizar_texto_seguridad(tag)
+        tag_normalizado = normalizar_texto(tag)
 
         if tag_normalizado:
             tags_normalizados.add(tag_normalizado)
@@ -232,13 +230,13 @@ def buscar_empleado(empleados: list[dict], empleado_id: str) -> dict | None:
     """
     validar_lista_diccionarios(empleados, "empleados_demo.json")
 
-    empleado_id_normalizado = normalizar_texto_seguridad(empleado_id)
+    empleado_id_normalizado = normalizar_texto(empleado_id)
 
     if not empleado_id_normalizado:
         return None
 
     for empleado in empleados:
-        identificador = normalizar_texto_seguridad(empleado.get("id", ""))
+        identificador = normalizar_texto(empleado.get("id", ""))
 
         if identificador == empleado_id_normalizado:
             return empleado
@@ -261,9 +259,9 @@ def puntuar_faq(faq: dict, palabras_pregunta: set[str], pregunta_normalizada: st
     - coincidencias literales con tags compuestos.
     """
     
-    pregunta_faq = normalizar_texto_seguridad(faq.get("pregunta", ""))
+    pregunta_faq = normalizar_texto(faq.get("pregunta", ""))
 
-    respuesta_corta = normalizar_texto_seguridad(faq.get("respuesta_corta", ""))
+    respuesta_corta = normalizar_texto(faq.get("respuesta_corta", ""))
 
     tags_normalizados = normalizar_tags(faq.get("tags", []))
 
@@ -325,7 +323,7 @@ def seleccionar_faq(faqs: list[dict], consulta: str, max_entradas: int = MAX_CON
 
     palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto_seguridad(consulta)
+    pregunta_normalizada = normalizar_texto(consulta)
 
     faqs_puntuadas: list[tuple[int, dict]] = []
 
@@ -365,19 +363,19 @@ def puntuar_documento(
     El departamento y el carácter transversal solo actúan
     como factores de personalización o desempate.
     """
-    departamento_empleado = normalizar_texto_seguridad(
+    departamento_empleado = normalizar_texto(
         empleado.get("departamento", "")
     )
 
-    departamento_documento = normalizar_texto_seguridad(
+    departamento_documento = normalizar_texto(
         documento.get("departamento", "")
     )
 
-    titulo = normalizar_texto_seguridad(
+    titulo = normalizar_texto(
         documento.get("titulo", "")
     )
 
-    cuerpo = normalizar_texto_seguridad(
+    cuerpo = normalizar_texto(
         documento.get("cuerpo", "")
     )
 
@@ -474,7 +472,7 @@ def seleccionar_documentos(
 
     palabras_pregunta = extraer_palabras(consulta)
 
-    pregunta_normalizada = normalizar_texto_seguridad(consulta)
+    pregunta_normalizada = normalizar_texto(consulta)
 
     documentos_puntuados: list[tuple[int, dict]] = []
 
@@ -507,10 +505,10 @@ def obtener_documento_por_id(documentos: list[dict], doc_id: str | None) -> dict
     if not doc_id:
         return None
 
-    doc_id_normalizado = normalizar_texto_seguridad(doc_id)
+    doc_id_normalizado = normalizar_texto(doc_id)
 
     for documento in documentos:
-        identificador = normalizar_texto_seguridad(documento.get("id", ""))
+        identificador = normalizar_texto(documento.get("id", ""))
 
         if identificador == doc_id_normalizado:
             return documento
@@ -563,7 +561,7 @@ def combinar_documentos(
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto_seguridad(documento_id)
+        documento_id_normalizado = normalizar_texto(documento_id)
 
         if documento_id_normalizado in ids_incluidos:
             continue
@@ -583,7 +581,7 @@ def combinar_documentos(
         if not documento_id:
             continue
 
-        documento_id_normalizado = normalizar_texto_seguridad(documento_id)
+        documento_id_normalizado = normalizar_texto(documento_id)
 
         if documento_id_normalizado in ids_incluidos:
             continue
@@ -649,31 +647,3 @@ def construir_contexto(
         "faq_ids": faq_ids,
         "hay_contexto": bool(documentos_finales or faqs_seleccionadas)
     }
-
-
-# ============================================================
-# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# La variante vulnerable deberá respetar el mismo contrato
-# de entrada y salida que construir_contexto().
-#
-# No debe devolver una lista genérica ni crear módulos
-# paralelos como:
-#
-# - context_vulnerable.py
-# - context_seguro.py
-#
-# Las variantes deberán reutilizar este módulo mediante
-# estrategias, adaptadores o funciones específicas.
-
-
-# ============================================================
-# LLM Y BENCHMARK — SIN INTEGRACIÓN DIRECTA
-# ============================================================
-
-# Este módulo no construye prompts, no selecciona modelos y
-# no registra métricas.
-#
-# El área LLM y Benchmark consume únicamente el contexto
-# documental generado por construir_contexto().
