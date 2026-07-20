@@ -44,21 +44,47 @@ OUTPUT_DIR = BASE_DIR / "programa" / "output"
 RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 
 # ============================================================
-# LLM Y BENCHMARK
+# LLM
 # ============================================================
 
-# Modelos reales disponibles en tu API para el test A/B
-MODEL_1 = "gemini-2.5-flash"  # Variante A (Eficiencia)
-MODEL_2 = "gemini-2.5-pro"    # Variante B (Calidad)
+# Modelos disponibles
+MODEL_1 = "gemini-1.5-flash"  # Variante A: eficiencia
+MODEL_2 = "gemini-1.5-pro"    # Variante B: calidad
 
-# Selección de modelo por defecto para el asistente en producción
+# Modelo por defecto del asistente
 MODEL = MODEL_1
 
+# Parámetros de generación
 TEMPERATURE_DEFAULT = 0.2
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
-TEMPERATURE_VULNERABLE = TEMPERATURE_DEFAULT
 
+# Límites funcionales y técnicos
 MAX_TOKENS_INPUT = 8_000
+MAX_OUTPUT_WORDS = 200
+MAX_OUTPUT_TOKENS = 800
+
+# Presupuesto de razonamiento
+THINKING_BUDGET_CHAT = 512
+THINKING_BUDGET_SMOKE_TEST = 0  # solo compatible con Flash
+
+
+# ============================================================
+# BENCHMARK
+# ============================================================
+
+BENCHMARK_MODELS = (MODEL_1, MODEL_2)
+
+BENCHMARK_MIN_CASES = 10
+BENCHMARK_MAX_CASES = 14
+
+BENCHMARK_TEMPERATURE = TEMPERATURE_DEFAULT
+BENCHMARK_THINKING_BUDGET = 512
+BENCHMARK_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
+
+
+# ============================================================
+# CONTRATO DE RESPUESTA LLM
+# ============================================================
 
 REQUIRED_RESPONSE_FIELDS = frozenset(
     {
@@ -68,7 +94,7 @@ REQUIRED_RESPONSE_FIELDS = frozenset(
         "document_ids",
         "faq_ids",
         "needs_escalation",
-        "escalation_department"
+        "escalation_department",
     }
 )
 
@@ -100,29 +126,64 @@ Reglas del formato:
 
 
 # ============================================================
-# CONFIGURACIÓN GENERAL DEL ASISTENTE
+# CONTRATO DE RESPUESTA LLM — CHECKLIST DÍA N
 # ============================================================
+#
+# El chat (REQUIRED_RESPONSE_FIELDS / JSON_SCHEMA_HINT) y el checklist
+# son dos capacidades distintas del producto (ver InstruccionesTeamChallenge.md,
+# "Capacidades del asistente", punto 2) y por tanto necesitan su propio
+# contrato de salida. Antes de esta corrección, este contrato no existía
+# en ningún módulo compartido.
 
-# Número máximo de mensajes recientes incluidos en el historial.
-WINDOW = 4
+REQUIRED_CHECKLIST_FIELDS = frozenset(
+    {
+        "empleado_id",
+        "dia",
+        "tareas",
+        "mensaje_resumen",
+    }
+)
 
-# Número máximo de caracteres que puede tener un input
-MAX_INPUT_CHARS = 2_500
+REQUIRED_TAREA_FIELDS = frozenset(
+    {
+        "id",
+        "titulo",
+        "completada",
+        "fuente_doc",
+    }
+)
 
-# Extensión máxima aproximada de la respuesta final.
-# En la parte de robustez para modo seguro añado restricción aquí
-MAX_OUTPUT_WORDS = 200
+CHECKLIST_JSON_SCHEMA_HINT = """
+Devuelve exclusivamente un objeto JSON válido con esta estructura:
 
-ASSISTANT_CONFIG_DEFAULT = {
-    "model": MODEL,
-    "temperature": TEMPERATURE_DEFAULT,
-    "perfil_activo": "onboarding",
-    "max_turnos_historial": WINDOW,
-    "idioma_respuesta": "español",
-    "max_palabras": MAX_OUTPUT_WORDS,
-    "max_documentos_contexto": 3,
-    "max_faqs_contexto": 2
+{
+  "empleado_id": "emp_01",
+  "dia": 1,
+  "tareas": [
+    {
+      "id": "t01",
+      "titulo": "Descripción clara de la tarea",
+      "completada": false,
+      "fuente_doc": "doc_id_utilizado"
+    }
+  ],
+  "mensaje_resumen": "Frase corta de orientación para el día"
 }
+
+Reglas del formato:
+
+- "empleado_id" debe coincidir exactamente con el id del empleado indicado.
+- "dia" debe ser el entero de día de onboarding indicado (1-5).
+- "tareas" debe ser una lista no vacía de objetos con "id", "titulo",
+  "completada" y "fuente_doc".
+- "completada" debe ser siempre false: el plan se genera, no se marca
+  como hecho.
+- "fuente_doc" debe ser el id de uno de los documentos autorizados
+  incluidos en el turno. No inventes ids de documentos.
+- "mensaje_resumen" debe ser un texto breve, no vacío.
+- No añadas texto, explicaciones ni bloques Markdown fuera del JSON.
+- No añadas propiedades distintas de las indicadas.
+""".strip()
 
 
 # ============================================================
@@ -131,6 +192,7 @@ ASSISTANT_CONFIG_DEFAULT = {
 
 # Número máximo de fuentes que context.py puede seleccionar
 # para una interacción.
+# Necesitan estar antes de ASSISTANT_CONFIG_DEFAULT
 MAX_CONTEXT_DOCUMENTS = 3
 MAX_CONTEXT_FAQS = 2
 
@@ -138,6 +200,30 @@ MAX_CONTEXT_FAQS = 2
 # el perfil funcional de onboarding salvo que la categoría
 # de la consulta requiera un perfil más específico.
 ONBOARDING_PROFILE_DAYS = 7
+
+# El acompañamiento inicial se considera comprendido dentro
+# de los primeros 30 días.
+
+# ============================================================
+# CONFIGURACIÓN GENERAL DEL ASISTENTE
+# ============================================================
+
+# Número máximo de mensajes recientes incluidos en el historial
+WINDOW = 4
+
+# Número máximo de caracteres del input del usuario
+MAX_INPUT_CHARS = 2_500
+
+ASSISTANT_CONFIG_DEFAULT = {
+    "model": MODEL,
+    "temperature": TEMPERATURE_DEFAULT,
+    "perfil_activo": "onboarding",
+    "max_turnos_historial": WINDOW,
+    "idioma_respuesta": "español",
+    "max_palabras": MAX_OUTPUT_WORDS,
+    "max_documentos_contexto": MAX_CONTEXT_DOCUMENTS,
+    "max_faqs_contexto": MAX_CONTEXT_FAQS,
+}
 
 
 # ============================================================
@@ -282,7 +368,7 @@ Reglas funcionales:
 """.strip()
 
 # ============================================================
-# REGLAS DE SEGURIDAD 
+# REGLAS DE SEGURIDAD
 # ============================================================
 
 # Reglas que se enviarán como instrucción de sistema real al SDK.
@@ -442,7 +528,8 @@ DOMAIN_KEYWORDS = {
 
 # Para peticiones sobre días concretos
 # Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
-PATRONES_DOMINIO_ADICIONALES = (r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
+PATRONES_DOMINIO_ADICIONALES = (
+    r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
 
 # ============================================================
 # ESCALACIÓN
@@ -495,12 +582,9 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
 # ROBUSTEZ — CONFIGURACIÓN ACTIVA (Alex)
 # ============================================================
 
-# Para poder compartir contexto entre el vulnerable y el seguro
-# Variable con ambos modos para poder alternar cómodamente
-MODOS_SEGURIDAD = frozenset({"seguro", "vulnerable"})
-
-# En producción siempre debe arrancar en modo seguro.
-MODO_SEGURIDAD_DEFAULT = "seguro"
+# El producto opera siempre en modo seguro. El pipeline vulnerable
+# solo existe de forma aislada en demos/demo5_vulnerable_vs_seguro.py
+# y no se selecciona mediante configuración ni switches.
 MAX_SAFE_OUTPUT_CHARS = 4_000
 
 # ============================================================
@@ -783,7 +867,7 @@ PATRONES_FUGA_SALIDA = (
 )
 
 # ============================================================
-# MENSAJES DE SEGURIDAD 
+# MENSAJES DE SEGURIDAD
 # ============================================================
 
 MENSAJES_SEGURIDAD = {
