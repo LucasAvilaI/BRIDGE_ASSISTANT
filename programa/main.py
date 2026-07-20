@@ -344,7 +344,7 @@ def ejecutar_sesion(
         # una interacción finalizada.
 
 # ============================================================
-# PUNTO DE ENTRADA
+# DEMO VULNERABLE VS SEGURO
 # ============================================================
 
 def demo_vulnerable_vs_seguro(
