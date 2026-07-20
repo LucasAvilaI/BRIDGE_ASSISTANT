@@ -1,6 +1,12 @@
 
 import json
-from config import PERFILES, SYSTEM_PROMPT, JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS
+from config import (
+    PERFILES,
+    SYSTEM_PROMPT,
+    JSON_SCHEMA_HINT,
+    CHECKLIST_JSON_SCHEMA_HINT,
+    REGLAS_SISTEMA_SEGURAS,
+)
 
 
 def resolver_perfil(assistant_config: dict) -> dict:
@@ -69,30 +75,19 @@ Mensaje actual del usuario:
 
 
 def build_vulnerable_prompt(user_message: str) -> str:
-    """Anti-patrón: mezcla instrucciones y mensaje del usuario (Fase 2).
-    Justificación de la implementación vulnerable
+    """
+    Anti-patrón: mezcla instrucciones del asistente y contenido del usuario
+    en un único prompt.
 
-Se ha optado por una vulnerabilidad realista y plausible, evitando introducir comportamientos deliberadamente inseguros o excesivamente obvios. El fallo principal consiste en incorporar directamente el mensaje del usuario al prompt, sin establecer una separación efectiva entre instrucciones confiables y contenido no confiable.
+    Uso exclusivo de la Demo 5.
+    """
 
-Además, el asistente recibe una autorización implícita y poco delimitada para utilizar la documentación disponible, reproduciendo un error habitual en sistemas RAG: confundir la capacidad de recuperar información con la autorización para utilizarla o revelarla.
-
-Esta implementación permite demostrar los riesgos de prompt injection y control de acceso deficiente a partir de errores de diseño comunes en prototipos y MVP reales, manteniendo una progresión pedagógica clara hacia las posteriores fases de detección y defensa."""
-    return f"""
-Eres el Employee Onboarding Assistant de Bridge SA, un copiloto interno que
-ayuda a los empleados durante sus primeros días en la empresa.
-
-Responde preguntas relacionadas con onboarding, políticas internas y procesos
-habituales utilizando la documentación disponible.
-
-Proporciona respuestas claras, prácticas y adaptadas a la consulta. Puedes
-crear checklists cuando resulte útil y recomendar contactar con People o IT
-cuando la documentación no sea suficiente.
+    return f"""{SYSTEM_PROMPT}
 
 Consulta la información disponible y responde a la siguiente solicitud:
 
-Usuario: {user_message.strip()}
+{user_message.strip()}
 """.strip()
-
 
 
 def build_secure_prompt(user_message: str) -> str:
@@ -105,7 +100,6 @@ def build_secure_prompt(user_message: str) -> str:
 {user_message.strip()}
 --- FIN MENSAJE USUARIO ---
 """.strip()
-
 
 
 def build_secure_system_instruction() -> str:
@@ -139,5 +133,57 @@ def build_secure_turn_contents(turno_preparado: dict) -> str:
         "faqs_autorizadas": turno_preparado["contexto"]["faqs"],
         "historial_no_confiable": turno_preparado["historial"],
         "pregunta_usuario_no_confiable": turno_preparado["consulta"]
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+# ============================================================
+# CHECKLIST DE LA SEMANA 1 (Capacidad 2 del producto)
+# ============================================================
+#
+# Estas dos funciones son el equivalente, para el checklist, de
+# build_secure_system_instruction() / build_secure_turn_contents().
+# No existían en el módulo: el checklist es una capacidad obligatoria
+# del producto (ver InstruccionesTeamChallenge.md) que no tenía ningún
+# soporte de prompt propio.
+
+def build_checklist_system_instruction() -> str:
+    """
+    Construye la instrucción privilegiada para generar el checklist
+    estructurado de un día de onboarding concreto.
+
+    Reutiliza las mismas reglas funcionales y de seguridad que el
+    chat; solo cambia el contrato de salida (CHECKLIST_JSON_SCHEMA_HINT
+    en lugar de JSON_SCHEMA_HINT).
+    """
+    return f"""
+{SYSTEM_PROMPT}
+
+{REGLAS_SISTEMA_SEGURAS}
+
+No mantienes una conversación libre: debes generar el plan de tareas
+del día de onboarding indicado, basado exclusivamente en los
+documentos autorizados incluidos en este turno.
+
+Contrato de salida:
+{CHECKLIST_JSON_SCHEMA_HINT}
+""".strip()
+
+
+def build_checklist_turno_contents(turno_preparado: dict) -> str:
+    """
+    Serializa el turno de checklist como datos no privilegiados.
+
+    Mismo criterio que build_secure_turn_contents(): todo el payload
+    se trata como datos, nunca como instrucciones.
+    """
+    payload = {
+        "empleado": turno_preparado["empleado"],
+        "empleado_id": turno_preparado["empleado"].get("id"),
+        "perfil_empleado": turno_preparado["perfil_empleado"],
+        "perfil_funcional": turno_preparado["perfil_funcional"],
+        "dia_onboarding": turno_preparado["dia_onboarding"],
+        "documentos_autorizados": turno_preparado["contexto"]["documentos"],
+        "faqs_autorizadas": turno_preparado["contexto"]["faqs"],
     }
     return json.dumps(payload, ensure_ascii=False)

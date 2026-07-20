@@ -8,10 +8,6 @@ from config import (
     MAX_INPUT_CHARS,
     MAX_SAFE_OUTPUT_CHARS,
     MENSAJES_SEGURIDAD,
-    # Necesarios para middleware en validators que gestiona activación de modos:
-    MODO_SEGURIDAD_DEFAULT,
-    MODOS_SEGURIDAD,
-    PATRONES_INCIDENCIA_CREDENCIALES,
     PATRONES_SOLICITUD_SECRETOS,
     PATRONES_DOMINIO_ADICIONALES,
     PATRONES_FUERA_DE_DOMINIO,
@@ -20,7 +16,9 @@ from config import (
     PATRONES_REFERENCIA_INTERNA,
     PATRONES_SENSIBLES_POR_CODIGO,
     TERMINOS_POCO_INFORMATIVOS_SEGURIDAD,
-    VALID_CATEGORIES
+    VALID_CATEGORIES,
+    REQUIRED_CHECKLIST_FIELDS,
+    REQUIRED_TAREA_FIELDS,
 )
 from context import STOPWORDS
 
@@ -222,10 +220,18 @@ def validar_entrada_segura(texto: Any) -> dict:
 
     # El orden determina la causa prioritaria del rechazo.
     # detectar si hay o se quiere información sensible
+    #
+    # NOTA DE CORRECCIÓN: antes se omitía por completo el código
+    # "credentials" en este bucle (continue), lo que dejaba sin
+    # comprobar nunca el patrón de PATRONES_SENSIBLES_POR_CODIGO
+    # ["credentials"] (contraseña/token + wifi/cuenta/acceso). La
+    # solicitud explícita ("dame la contraseña") ya se bloquea antes
+    # mediante PATRONES_SOLICITUD_SECRETOS, pero ese patrón no cubre
+    # formulaciones sin verbo de entrega (p. ej. "necesito la
+    # contraseña de la wifi"). Se elimina el "continue" para que
+    # también se compruebe.
     for codigo, patrones in PATRONES_SENSIBLES_POR_CODIGO.items():
-        if codigo == "credentials":
-            continue
-        if _coincide_algun_patron(texto_normalizado,patrones):     # tupla que contiene los patrones para cada caso
+        if _coincide_algun_patron(texto_normalizado, patrones):    # tupla que contiene los patrones para cada caso
             return _resultado_validacion(False, codigo, "input")   # si alguno coincide bloquea
             
 
@@ -652,6 +658,27 @@ def validar_respuesta_estructurada(resultado_externo: Any) -> dict:
         if not necesita_escalacion and departamento_escalacion is not None:
             errores.append("Si 'needs_escalation' es False, 'escalation_department' debe ser None.")
 
+    # Comprobación de coherencia entre 'in_scope' y 'category'.
+    # Ambas contradicciones son posibles si no se valida aquí:
+    # in_scope=False con una categoría distinta de out_of_scope,
+    # o in_scope=True con category='out_of_scope'.
+    if (
+        isinstance(in_scope, bool)
+        and isinstance(categoria, str)
+        and categoria in VALID_CATEGORIES
+    ):
+        if not in_scope and categoria != "out_of_scope":
+            errores.append(
+                "Si 'in_scope' es False, "
+                "'category' debe ser 'out_of_scope'."
+            )
+
+        if in_scope and categoria == "out_of_scope":
+            errores.append(
+                "Si 'in_scope' es True, "
+                "'category' no puede ser 'out_of_scope'."
+            )
+
     return {
         "valido": not errores,
         "errores": errores
@@ -687,11 +714,35 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
     if not validacion_estructura["valido"]:
         return _resultado_validacion(False,"unsafe_output","output")
 
-    contexto = turno_preparado.get("contexto",{})
+    contexto = turno_preparado.get("contexto")
 
-    ids_documentos_permitidos = set(contexto.get("document_ids", []))
+    if not isinstance(contexto, dict):
+        return _resultado_validacion(False, "unsafe_output", "output")
 
-    ids_faq_permitidas = set(contexto.get("faq_ids", []))
+    document_ids_permitidos = contexto.get("document_ids")
+    faq_ids_permitidas_raw = contexto.get("faq_ids")
+
+    if (
+        not isinstance(document_ids_permitidos, list)
+        or not all(
+            isinstance(documento_id, str) and documento_id.strip()
+            for documento_id in document_ids_permitidos
+        )
+    ):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    if (
+        not isinstance(faq_ids_permitidas_raw, list)
+        or not all(
+            isinstance(faq_id, str) and faq_id.strip()
+            for faq_id in faq_ids_permitidas_raw
+        )
+    ):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    ids_documentos_permitidos = set(document_ids_permitidos)
+
+    ids_faq_permitidas = set(faq_ids_permitidas_raw)
 
     ids_documentos_devueltos = set(resultado_externo["document_ids"])
 
@@ -702,6 +753,17 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
 
     if not ids_faq_devueltas.issubset(ids_faq_permitidas):
         return _resultado_validacion(False,"unsafe_output","output")
+
+    # Una respuesta dentro de dominio sin ninguna fuente declarada
+    # no queda respaldada documentalmente. set().issubset(cualquiera)
+    # es siempre True, así que sin este chequeo una respuesta con
+    # document_ids=[] y faq_ids=[] pasaría la validación igualmente.
+    if (
+        resultado_externo["in_scope"]
+        and not ids_documentos_devueltos
+        and not ids_faq_devueltas
+    ):
+        return _resultado_validacion(False, "unsafe_output", "output")
 
     respuesta_normalizada = normalizar_texto_seguridad(resultado_externo["answer"])
 
@@ -715,44 +777,173 @@ def validar_salida_segura(resultado_externo: Any, turno_preparado: Any) -> dict:
 
 
 
+# ============================================================
+# VALIDACIÓN ESTRUCTURAL DE LA RESPUESTA DEL CHECKLIST
+# ============================================================
+#
+# Equivalente, para el checklist, de validar_respuesta_estructurada().
+# No existía ningún validador para esta capacidad del producto.
+
+def validar_respuesta_checklist(resultado_externo: Any, *, empleado_id_esperado: str, dia_esperado: int) -> dict:
+    """
+    Comprueba que la respuesta externa cumple el contrato JSON
+    esperado para el checklist de un día de onboarding.
+    """
+    errores: list[str] = []
+
+    if not isinstance(resultado_externo, dict):
+        return {
+            "valido": False,
+            "errores": ["La respuesta externa debe ser un diccionario."]
+        }
+
+    campos_recibidos = set(resultado_externo.keys())
+    campos_ausentes = REQUIRED_CHECKLIST_FIELDS - campos_recibidos
+    campos_adicionales = campos_recibidos - REQUIRED_CHECKLIST_FIELDS
+
+    if campos_ausentes:
+        errores.append("Faltan campos obligatorios: " + ", ".join(sorted(campos_ausentes)) + ".")
+
+    if campos_adicionales:
+        errores.append("Se han recibido campos no permitidos: " + ", ".join(sorted(campos_adicionales)) + ".")
+
+    empleado_id = resultado_externo.get("empleado_id")
+
+    if not isinstance(empleado_id, str) or not empleado_id.strip():
+        errores.append("'empleado_id' debe ser un string no vacío.")
+    elif empleado_id.strip() != empleado_id_esperado:
+        errores.append("'empleado_id' no coincide con el empleado del turno.")
+
+    dia = resultado_externo.get("dia")
+
+    if not isinstance(dia, int) or isinstance(dia, bool):
+        errores.append("'dia' debe ser un entero.")
+    elif dia != dia_esperado:
+        errores.append("'dia' no coincide con el día de onboarding del turno.")
+
+    tareas = resultado_externo.get("tareas")
+
+    if not isinstance(tareas, list) or not tareas:
+        errores.append("'tareas' debe ser una lista no vacía.")
+    else:
+        ids_tarea_vistos: set[str] = set()
+
+        for posicion, tarea in enumerate(tareas, start=1):
+            if not isinstance(tarea, dict):
+                errores.append(f"La tarea en la posición {posicion} debe ser un objeto JSON.")
+                continue
+
+            campos_tarea = set(tarea.keys())
+            ausentes_tarea = REQUIRED_TAREA_FIELDS - campos_tarea
+            adicionales_tarea = campos_tarea - REQUIRED_TAREA_FIELDS
+
+            if ausentes_tarea:
+                errores.append(
+                    f"Tarea {posicion}: faltan campos " + ", ".join(sorted(ausentes_tarea)) + "."
+                )
+            if adicionales_tarea:
+                errores.append(
+                    f"Tarea {posicion}: campos no permitidos " + ", ".join(sorted(adicionales_tarea)) + "."
+                )
+
+            tarea_id = tarea.get("id")
+            if not isinstance(tarea_id, str) or not tarea_id.strip():
+                errores.append(f"Tarea {posicion}: 'id' debe ser un string no vacío.")
+            elif tarea_id in ids_tarea_vistos:
+                errores.append(f"Tarea {posicion}: 'id' duplicado ({tarea_id}).")
+            else:
+                ids_tarea_vistos.add(tarea_id)
+
+            titulo = tarea.get("titulo")
+            if not isinstance(titulo, str) or not titulo.strip():
+                errores.append(f"Tarea {posicion}: 'titulo' debe ser un string no vacío.")
+
+            completada = tarea.get("completada")
+            if completada is not True and completada is not False:
+                errores.append(f"Tarea {posicion}: 'completada' debe ser booleano.")
+            elif completada is not False:
+                errores.append(f"Tarea {posicion}: 'completada' debe ser false al generar el plan.")
+
+            fuente_doc = tarea.get("fuente_doc")
+            if not isinstance(fuente_doc, str) or not fuente_doc.strip():
+                errores.append(f"Tarea {posicion}: 'fuente_doc' debe ser un string no vacío.")
+
+    mensaje_resumen = resultado_externo.get("mensaje_resumen")
+
+    if not isinstance(mensaje_resumen, str) or not mensaje_resumen.strip():
+        errores.append("'mensaje_resumen' debe ser un string no vacío.")
+
+    return {
+        "valido": not errores,
+        "errores": errores,
+    }
+
+
+# ============================================================
+# VALIDACIÓN DE SALIDA DEL CHECKLIST
+# ============================================================
+#
+# Equivalente, para el checklist, de validar_salida_segura(): además
+# de la estructura, comprueba que cada 'fuente_doc' citada pertenece
+# a los documentos autorizados del turno (fail-closed ante alucinación
+# de ids de documento).
+
+def validar_salida_checklist(resultado_externo: Any, turno_preparado: Any) -> dict:
+    """Tercera capa de validación del checklist, antes de persistirlo."""
+    if not isinstance(turno_preparado, dict):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    empleado = turno_preparado.get("empleado")
+    dia_onboarding = turno_preparado.get("dia_onboarding")
+    contexto = turno_preparado.get("contexto")
+
+    if (
+        not isinstance(empleado, dict)
+        or not isinstance(dia_onboarding, int)
+        or isinstance(dia_onboarding, bool)
+        or not isinstance(contexto, dict)
+    ):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    empleado_id_esperado = empleado.get("id")
+
+    if not isinstance(empleado_id_esperado, str) or not empleado_id_esperado.strip():
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    validacion_estructura = validar_respuesta_checklist(
+        resultado_externo,
+        empleado_id_esperado=empleado_id_esperado.strip(),
+        dia_esperado=dia_onboarding,
+    )
+
+    if not validacion_estructura["valido"]:
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    document_ids_permitidos = contexto.get("document_ids")
+
+    if (
+        not isinstance(document_ids_permitidos, list)
+        or not all(
+            isinstance(documento_id, str) and documento_id.strip()
+            for documento_id in document_ids_permitidos
+        )
+    ):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    ids_documentos_permitidos = set(document_ids_permitidos)
+
+    fuentes_citadas = {
+        tarea.get("fuente_doc")
+        for tarea in resultado_externo.get("tareas", [])
+        if isinstance(tarea, dict)
+    }
+
+    if not fuentes_citadas.issubset(ids_documentos_permitidos):
+        return _resultado_validacion(False, "unsafe_output", "output")
+
+    return _resultado_validacion(True, "valid_output", "output")
+
+
 # después de esta validación de respuesta queda cerrar turno
 # con finalizar_turno() para guardar la interacción en el historial
 
-
-
-
-
-
-
-# ============================================================
-# CODIGO ANTERIOR
-# ============================================================
-
-# def validate_input(texto: str) -> list[str]:
-        
-#     """Devuelve lista de errores (vacía = OK). Ver README Fase 2, Tarea 1."""
-#     errores: list[str] = []
-#     t = (texto or "").strip()
-#     if not t:
-#         errores.append("El mensaje no puede estar vacío.")
-#     if len(t) > MAX_INPUT_CHARS:
-#         errores.append(f"Mensaje demasiado largo (máx {MAX_INPUT_CHARS} caracteres).")
-#     t_lower = t.lower()
-#     for patron in PATRONES_SOSPECHOSOS:
-#         if patron in t_lower:
-#             errores.append(f"Patrón no permitido detectado: {patron!r}")
-#     return errores
-
-
-# def parece_dominio_python(texto: str) -> bool:
-#     """True si el mensaje parece relacionado con Python/bootcamp. Ver README Fase 2."""
-#     t = texto.lower()
-#     return any(k in t for k in DOMINIO_KEYWORDS)
-
-
-# def rechazo_fuera_de_dominio() -> str:
-#     """Mensaje fijo cuando la pregunta no encaja en el producto."""
-#     return (
-#         "Solo puedo ayudarte con Python y ejercicios del bootcamp. "
-#         "Reformula tu pregunta en ese contexto."
-#     )
