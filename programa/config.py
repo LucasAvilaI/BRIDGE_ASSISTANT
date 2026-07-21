@@ -14,6 +14,7 @@ EMPRESA_PATH = DATA_DIR / "empresa.json"
 EMPLEADOS_PATH = DATA_DIR / "empleados_demo.json"
 DOCS_PATH = DATA_DIR / "onboarding_docs.json"
 FAQ_PATH = DATA_DIR / "faq_onboarding.json"
+CASOS_TRAMPA_PATH = DATA_DIR / "casos_trampa.json"
 
 
 # ============================================================
@@ -48,8 +49,8 @@ RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 # ============================================================
 
 # Modelos disponibles
-MODEL_1 = "gemini-1.5-flash"  # Variante A: eficiencia
-MODEL_2 = "gemini-1.5-pro"    # Variante B: calidad
+MODEL_1 = "gemini-3.5-flash"  # Variante A: eficiencia
+MODEL_2 = "gemini-3.1-flash-lite"    # Variante B: calidad
 
 # Modelo por defecto del asistente
 MODEL = MODEL_1
@@ -66,6 +67,21 @@ MAX_OUTPUT_TOKENS = 800
 # Presupuesto de razonamiento
 THINKING_BUDGET_CHAT = 512
 THINKING_BUDGET_SMOKE_TEST = 0  # solo compatible con Flash
+
+# ============================================================
+# CONFIGURACIÓN DEL CLIENTE GEMINI
+# ============================================================
+
+# Tiempo máximo de espera de una petición HTTP.
+GEMINI_TIMEOUT_MS = 120_000
+
+# Número máximo de intentos ante errores HTTP temporales.
+GEMINI_RETRY_ATTEMPTS = 2
+
+# Nivel de razonamiento para los modelos Gemini 3.x.
+# "minimal" prioriza velocidad y es suficiente para el chat
+# de onboarding y para comparar ambos modelos en igualdad.
+THINKING_LEVEL_CHAT = "minimal"
 
 
 # ============================================================
@@ -94,7 +110,7 @@ REQUIRED_RESPONSE_FIELDS = frozenset(
         "document_ids",
         "faq_ids",
         "needs_escalation",
-        "escalation_department",
+        "escalation_department"
     }
 )
 
@@ -123,6 +139,62 @@ Reglas del formato:
 - No añadas texto, explicaciones ni bloques Markdown fuera del JSON.
 - No añadas propiedades distintas de las indicadas.
 """.strip()
+
+CHAT_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "in_scope": {
+            "type": "boolean"
+        },
+        "category": {
+            "type": "string",
+            "enum": [
+                "onboarding",
+                "it",
+                "rrhh",
+                "people",
+                "engineering",
+                "sales",
+                "operations",
+                "general",
+                "out_of_scope"
+            ]
+        },
+        "answer": {
+            "type": "string"
+        },
+        "document_ids": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "faq_ids": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "needs_escalation": {
+            "type": "boolean"
+        },
+        "escalation_department": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    },
+    "required": [
+        "in_scope",
+        "category",
+        "answer",
+        "document_ids",
+        "faq_ids",
+        "needs_escalation",
+        "escalation_department"
+    ]
+}
 
 
 # ============================================================
@@ -658,40 +730,60 @@ PATRONES_INYECCION = (
 # SOLICITUDES DE SECRETOS Y CREDENCIALES
 PATRONES_SOLICITUD_SECRETOS = (
     (
-        r"\b(dame|dime|muestra|revela|ensena|comparte|facilita|"
-        r"proporciona|entrega|extrae|exporta|imprime|copia)\b"
-        r".{0,60}\b(contrasena|password|token|api key|clave api|"
-        r"clave de acceso|credencial|credenciales|secreto)\b"
+        r"\b(dame|dime|muestr\w*|revel\w*|compart\w*|"
+        r"envi\w*|pas\w*|facilit\w*|copi\w*|"
+        r"extra\w*|export\w*)\b"
+        r".{0,80}"
+        r"\b(contrasen(?:a|as)|passwords?|tokens?|api keys?|"
+        r"clave de acceso|credencial(?:es)?|secretos?|"
+        r"clave (?:de )?wifi)\b"
     ),
     (
-        r"\b(cual es|cuales son)\b"
-        r".{0,60}\b(contrasena|password|token|api key|clave api|"
-        r"clave de acceso|credencial|credenciales|secreto)\b"
+        r"\b(contrasen(?:a|as)|passwords?|tokens?|api keys?|"
+        r"clave de acceso|credencial(?:es)?|secretos?|"
+        r"clave (?:de )?wifi)\b"
+        r".{0,80}"
+        r"\b(dame|dime|muestr\w*|revel\w*|compart\w*|"
+        r"envi\w*|pas\w*|facilit\w*|copi\w*|"
+        r"extra\w*|export\w*)\b"
     ),
     (
-        r"\b(contrasena|password|token|api key|clave api|"
-        r"clave de acceso|credencial|credenciales|secreto)\b"
-        r".{0,60}\b(dame|dime|muestra|revela|comparte|facilita|"
-        r"proporciona|entrega|copia)\b"
-    )
+        r"\bcual es\b"
+        r"(?![^.!?\n]{0,50}\b"
+        r"(politica|norma|procedimiento|requisito)\b)"
+        r".{0,60}"
+        r"\b(contrasen(?:a|as)|passwords?|tokens?|api keys?|"
+        r"clave de acceso|credencial(?:es)?|secretos?|"
+        r"clave (?:de )?wifi)\b"
+    ),
 )
 
 PATRONES_INCIDENCIA_CREDENCIALES = (
     (
-        r"\b(no puedo|no me deja|no funciona|he olvidado|olvide|"
-        r"he perdido|ha caducado|esta caducado|esta bloqueada|"
-        r"esta bloqueado|error|problema|incidencia)\b"
-        r".{0,80}\b(acceder|iniciar sesion|cuenta|contrasena|"
-        r"password|token|api key|clave api|credencial|"
-        r"credenciales|2fa|autenticacion)\b"
+        r"\b(olvid\w*|recuper\w*|restable\w*|cambi\w*|"
+        r"renov\w*|desbloque\w*|activ\w*|configur\w*)\b"
+        r".{0,80}"
+        r"\b(contrasen(?:a|as)|passwords?|tokens?|api keys?|"
+        r"clave de acceso|credencial(?:es)?|"
+        r"clave (?:de )?wifi)\b"
     ),
     (
-        r"\b(restablecer|resetear|recuperar|regenerar|rotar|"
-        r"revocar|renovar|cambiar)\b"
-        r".{0,60}\b(contrasena|password|token|api key|clave api|"
-        r"credencial|credenciales|2fa)\b"
-    )
+        r"\b(contrasen(?:a|as)|passwords?|tokens?|api keys?|"
+        r"clave de acceso|credencial(?:es)?|"
+        r"clave (?:de )?wifi)\b"
+        r".{0,80}"
+        r"\b(olvid\w*|caduc\w*|bloquead\w*|desactivad\w*|"
+        r"recuper\w*|restable\w*|cambi\w*|renov\w*|"
+        r"desbloque\w*)\b"
+    ),
+    (
+        r"\b(no puedo|no consigo|error|problema|incidencia|fallo)\b"
+        r".{0,80}"
+        r"\b(acceder|entrar|inicio de sesion|login|"
+        r"autenticacion|cuenta|slack|github|correo|vpn)\b"
+    ),
 )
+
 
 # SOLICITUDES/ENVIOS DE DATOS SENSIBLES
 # Claves para agrupar según:
@@ -858,7 +950,16 @@ PATRONES_FUGA_SALIDA = (
     ),
     # [:=] - clase de caracteres que indica que solo acepta uno de los dos simbolos : =
     # si en la respuesta aparece la contrasena es xxx no lo va a detectar
-    r"\b(api key|token|password|contrasena)\s*[:=]\s*\S+",
+    
+    (
+        r"\b(api key|token|password|contrasena|clave de acceso)\b"
+        r"\s*(?::|=|\bes\b|\bseria\b|\bvale\b)"
+        r"\s*[A-Za-z0-9_@#$%+\-]{8,}"
+    ),
+
+    # r"\b(api key|token|password|contrasena)\s*[:=]\s*\S+",
+    
+    
     # patron comun para las api_key de google
     # empieza por AIza
     # [0-9A-Za-z_-] cualquier caracter del 0 al 9, de la A a la Z (también en minúsculas), y _ y -
