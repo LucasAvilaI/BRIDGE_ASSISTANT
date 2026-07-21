@@ -5,7 +5,7 @@ from config import (
     SYSTEM_PROMPT,
     JSON_SCHEMA_HINT,
     CHECKLIST_JSON_SCHEMA_HINT,
-    REGLAS_SISTEMA_SEGURAS,
+    REGLAS_SISTEMA_SEGURAS
 )
 
 
@@ -111,6 +111,21 @@ def build_secure_system_instruction() -> str:
 {SYSTEM_PROMPT}
 
 {REGLAS_SISTEMA_SEGURAS}
+
+Reglas para el campo "category":
+- Debe contener exactamente uno de estos valores:
+  onboarding
+  it
+  rrhh
+  people
+  engineering
+  sales
+  operations
+  general
+  out_of_scope
+- No inventes nuevas categorías.
+- Para Slack, accesos, cuentas, GitHub, software o herramientas
+  técnicas utiliza "it".
 
 Contrato de salida:
 {JSON_SCHEMA_HINT}
