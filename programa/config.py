@@ -38,11 +38,12 @@ VULNERABLE_CONTEXT_PATHS = [
 PREGUNTAS_BENCHMARK_PATH = DATA_DIR / "preguntas_benchmark.json"
 
 # El reporte final generado por el script (Salida)
-# Define output siempre en relación a la raíz
-# output está dentro de /programa
-# Rutas de salida (dentro de 'programa/output')
-OUTPUT_DIR = BASE_DIR / "programa" / "output"
+# output/ vive en la raíz del proyecto, al mismo nivel que programa/
+# y data/ (mismo criterio que usan benchmark.py y
+# generar_entregables.py al calcular su propio OUTPUT_DIR).
+OUTPUT_DIR = BASE_DIR / "output"
 RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
+ENTREGABLES_DIR = BASE_DIR / "entregables"
 
 # ============================================================
 # LLM
@@ -55,6 +56,16 @@ MODEL_2 = "gemini-3.1-flash-lite"    # Variante B: calidad
 # Modelo por defecto del asistente
 MODEL = MODEL_1
 
+# Modelo de respaldo SOLO para el chat interactivo en producción
+# (main.py). Se usa si MODEL falla con un GeminiClientError (p. ej.
+# un 503 UNAVAILABLE por saturación del proveedor).
+#
+# NUNCA debe pasarse a demos ni al benchmark: ejecutar_caso_benchmark()
+# ni siquiera acepta fallback_model_id (ver gemini_client.py) para que
+# la comparación entre modelos no pueda verse contaminada por un
+# cambio de modelo silencioso a mitad de la medición.
+FALLBACK_MODEL = MODEL_2
+
 # Parámetros de generación
 TEMPERATURE_DEFAULT = 0.2
 TEMPERATURE_SAFE = TEMPERATURE_DEFAULT
@@ -64,19 +75,15 @@ MAX_TOKENS_INPUT = 8_000
 MAX_OUTPUT_WORDS = 200
 MAX_OUTPUT_TOKENS = 800
 
-# Presupuesto de razonamiento
-THINKING_BUDGET_CHAT = 512
-THINKING_BUDGET_SMOKE_TEST = 0  # solo compatible con Flash
-
 # ============================================================
 # CONFIGURACIÓN DEL CLIENTE GEMINI
 # ============================================================
 
 # Tiempo máximo de espera de una petición HTTP.
-GEMINI_TIMEOUT_MS = 120_000
+GEMINI_TIMEOUT_MS = 10000
 
 # Número máximo de intentos ante errores HTTP temporales.
-GEMINI_RETRY_ATTEMPTS = 2
+GEMINI_RETRY_ATTEMPTS = 1
 
 # Nivel de razonamiento para los modelos Gemini 3.x.
 # "minimal" prioriza velocidad y es suficiente para el chat
@@ -94,8 +101,12 @@ BENCHMARK_MIN_CASES = 10
 BENCHMARK_MAX_CASES = 14
 
 BENCHMARK_TEMPERATURE = TEMPERATURE_DEFAULT
-BENCHMARK_THINKING_BUDGET = 512
 BENCHMARK_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
+
+# Nivel de razonamiento común para los dos modelos del benchmark
+# (ver gemini_client.py: los modelos 3.x usan thinking_level, no el
+# thinking_budget numérico de Gemini 2.x).
+BENCHMARK_THINKING_LEVEL = "low"
 
 
 # ============================================================
@@ -950,7 +961,7 @@ PATRONES_FUGA_SALIDA = (
     ),
     # [:=] - clase de caracteres que indica que solo acepta uno de los dos simbolos : =
     # si en la respuesta aparece la contrasena es xxx no lo va a detectar
-    
+
     (
         r"\b(api key|token|password|contrasena|clave de acceso)\b"
         r"\s*(?::|=|\bes\b|\bseria\b|\bvale\b)"
@@ -958,8 +969,8 @@ PATRONES_FUGA_SALIDA = (
     ),
 
     # r"\b(api key|token|password|contrasena)\s*[:=]\s*\S+",
-    
-    
+
+
     # patron comun para las api_key de google
     # empieza por AIza
     # [0-9A-Za-z_-] cualquier caracter del 0 al 9, de la A a la Z (también en minúsculas), y _ y -

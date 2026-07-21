@@ -14,20 +14,28 @@ logic.py, añadidas para dar soporte a esta capacidad (antes no existía
 ningún punto de entrada de checklist conectado de extremo a extremo).
 """
 from __future__ import annotations
-from programa.state import inicializar_estado
-from programa.prompts import (
+
+import os
+import sys
+
+# Ver el mismo comentario en demo1_chat_onboarding.py: este proyecto
+# usa imports bare en todos los módulos internos, no "programa.x".
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from state import inicializar_estado
+from prompts import (
     build_checklist_system_instruction,
     build_checklist_turno_contents,
 )
-from programa.metrics import formatear_metricas_turno
-from programa.logic import finalizar_checklist_seguro, preparar_checklist_seguro
-from programa.gemini_client import (
+from metrics import formatear_metricas_turno
+from logic import finalizar_checklist_seguro, preparar_checklist_seguro
+from gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from programa.context import buscar_empleado, cargar_json
-from programa.config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from context import buscar_empleado, cargar_json
+from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH, FALLBACK_MODEL
 
 # ============================================================
 # CONFIGURACIÓN
@@ -107,6 +115,7 @@ def ejecutar_demo_checklist_dia_1() -> None:
             build_checklist_turno_contents(turno_preparado),
             system_instruction=build_checklist_system_instruction(),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:

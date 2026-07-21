@@ -16,29 +16,45 @@ contexto, validaciones ni construcción de prompts.
 
 from __future__ import annotations
 
-# Obtiene la ruta de la carpeta raíz del proyecto (BRIDGE_ASSISTANT)
-# Esto hace que el código sea 100% portátil en cualquier PC
-from programa.state import inicializar_estado
-from programa.prompts import build_secure_system_instruction, build_secure_turn_contents
-from programa.metrics import formatear_metricas_turno
-from programa.logic import finalizar_turno_seguro, preparar_turno_seguro
-from programa.gemini_client import (
+import os
+import sys
+
+# IMPORTANTE: este proyecto usa imports "bare" (from state import ...,
+# NO from programa.state import ...) en TODOS los módulos internos.
+# main.py, menu.py, run_demo.py y demo3/4/5/6 ya asumen esto - run_demo.py
+# en concreto solo añade 'programa/' a sys.path (no su carpeta padre),
+# así que un import "from programa.x import ..." aquí rompe run_demo.py
+# y crea además una segunda copia de cada módulo (dos gemini_client.py
+# con dos clientes cacheados distintos) si esta demo se ejecuta junto a
+# otra parte de la app que importe en bare. Si esto se ha revertido de
+# nuevo: NO cambiar a "from programa.x import ...", el bug ya se
+# reprodujo dos veces por esto.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from state import inicializar_estado
+from prompts import build_secure_system_instruction, build_secure_turn_contents
+from metrics import formatear_metricas_turno
+from logic import finalizar_turno_seguro, preparar_turno_seguro
+from gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from programa.context import buscar_empleado, cargar_json
-from programa.config import (
+from context import buscar_empleado, cargar_json
+from config import (
     ASSISTANT_CONFIG_DEFAULT,
     DOCS_PATH,
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
+    FALLBACK_MODEL,
 )
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
+
+from datetime import date
 
 EMPLEADO_ID_DEMO = "emp_01"
 CONSULTA_DEMO = "¿A qué canales de Slack tengo que unirme en mi primera semana?"
@@ -94,6 +110,13 @@ def ejecutar_demo_chat_onboarding() -> None:
         documentos=documentos,
         faqs=faqs,
         configuracion=ASSISTANT_CONFIG_DEFAULT,
+        # Fuerza día 1 real (fecha_referencia = fecha_inicio del
+        # empleado) para que la demo sea reproducible sin depender de
+        # que empleados_demo.json mantenga una fecha_inicio "reciente".
+        # Sin esto, calcular_dia_onboarding() usa la fecha real del
+        # sistema y, con datos de ejemplo antiguos, el empleado puede
+        # aparecer en el día 100+ de onboarding en vez del día 1.
+        fecha_referencia=date.fromisoformat(empleado["fecha_inicio"]),
     )
 
     if preparacion.get("status") != "ok":
@@ -116,6 +139,7 @@ def ejecutar_demo_chat_onboarding() -> None:
             build_secure_turn_contents(turno_preparado),
             system_instruction=build_secure_system_instruction(),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:
