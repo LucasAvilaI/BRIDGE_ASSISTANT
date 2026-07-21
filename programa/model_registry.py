@@ -35,26 +35,26 @@ MODELS: Final[dict[str, ModelMetadata]] = {
         "provider": PROVIDER_GEMINI,
         "model_id": MODEL_2,
         "enabled": True,
-        "benchmark_role": "quality_candidate",
-        "display_name": "Gemini 1.5 Pro",
+        "benchmark_role": "efficiency_candidate",
+        "display_name": "Gemini 3.1 flash-lite",
         "context_window": 1_000_000,
         "cost_input_per_m": 1.25,
         "cost_output_per_m": 10.00,
         "description": "Modelo de mayor capacidad para razonamiento complejo.",
-        "selection_reason": "Establece la referencia de calidad del benchmark.",
+        "selection_reason": "Establece la referencia de calidad del benchmark."
     },
     MODEL_1: {
         "provider": PROVIDER_GEMINI,
         "model_id": MODEL_1,
         "enabled": True,
-        "benchmark_role": "efficiency_candidate",
-        "display_name": "Gemini 1.5 Flash",
+        "benchmark_role": "quality_candidate",
+        "display_name": "Gemini 3.5 Flash",
         "context_window": 1_000_000,
         "cost_input_per_m": 0.30,
         "cost_output_per_m": 2.50,
         "description": "Modelo optimizado para latencia y coste.",
-        "selection_reason": "Candidato principal para producción por eficiencia.",
-    },
+        "selection_reason": "Candidato principal para producción por eficiencia."
+    }
 }
 
 DEFAULT_MODEL_KEY: Final[str] = MODEL

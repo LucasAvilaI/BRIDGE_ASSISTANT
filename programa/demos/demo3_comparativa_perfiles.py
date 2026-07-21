@@ -66,7 +66,7 @@ def _buscar_empleado_por_perfil(empleados: list[dict], palabra_clave: str) -> di
 
 
 def obtener_perfiles_demo() -> tuple[dict, dict]:
-    """Devuelve un empleado Comercial y un empleado Remoto UE de la demo."""
+    """Devuelve un empleado Comercial y un empleado Remoto EU de la demo."""
     empleados = cargar_json(EMPLEADOS_PATH)
 
     empleado_comercial = _buscar_empleado_por_perfil(
@@ -77,7 +77,7 @@ def obtener_perfiles_demo() -> tuple[dict, dict]:
     if empleado_comercial is None or empleado_remoto_ue is None:
         raise ValueError(
             "No se han encontrado en empleados_demo.json un empleado con "
-            "perfil 'Comercial' y otro con perfil 'Remoto UE' para la "
+            "perfil 'Comercial' y otro con perfil 'Remoto EU' para la "
             "comparativa."
         )
 
@@ -185,7 +185,7 @@ def ejecutar_demo_comparativa_perfiles() -> None:
         faqs=faqs,
         consulta=consulta,
     )
-    _mostrar_resultado("PERFIL REMOTO UE",
+    _mostrar_resultado("PERFIL REMOTO EU",
                        empleado_remoto_ue, resultado_remoto_ue)
 
 

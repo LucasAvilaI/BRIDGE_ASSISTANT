@@ -12,6 +12,7 @@ from config import (
     PATRONES_DOMINIO_ADICIONALES,
     PATRONES_FUERA_DE_DOMINIO,
     PATRONES_FUGA_SALIDA,
+    PATRONES_INCIDENCIA_CREDENCIALES,
     PATRONES_INYECCION,
     PATRONES_REFERENCIA_INTERNA,
     PATRONES_SENSIBLES_POR_CODIGO,
@@ -217,6 +218,10 @@ def validar_entrada_segura(texto: Any) -> dict:
     # aunque también contenga vocabulario propio de una incidencia.
     if hay_solicitud_secretos:
         return _resultado_validacion(False, "credentials", "input")
+    
+    # Detecta consultas legítimas de recuperación, cambio,
+    # restablecimiento o problemas de acceso.
+    hay_incidencia_credenciales = _coincide_algun_patron(texto_normalizado, PATRONES_INCIDENCIA_CREDENCIALES)
 
     # El orden determina la causa prioritaria del rechazo.
     # detectar si hay o se quiere información sensible
@@ -230,12 +235,23 @@ def validar_entrada_segura(texto: Any) -> dict:
     # formulaciones sin verbo de entrega (p. ej. "necesito la
     # contraseña de la wifi"). Se elimina el "continue" para que
     # también se compruebe.
+    # Comprueba las distintas categorías de información sensible.
     for codigo, patrones in PATRONES_SENSIBLES_POR_CODIGO.items():
-        if _coincide_algun_patron(texto_normalizado, patrones):    # tupla que contiene los patrones para cada caso
-            return _resultado_validacion(False, codigo, "input")   # si alguno coincide bloquea
+
+        # Una incidencia legítima puede mencionar una contraseña,
+        # token o cuenta sin pedir que se revele su valor.
+        #
+        # En ese caso no se bloquea como "credentials": la consulta
+        # continúa hacia la validación documental y podrá derivarse
+        # a IT si existe contexto suficiente.
+        if codigo == "credentials" and hay_incidencia_credenciales:
+            continue
+
+        if _coincide_algun_patron(texto_normalizado, patrones):
+            return _resultado_validacion(False, codigo, "input")
             
 
-    if _coincide_algun_patron(texto_normalizado,PATRONES_FUERA_DE_DOMINIO):
+    if _coincide_algun_patron(texto_normalizado, PATRONES_FUERA_DE_DOMINIO):
         return _resultado_validacion(False, "external_participant", "input")
 
     # "Baja" sin especificar el tipo no debe mezclar los dos

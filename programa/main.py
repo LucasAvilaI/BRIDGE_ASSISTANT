@@ -17,6 +17,7 @@ from typing import Any
 
 from config import (
     ASSISTANT_CONFIG_DEFAULT,
+    CHAT_RESPONSE_SCHEMA,
     DOCS_PATH,
     EMPLEADOS_PATH,
     EMPRESA_PATH,
@@ -259,6 +260,7 @@ def generar_respuesta_llm(
         build_secure_turn_contents(turno_preparado),
         system_instruction=build_secure_system_instruction(),
         json_mode=True,
+        response_schema=CHAT_RESPONSE_SCHEMA
     )
 
     return parsear_json(texto_modelo), metricas
@@ -314,7 +316,7 @@ def ejecutar_sesion(
             empresa=empresa,
             documentos=documentos,
             faqs=faqs,
-            configuracion=ASSISTANT_CONFIG_DEFAULT,
+            configuracion=ASSISTANT_CONFIG_DEFAULT
         )
 
         if preparacion.get("status") != "ok":
@@ -323,7 +325,7 @@ def ejecutar_sesion(
 
         datos_preparacion = preparacion.get(
             "data",
-            {},
+            {}
         )
 
         if not isinstance(datos_preparacion, dict):
@@ -339,17 +341,14 @@ def ejecutar_sesion(
                             "El campo 'data' debe ser "
                             "un diccionario."
                         ]
-                    },
+                    }
                 }
             )
             continue
 
         # La consulta puede haber sido atendida mediante una
         # respuesta controlada sin invocar al modelo.
-        if not datos_preparacion.get(
-            "llamar_modelo",
-            False,
-        ):
+        if not datos_preparacion.get("llamar_modelo", False):
             imprimir_respuesta_final(preparacion)
             continue
 
@@ -375,9 +374,8 @@ def ejecutar_sesion(
 
         # 2. Invocación del adaptador LLM (canal seguro).
         try:
-            resultado_externo, metricas = generar_respuesta_llm(
-                turno_preparado
-            )
+            resultado_externo, metricas = generar_respuesta_llm(turno_preparado)
+        
         except (GeminiClientError, ValueError, TypeError) as error:
             imprimir_errores(
                 {
@@ -388,7 +386,7 @@ def ejecutar_sesion(
                     ),
                     "data": {
                         "errores": [str(error)]
-                    },
+                    }
                 }
             )
             continue
@@ -398,7 +396,7 @@ def ejecutar_sesion(
         resultado_final = finalizar_turno_seguro(
             estado=estado,
             turno_preparado=turno_preparado,
-            resultado_externo=resultado_externo,
+            resultado_externo=resultado_externo
         )
 
         imprimir_respuesta_final(resultado_final)
@@ -421,20 +419,13 @@ def ejecutar_aplicacion_principal() -> None:
         print(f"- {error}")
         return
 
-    empleado = seleccionar_empleado(
-        datos["empleados"]
-    )
+    empleado = seleccionar_empleado(datos["empleados"])
 
     if empleado is None:
         print("\nAplicación finalizada.")
         return
 
-    ejecutar_sesion(
-        empleado=empleado,
-        empresa=datos["empresa"],
-        documentos=datos["documentos"],
-        faqs=datos["faqs"],
-    )
+    ejecutar_sesion(empleado, datos["empresa"], datos["documentos"], datos["faqs"])
 
 
 # ============================================================
