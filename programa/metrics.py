@@ -29,11 +29,11 @@ import statistics
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from programa.model_utils import obtener_modelo
+from model_utils import obtener_modelo
 
 try:
     # Solo se usa para anotar tipos; metrics.py no importa el SDK.
-    from programa.gemini_client import MetricasLlamada
+    from gemini_client import MetricasLlamada
 except ImportError:  # pragma: no cover
     MetricasLlamada = Any  # type: ignore[assignment,misc]
 
@@ -212,6 +212,13 @@ def formatear_metricas_turno(metricas: "MetricasLlamada") -> str:
         f"{rendimiento} tok/s" if rendimiento is not None else "n/d"
     )
 
+    aviso_fallback = (
+        " [FALLBACK: el modelo principal falló, respondió el modelo "
+        "de respaldo]"
+        if resumen["fallback_used"]
+        else ""
+    )
+
     return (
         f"[métricas] modelo={resumen['model_id']} "
         f"latencia={resumen['latencia_ms']} ms "
@@ -220,6 +227,7 @@ def formatear_metricas_turno(metricas: "MetricasLlamada") -> str:
         f"{resumen['thinking_tokens']} "
         f"coste≈{coste_texto} "
         f"rendimiento={rendimiento_texto}"
+        f"{aviso_fallback}"
     )
 
 

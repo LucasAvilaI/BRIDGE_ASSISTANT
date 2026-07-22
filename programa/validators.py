@@ -2,7 +2,7 @@
 import re
 import unicodedata
 from typing import Any
-from config import (
+from programa.config import (
     DOMAIN_KEYWORDS,
     FIRMAS_INYECCION_COMPACTAS,
     MAX_INPUT_CHARS,
@@ -21,7 +21,7 @@ from config import (
     REQUIRED_CHECKLIST_FIELDS,
     REQUIRED_TAREA_FIELDS,
 )
-from context import STOPWORDS
+from programa.context import STOPWORDS
 
 # NORMALIZAR TEXTOS SEGURO
 # retirar espacios, todo en minúsculas, sin tildes...

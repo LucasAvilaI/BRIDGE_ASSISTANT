@@ -3,6 +3,8 @@ Menú principal de demostraciones del asistente de onboarding.
 """
 from __future__ import annotations
 from typing import Any, Callable
+
+# Importaciones de las demostraciones del proyecto
 from demos.demo1_chat_onboarding import ejecutar_demo_chat_onboarding
 from demos.demo2_checklist_dia_1 import ejecutar_demo_checklist_dia_1
 from demos.demo3_comparativa_perfiles import ejecutar_demo_comparativa_perfiles
@@ -13,12 +15,11 @@ from demos.demo5_vulnerable_vs_seguro import (
     ejecutar_demo_vulnerable_vs_seguro,
 )
 from demos.demo6_casos_trampa import ejecutar_demo_casos_trampa
-from config import EMPLEADOS_PATH, EMPRESA_PATH, DOCS_PATH, FAQ_PATH
-from context import cargar_json, buscar_empleado
-
-# Importaciones de las demostraciones del proyecto
 
 # Importaciones reales de tu infraestructura de datos y contexto
+
+from config import EMPLEADOS_PATH, EMPRESA_PATH, DOCS_PATH, FAQ_PATH
+from context import cargar_json, buscar_empleado
 
 AccionMenu = Callable[[], Any]
 

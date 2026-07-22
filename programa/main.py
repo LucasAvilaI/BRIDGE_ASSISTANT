@@ -6,31 +6,31 @@ integración vulnerable está aislada exclusivamente en la Demo 5.
 """
 
 from __future__ import annotations
-
-import sys
-import os
-
-# Añade la carpeta padre (la raíz 'BRIDGE_ASSISTANT') al path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from typing import Any
-
-from programa.config import (
+from state import inicializar_estado
+from prompts import build_secure_system_instruction, build_secure_turn_contents
+from metrics import formatear_metricas_turno
+from menu import ejecutar_menu
+from logic import finalizar_turno_seguro, preparar_turno_seguro
+from gemini_client import GeminiClientError, parsear_json, safe_generate_with_system_instruction
+from gemini_auth import GeminiAuthError, configurar_gemini_api_key
+from context import buscar_empleado, cargar_json
+from config import (
     ASSISTANT_CONFIG_DEFAULT,
     CHAT_RESPONSE_SCHEMA,
     DOCS_PATH,
     EMPLEADOS_PATH,
     EMPRESA_PATH,
     FAQ_PATH,
+    FALLBACK_MODEL,
 )
-from programa.context import buscar_empleado, cargar_json
-from programa.gemini_auth import GeminiAuthError, configurar_gemini_api_key
-from programa.gemini_client import GeminiClientError, parsear_json, safe_generate_with_system_instruction
-from programa.logic import finalizar_turno_seguro, preparar_turno_seguro
-from programa.menu import ejecutar_menu
-from programa.metrics import formatear_metricas_turno
-from programa.prompts import build_secure_system_instruction, build_secure_turn_contents
-from programa.state import inicializar_estado
+from typing import Any
+
+import sys
+import os
+from time import perf_counter
+
+# Añade la carpeta padre (la raíz 'BRIDGE_ASSISTANT') al path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 # ============================================================
@@ -255,12 +255,19 @@ def generar_respuesta_llm(
     finalizar_turno_seguro() a través de validators.py. Esta función
     solo se encarga de la llamada externa y de traducir cualquier
     fallo técnico en un error controlado (fail-closed).
+
+    Usa fallback_model_id=FALLBACK_MODEL: si MODEL falla con un
+    GeminiClientError (p. ej. un 503 por saturación del proveedor),
+    reintenta automáticamente con FALLBACK_MODEL antes de rendirse.
+    Esto es exclusivo del chat en producción; ni las demos ni
+    benchmark.py deben activar esto (ver la nota en config.py).
     """
     texto_modelo, metricas = safe_generate_with_system_instruction(
         build_secure_turn_contents(turno_preparado),
         system_instruction=build_secure_system_instruction(),
         json_mode=True,
-        response_schema=CHAT_RESPONSE_SCHEMA
+        response_schema=CHAT_RESPONSE_SCHEMA,
+        fallback_model_id=FALLBACK_MODEL,
     )
 
     return parsear_json(texto_modelo), metricas
@@ -373,10 +380,41 @@ def ejecutar_sesion(
             continue
 
         # 2. Invocación del adaptador LLM (canal seguro).
+        print("\n(Consultando al asistente, puede tardar unos segundos...)")
+
+        t_llm_inicio = perf_counter()
+
         try:
-            resultado_externo, metricas = generar_respuesta_llm(turno_preparado)
-        
+            resultado_externo, metricas = generar_respuesta_llm(
+                turno_preparado
+            )
+
+            t_llm_fin = perf_counter()
+
+            print(
+                f"[TIMING] LLM total: "
+                f"{(t_llm_fin - t_llm_inicio) * 1000:.0f} ms"
+            )
+
+            print(
+                f"[TIMING] SDK métricas: "
+                f"{metricas.elapsed_ms} ms"
+            )
+
+            print(
+                f"[TIMING] Modelo: {metricas.model_id} "
+                f"fallback={metricas.fallback_used}"
+            )
+
         except (GeminiClientError, ValueError, TypeError) as error:
+
+            t_llm_fin = perf_counter()
+
+            print(
+                f"[TIMING] LLM ERROR tras "
+                f"{(t_llm_fin - t_llm_inicio) * 1000:.0f} ms"
+            )
+
             imprimir_errores(
                 {
                     "status": "error",
@@ -425,7 +463,8 @@ def ejecutar_aplicacion_principal() -> None:
         print("\nAplicación finalizada.")
         return
 
-    ejecutar_sesion(empleado, datos["empresa"], datos["documentos"], datos["faqs"])
+    ejecutar_sesion(empleado, datos["empresa"],
+                    datos["documentos"], datos["faqs"])
 
 
 # ============================================================

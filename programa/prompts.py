@@ -1,11 +1,11 @@
 
 import json
-from config import (
+from programa.config import (
     PERFILES,
     SYSTEM_PROMPT,
     JSON_SCHEMA_HINT,
     CHECKLIST_JSON_SCHEMA_HINT,
-    REGLAS_SISTEMA_SEGURAS
+    REGLAS_SISTEMA_SEGURAS,
 )
 
 

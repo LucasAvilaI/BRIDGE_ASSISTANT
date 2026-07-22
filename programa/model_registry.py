@@ -36,12 +36,15 @@ MODELS: Final[dict[str, ModelMetadata]] = {
         "model_id": MODEL_2,
         "enabled": True,
         "benchmark_role": "efficiency_candidate",
-        "display_name": "Gemini 3.1 flash-lite",
+        "display_name": "Gemini 3.1 Flash-Lite",
         "context_window": 1_000_000,
-        "cost_input_per_m": 1.25,
-        "cost_output_per_m": 10.00,
-        "description": "Modelo de mayor capacidad para razonamiento complejo.",
-        "selection_reason": "Establece la referencia de calidad del benchmark."
+        # NOTA: precios de julio 2026, verificar contra
+        # https://ai.google.dev/gemini-api/docs/pricing antes de la
+        # entrega definitiva.
+        "cost_input_per_m": 0.25,
+        "cost_output_per_m": 1.50,
+        "description": "Modelo más económico y rápido de la familia, pensado para alto volumen.",
+        "selection_reason": "Candidato de eficiencia: menor coste y menor latencia del benchmark.",
     },
     MODEL_1: {
         "provider": PROVIDER_GEMINI,
@@ -50,11 +53,11 @@ MODELS: Final[dict[str, ModelMetadata]] = {
         "benchmark_role": "quality_candidate",
         "display_name": "Gemini 3.5 Flash",
         "context_window": 1_000_000,
-        "cost_input_per_m": 0.30,
-        "cost_output_per_m": 2.50,
-        "description": "Modelo optimizado para latencia y coste.",
-        "selection_reason": "Candidato principal para producción por eficiencia."
-    }
+        "cost_input_per_m": 1.50,
+        "cost_output_per_m": 9.00,
+        "description": "Modelo flagship de la familia Flash: mejor calidad y razonamiento.",
+        "selection_reason": "Establece la referencia de calidad del benchmark.",
+    },
 }
 
 DEFAULT_MODEL_KEY: Final[str] = MODEL

@@ -16,7 +16,7 @@ from copy import deepcopy
 from datetime import date
 from typing import Any
 
-from config import (
+from programa.config import (
     ASSISTANT_CONFIG_DEFAULT,
     DOMAIN_KEYWORDS,
     MAX_CONTEXT_DOCUMENTS,
@@ -27,9 +27,9 @@ from config import (
     VALID_CATEGORIES,
     VALID_PROFILES,
 )
-from context import construir_contexto, normalizar_texto
-from state import append_assistant, append_user, ultimos_n
-from validators import (
+from programa.context import construir_contexto, normalizar_texto
+from programa.state import append_assistant, append_user, ultimos_n
+from programa.validators import (
     validar_contexto_seguro,
     validar_entrada_segura,
     validar_salida_segura,

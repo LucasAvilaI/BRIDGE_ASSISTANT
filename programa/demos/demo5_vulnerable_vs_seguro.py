@@ -9,18 +9,19 @@ para comparar ambos comportamientos con exactamente el mismo escenario.
 """
 
 from __future__ import annotations
-from programa.logic import (
+from datetime import date
+from logic import (
     finalizar_turno,
     preparar_turno,
     finalizar_turno_seguro,
     preparar_turno_seguro,
 )
-from programa.gemini_client import (
+from gemini_client import (
     parsear_json,
     safe_generate,
     safe_generate_with_system_instruction,
 )
-from programa.config import JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
+from config import FALLBACK_MODEL, JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
 from typing import Any
 from copy import deepcopy
 import json
@@ -49,8 +50,18 @@ def ejecutar_demo_vulnerable_vs_seguro(
     faqs: list[dict],
     consulta: str = CONSULTA_DEMO,
     configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
 ) -> None:
-    """Ejecuta el mismo escenario mediante ambos pipelines."""
+    """Ejecuta el mismo escenario mediante ambos pipelines.
+
+    Si no se indica fecha_referencia, se usa la fecha_inicio del
+    empleado (día 1) para que la demo sea reproducible sin depender
+    de cuán vieja esté fecha_inicio en empleados_demo.json en el
+    momento de ejecutarla (ver mismo ajuste en demo1/3/6).
+    """
+    if fecha_referencia is None:
+        fecha_referencia = date.fromisoformat(empleado["fecha_inicio"])
+
     argumentos = _crear_argumentos_comunes(
         empleado=empleado,
         empresa=empresa,
@@ -58,6 +69,7 @@ def ejecutar_demo_vulnerable_vs_seguro(
         faqs=faqs,
         consulta=consulta,
         configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
     )
 
     print("\n=== PIPELINE SEGURO ===")
@@ -77,6 +89,7 @@ def ejecutar_ruta_segura(
     faqs: list[dict],
     consulta: str,
     configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
 ) -> Resultado:
     """Ejecuta el pipeline normal y permanente del producto."""
     estado = _crear_estado(empleado)
@@ -89,6 +102,7 @@ def ejecutar_ruta_segura(
         documentos=documentos,
         faqs=faqs,
         configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
     )
 
     if preparacion.get("status") != "ok":
@@ -111,6 +125,7 @@ def ejecutar_ruta_segura(
             _construir_contents_seguro(turno_preparado),
             system_instruction=_construir_system_instruction_segura(),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (TypeError, ValueError, RuntimeError) as error:
@@ -136,6 +151,7 @@ def ejecutar_ruta_vulnerable_demo(
     faqs: list[dict],
     consulta: str,
     configuracion: dict | None = None,
+    fecha_referencia: date | None = None,
 ) -> Resultado:
     """Ejecuta la integración vulnerable aislada de esta demostración.
 
@@ -153,6 +169,7 @@ def ejecutar_ruta_vulnerable_demo(
         documentos=documentos,
         faqs=faqs,
         configuracion=configuracion,
+        fecha_referencia=fecha_referencia,
     )
 
     if preparacion.get("status") != "ok":
@@ -171,6 +188,7 @@ def ejecutar_ruta_vulnerable_demo(
         texto_modelo, metricas = safe_generate(
             _construir_prompt_vulnerable(turno_preparado),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (TypeError, ValueError, RuntimeError) as error:
@@ -196,6 +214,7 @@ def _crear_argumentos_comunes(
     faqs: list[dict],
     consulta: str,
     configuracion: dict | None,
+    fecha_referencia: date | None = None,
 ) -> dict[str, Any]:
     """Crea copias independientes del mismo escenario de comparación."""
     return {
@@ -205,6 +224,7 @@ def _crear_argumentos_comunes(
         "faqs": deepcopy(faqs),
         "consulta": consulta,
         "configuracion": deepcopy(configuracion),
+        "fecha_referencia": fecha_referencia,
     }
 
 
@@ -232,8 +252,11 @@ def _construir_payload_turno(turno_preparado: dict) -> dict[str, Any]:
     return {
         "empleado": turno_preparado.get("empleado", {}),
         "empresa": turno_preparado.get("empresa", {}),
-        "perfil_activo": turno_preparado.get("perfil_activo"),
-        "perfil_funcional": turno_preparado.get("perfil", {}),
+        "perfil_empleado": turno_preparado.get("perfil_empleado"),
+        "perfil_funcional": turno_preparado.get("perfil_funcional"),
+        "configuracion_perfil_funcional": turno_preparado.get(
+            "configuracion_perfil_funcional", {}
+        ),
         "categoria_preliminar": turno_preparado.get("categoria_preliminar"),
         "dia_onboarding": turno_preparado.get("dia_onboarding"),
         "contexto": turno_preparado.get("contexto", {}),

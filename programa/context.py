@@ -4,14 +4,14 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from config import (
+from programa.config import (
     DOCUMENT_SCORE_WEIGHTS,
     FAQ_SCORE_WEIGHTS,
     MAX_CONTEXT_DOCUMENTS,
     MAX_CONTEXT_FAQS,
     MIN_DOCUMENT_SCORE,
     MIN_FAQ_SCORE,
-    TRANSVERSAL_DOCUMENT_IDS
+    TRANSVERSAL_DOCUMENT_IDS,
 )
 
 
