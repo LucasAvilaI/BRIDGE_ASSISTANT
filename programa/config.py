@@ -42,6 +42,9 @@ PREGUNTAS_BENCHMARK_PATH = DATA_DIR / "preguntas_benchmark.json"
 # y data/ (mismo criterio que usan benchmark.py y
 # generar_entregables.py al calcular su propio OUTPUT_DIR).
 OUTPUT_DIR = BASE_DIR / "output"
+
+# Salidas de consola generadas al ejecutar las demos
+OUTPUT_DEMO_DIR = BASE_DIR / "output_demo"
 RESULTADOS_BENCHMARK_PATH = OUTPUT_DIR / "resultados_benchmark.json"
 ENTREGABLES_DIR = BASE_DIR / "entregables"
 
