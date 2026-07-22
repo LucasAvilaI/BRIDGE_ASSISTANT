@@ -736,9 +736,9 @@ def parsear_json(texto: str) -> dict[str, Any]:
     texto_limpio = _validar_texto(texto, "texto")
 
     try:
-        # print("\n========== JSON DEVUELTO POR GEMINI ==========")
-        # print(texto_limpio)
-        # print("=============================================\n")
+        print("\n========== JSON DEVUELTO POR GEMINI ==========")
+        print(texto_limpio)
+        print("=============================================\n")
         resultado = json.loads(texto_limpio)
 
     except json.JSONDecodeError as error:

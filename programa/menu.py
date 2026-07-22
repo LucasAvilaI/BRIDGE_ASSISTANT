@@ -17,6 +17,7 @@ from demos.demo5_vulnerable_vs_seguro import (
 from demos.demo6_casos_trampa import ejecutar_demo_casos_trampa
 from config import EMPLEADOS_PATH, EMPRESA_PATH, DOCS_PATH, FAQ_PATH
 from context import cargar_json, buscar_empleado
+from utils.console import registrar_salida_demo
 
 # Importaciones de las demostraciones del proyecto
 
@@ -153,15 +154,33 @@ def ejecutar_menu() -> None:
         descripcion_demo, funcion_demo = registro
         limpiar_pantalla()
 
-        print(f"🚀 Ejecutando: {descripcion_demo}\n" + "─" * 56 + "\n")
+        nombre_demo = f"demo_{opcion}"
 
-        try:
-            funcion_demo()
-        except KeyboardInterrupt:
-            print("\n\n⚠️ Ejecución cancelada de golpe por el usuario.")
-        except Exception as error:
-            print("\n💥 El subsistema no pudo completar la demostración.")
-            print(f"Detalle técnico del error: {error}")
+        with registrar_salida_demo(nombre_demo) as ruta_log:
+
+            print(
+                f"🚀 Ejecutando: {descripcion_demo}\n"
+                + "─" * 56
+                + "\n"
+            )
+
+            try:
+                funcion_demo()
+
+            except KeyboardInterrupt:
+                print(
+                    "\n\n⚠️ Ejecución cancelada de golpe "
+                    "por el usuario."
+                )
+
+            except Exception as error:
+                print(
+                    "\n💥 El subsistema no pudo completar "
+                    "la demostración."
+                )
+                print(f"Detalle técnico del error: {error}")
+
+        print(f"\n[LOG] Salida guardada en: {ruta_log}")
 
         pausar()
         limpiar_pantalla()
