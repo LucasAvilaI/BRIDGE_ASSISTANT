@@ -1,0 +1,54 @@
+🚀 Ejecutando: 📊  Benchmark de rendimiento de modelos
+────────────────────────────────────────────────────────
+
+
+[benchmark] run_id=20260722T145817Z_132e7276 casos=10 modelos=2
+[benchmark] caso=bench_01_engineering_acceso_github modelo=gemini-3.1-flash-lite
+[DEBUG CONFIG] timeout=10000 ms | intentos=1
+  [OK] 2326 ms | in=250 out=195 think=126
+[benchmark] caso=bench_01_engineering_acceso_github modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_02_engineering_dia_3 modelo=gemini-3.1-flash-lite
+  [OK] 1611 ms | in=284 out=222 think=148
+[benchmark] caso=bench_02_engineering_dia_3 modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_03_sales_dia_2 modelo=gemini-3.1-flash-lite
+  [OK] 1904 ms | in=227 out=258 think=129
+[benchmark] caso=bench_03_sales_dia_2 modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_04_operations_incidencia_cohorte modelo=gemini-3.1-flash-lite
+  [OK] 1509 ms | in=232 out=208 think=131
+[benchmark] caso=bench_04_operations_incidencia_cohorte modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_05_remoto_ue_otro_pais modelo=gemini-3.1-flash-lite
+  [OK] 1739 ms | in=251 out=290 think=123
+[benchmark] caso=bench_05_remoto_ue_otro_pais modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_06_checklist_engineering_dia_1 modelo=gemini-3.1-flash-lite
+  [OK] 1530 ms | in=386 out=385 think=109
+[benchmark] caso=bench_06_checklist_engineering_dia_1 modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_07_ambiguedad_tipo_baja modelo=gemini-3.1-flash-lite
+  [OK] 1545 ms | in=229 out=220 think=146
+[benchmark] caso=bench_07_ambiguedad_tipo_baja modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_08_limite_dato_sensible modelo=gemini-3.1-flash-lite
+  [OK] 1475 ms | in=243 out=192 think=111
+[benchmark] caso=bench_08_limite_dato_sensible modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_09_limite_inyeccion modelo=gemini-3.1-flash-lite
+  [OK] 1109 ms | in=245 out=92 think=122
+[benchmark] caso=bench_09_limite_inyeccion modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[benchmark] caso=bench_10_limite_politica_no_documentada modelo=gemini-3.1-flash-lite
+  [OK] 1163 ms | in=236 out=89 think=128
+[benchmark] caso=bench_10_limite_politica_no_documentada modelo=gemini-3.5-flash
+  [ERROR] GeminiClientError: Ha fallado la generación con el modelo gemini-3.5-flash. Error original: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+
+[benchmark] Archivos generados:
+- ..\BRIDGE_ASSISTANT\output\resultados_benchmark.json
+- ..\BRIDGE_ASSISTANT\output\resultados_benchmark.csv
+- ..\BRIDGE_ASSISTANT\output\resumen_benchmark.json
+- ..\BRIDGE_ASSISTANT\output\proyeccion_trafico_x2.json
+
+[benchmark] Falta únicamente puntuar manualmente fidelidad, relevancia, tono y seguridad (1-3) en el CSV antes de generar la decisión final.

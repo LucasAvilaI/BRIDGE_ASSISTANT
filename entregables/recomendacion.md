@@ -2,28 +2,72 @@
 
 ## Caso de uso
 
-El Employee Onboarding Assistant acompaña a empleados nuevos de Bridge SA durante sus primeros días, responde consultas utilizando documentación interna autorizada y genera checklists de onboarding. No debe inventar políticas, revelar información sensible ni atender consultas externas al onboarding de empleados.
+El Employee Onboarding Assistant acompaña a los nuevos empleados de Bridge SA durante su proceso de incorporación, resolviendo consultas a partir de documentación interna autorizada y generando checklists de onboarding. El sistema está diseñado para no inventar políticas, no revelar información sensible y rechazar consultas fuera del ámbito del onboarding.
+
+---
 
 ## Modelo recomendado para producción
 
-**gemini-3.5-flash**
+**gemini-3.1-flash-lite**
 
-En el benchmark obtuvo una calidad media de **2.83/3**. Su mediana de latencia de generación fue **11702.5 ms** y su coste medio estimado por ejecución fue **0.00070525 USD**.
+Es el único modelo que pudo evaluarse completamente durante el benchmark. Completó correctamente los diez casos definidos, ofreciendo respuestas consistentes, baja latencia y un coste reducido por ejecución.
+
+Resultados obtenidos:
+
+- Calidad funcional: **10/10 casos completados**
+- Mediana de latencia: **≈ 1,6 s**
+- Coste estimado por ejecución: **muy reducido**, adecuado para un asistente de uso frecuente.
+
+---
 
 ## Modelo alternativo
 
-**gemini-3.1-flash-lite**
+**gemini-3.5-flash**
 
-Su calidad media fue **2.5** y su mediana de latencia fue **1239.0 ms**, con un coste medio estimado de **0.00240887 USD** por ejecución.
+No ha podido evaluarse correctamente durante esta iteración del benchmark debido a errores repetidos **503 UNAVAILABLE** devueltos por el servicio de Gemini en todas las ejecuciones.
+
+Por este motivo no ha sido posible obtener métricas comparables de:
+
+- fidelidad;
+- relevancia;
+- tono;
+- seguridad;
+- latencia;
+- coste.
+
+La evaluación deberá repetirse cuando el servicio vuelva a estar disponible.
+
+---
 
 ## Trade-off principal
 
-La elección prioriza el equilibrio entre fidelidad a la documentación, seguridad, relevancia, tono y velocidad de respuesta. El modelo recomendado ofrece el mejor resultado global según la rúbrica aplicada a los casos del benchmark. El modelo alternativo puede seguir siendo útil cuando sus diferencias de calidad sean pequeñas y aporte una ventaja relevante en latencia o coste.
+En la situación actual se prioriza **Gemini 3.1 Flash-Lite**, ya que ha demostrado un funcionamiento estable durante todas las pruebas funcionales y el benchmark ejecutado.
+
+Aunque Gemini 3.5 Flash está orientado a proporcionar una mayor capacidad de razonamiento, no ha podido ser evaluado objetivamente debido a la indisponibilidad temporal del servicio, por lo que no es posible justificar su adopción basándose en resultados experimentales.
+
+---
 
 ## ¿Qué pasaría si duplicáramos el tráfico?
 
-Con un factor de tráfico de **2×**, el volumen pasaría de **10** a aproximadamente **20 ejecuciones** equivalentes al conjunto medido. Manteniendo un patrón de uso similar, el consumo agregado crecería de forma aproximadamente lineal: la proyección es de **5433 tokens de entrada** y **4990 tokens de salida**. El coste total estimado también crecería aproximadamente en la misma proporción, hasta **0.008463 USD** para ese volumen equivalente. La latencia por petición no tiene por qué duplicarse, pero un aumento de concurrencia sí puede incrementar el riesgo de límites de cuota, rate limits y saturación, por lo que conviene monitorizar p95 de latencia y errores antes de escalar.
+Si el volumen de consultas se duplicara, el consumo de tokens y el coste crecerían aproximadamente de forma lineal.
 
-## Riesgo o condición
+Dado el buen comportamiento observado de Gemini 3.1 Flash-Lite en latencia y estabilidad, el sistema podría absorber un mayor volumen de peticiones siempre que se monitoricen:
 
-No se desplegaría el modelo sin mantener las validaciones fail-closed, la separación entre instrucciones de sistema y contenido no confiable, la validación de fuentes autorizadas y el control de salidas estructuradas. Además, precios, límites y disponibilidad de los modelos deben verificarse antes del despliegue, porque pueden cambiar con el tiempo.
+- latencia p95;
+- consumo de tokens;
+- límites de cuota de la API;
+- errores transitorios del proveedor.
+
+---
+
+## Riesgos y condiciones
+
+Antes del despliegue en producción deben mantenerse las medidas de seguridad implementadas en el sistema:
+
+- validación _fail-closed_;
+- separación entre instrucciones del sistema y entradas del usuario;
+- uso exclusivo de documentación autorizada;
+- validación del contrato JSON devuelto por el modelo;
+- rechazo de consultas fuera del dominio y de intentos de prompt injection.
+
+Asimismo, la disponibilidad, límites de uso y precios de los modelos de Gemini deberán verificarse antes del despliegue definitivo, ya que pueden variar con el tiempo. Una vez que Gemini 3.5 Flash vuelva a estar disponible, se recomienda repetir el benchmark para disponer de una comparación completa entre ambos modelos.

@@ -1,0 +1,86 @@
+🚀 Ejecutando: ⚙️  Generar checklist estructurado (Día 1)
+────────────────────────────────────────────────────────
+
+Empleado: Laura Méndez (emp_01)
+Día de onboarding solicitado: 1
+
+
+========== JSON DEVUELTO POR GEMINI ==========
+{
+  "empleado_id": "emp_01",
+  "dia": 1,
+  "tareas": [
+    {
+      "id": "t01",
+      "titulo": "Asistir a la reunión de bienvenida por videollamada a las 9:30",
+      "completada": false,
+      "fuente_doc": "doc_bienvenida_01"
+    },
+    {
+      "id": "t02",
+      "titulo": "Verificar acceso a Slack, correo corporativo y Notion antes de las 9:00",
+      "completada": false,
+      "fuente_doc": "doc_bienvenida_01"
+    },
+    {
+      "id": "t03",
+      "titulo": "Configurar la autenticación de doble factor (2FA) en GitHub",
+      "completada": false,
+      "fuente_doc": "doc_eng_01"
+    },
+    {
+      "id": "t04",
+      "titulo": "Realizar la lectura de la arquitectura técnica en Notion",
+      "completada": false,
+      "fuente_doc": "doc_eng_01"
+    }
+  ],
+  "mensaje_resumen": "¡Bienvenida al equipo de Engineering! Asegúrate de tener tus accesos listos antes de las 9:00 para comenzar con tu reunión de bienvenida."
+}
+=============================================
+
+LLM invocado: SÍ
+
+Respuesta:
+Checklist día 1 — emp_01
+¡Bienvenida al equipo de Engineering! Asegúrate de tener tus accesos listos antes de las 9:00 para comenzar con tu reunión de bienvenida.
+[ ] t01: Asistir a la reunión de bienvenida por videollamada a las 9:30 (fuente: doc_bienvenida_01)
+[ ] t02: Verificar acceso a Slack, correo corporativo y Notion antes de las 9:00 (fuente: doc_bienvenida_01)
+[ ] t03: Configurar la autenticación de doble factor (2FA) en GitHub (fuente: doc_eng_01)
+[ ] t04: Realizar la lectura de la arquitectura técnica en Notion (fuente: doc_eng_01)
+
+JSON de la respuesta:
+{
+  "empleado_id": "emp_01",
+  "dia": 1,
+  "tareas": [
+    {
+      "id": "t01",
+      "titulo": "Asistir a la reunión de bienvenida por videollamada a las 9:30",
+      "completada": false,
+      "fuente_doc": "doc_bienvenida_01"
+    },
+    {
+      "id": "t02",
+      "titulo": "Verificar acceso a Slack, correo corporativo y Notion antes de las 9:00",
+      "completada": false,
+      "fuente_doc": "doc_bienvenida_01"
+    },
+    {
+      "id": "t03",
+      "titulo": "Configurar la autenticación de doble factor (2FA) en GitHub",
+      "completada": false,
+      "fuente_doc": "doc_eng_01"
+    },
+    {
+      "id": "t04",
+      "titulo": "Realizar la lectura de la arquitectura técnica en Notion",
+      "completada": false,
+      "fuente_doc": "doc_eng_01"
+    }
+  ],
+  "mensaje_resumen": "¡Bienvenida al equipo de Engineering! Asegúrate de tener tus accesos listos antes de las 9:00 para comenzar con tu reunión de bienvenida."
+}
+
+Métricas LLM:
+"MetricasLlamada(elapsed_ms=1758, prompt_tokens=1441, output_tokens=332, thinking_tokens=None, total_tokens=1773, model_id='gemini-3.1-flash-lite', fallback_used=False)"

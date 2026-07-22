@@ -31,9 +31,9 @@ class ModelMetadata(TypedDict):
 # benchmark.py puede pasar directamente ``model_id`` a gemini_client.py sin
 # mantener aliases paralelos o realizar traducciones adicionales.
 MODELS: Final[dict[str, ModelMetadata]] = {
-    MODEL_2: {
+    MODEL_1: {
         "provider": PROVIDER_GEMINI,
-        "model_id": MODEL_2,
+        "model_id": MODEL_1,
         "enabled": True,
         "benchmark_role": "efficiency_candidate",
         "display_name": "Gemini 3.1 Flash-Lite",
@@ -46,9 +46,9 @@ MODELS: Final[dict[str, ModelMetadata]] = {
         "description": "Modelo más económico y rápido de la familia, pensado para alto volumen.",
         "selection_reason": "Candidato de eficiencia: menor coste y menor latencia del benchmark.",
     },
-    MODEL_1: {
+    MODEL_2: {
         "provider": PROVIDER_GEMINI,
-        "model_id": MODEL_1,
+        "model_id": MODEL_2,
         "enabled": True,
         "benchmark_role": "quality_candidate",
         "display_name": "Gemini 3.5 Flash",
