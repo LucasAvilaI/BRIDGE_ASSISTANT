@@ -1,3 +1,36 @@
+"""
+Gestión y construcción del contexto documental del asistente.
+
+Responsabilidades de este módulo:
+- Cargar y validar las fuentes de datos JSON.
+- Normalizar textos, palabras clave y etiquetas para facilitar búsquedas.
+- Buscar empleados y documentos por sus identificadores.
+- Calcular la relevancia de FAQ y documentos respecto a una consulta.
+- Seleccionar las fuentes más relevantes aplicando límites de contexto.
+- Combinar documentos recuperados directamente y mediante referencias de FAQ.
+- Construir el contexto documental que utilizará el asistente en cada turno.
+
+La selección prioriza la intención de la consulta y utiliza el departamento
+del empleado y los documentos transversales como factores adicionales de
+relevancia. Las FAQ funcionan como apoyo e índice hacia la documentación
+principal.
+
+Este módulo NO:
+- clasifica funcionalmente la consulta;
+- decide el perfil activo del asistente;
+- construye prompts;
+- realiza llamadas al modelo;
+- aplica las validaciones de seguridad del modo seguro;
+- modifica el estado de la conversación.
+
+Notas para el equipo:
+- config.py define los límites, pesos y parámetros de selección.
+- logic.py coordina la preparación del turno y solicita la construcción
+  del contexto.
+- validators.py comprueba posteriormente que el contexto obtenido sea
+  válido y seguro antes de autorizar una llamada al modelo.
+"""
+
 import json
 import re
 import unicodedata

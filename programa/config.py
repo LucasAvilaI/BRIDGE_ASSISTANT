@@ -1,3 +1,35 @@
+"""
+Configuración central del Employee Onboarding Assistant.
+
+Este módulo actúa como única fuente de verdad para los parámetros
+compartidos por la aplicación. Centraliza constantes, rutas, límites,
+contratos de respuesta, modelos y reglas necesarias para que los
+distintos módulos trabajen con una configuración coherente.
+
+Responsabilidades:
+- Definir las rutas de datos, resultados y entregables del proyecto.
+- Configurar los modelos Gemini utilizados por el chat y el benchmark.
+- Definir parámetros de generación, límites de tokens y timeouts.
+- Establecer la configuración general del asistente.
+- Definir los contratos de salida estructurada del chat y del checklist.
+- Configurar límites y pesos utilizados para seleccionar contexto.
+- Declarar perfiles funcionales y categorías válidas.
+- Mantener las reglas funcionales y de seguridad del asistente.
+- Centralizar patrones, mensajes y límites utilizados por validators.py.
+- Configurar los parámetros comunes del benchmark.
+
+Este módulo NO:
+- ejecuta lógica de negocio;
+- selecciona documentos o FAQ;
+- valida entradas, contexto o respuestas;
+- construye prompts;
+- realiza llamadas al modelo;
+- calcula métricas.
+
+Los demás módulos deben importar desde aquí los valores de configuración
+que necesiten, evitando duplicar constantes o parámetros en distintos
+puntos del proyecto.
+"""
 
 from pathlib import Path
 
@@ -27,7 +59,7 @@ VULNERABLE_CONTEXT_PATHS = [
     EMPRESA_PATH,
     EMPLEADOS_PATH,
     DOCS_PATH,
-    FAQ_PATH
+    FAQ_PATH,
 ]
 
 
@@ -53,8 +85,8 @@ ENTREGABLES_DIR = BASE_DIR / "entregables"
 # ============================================================
 
 # Modelos disponibles
-MODEL_1 = "gemini-3.1-flash-lite"    # Variante A: calidad
-MODEL_2 = "gemini-3.5-flash"  # Variante b: eficiencia
+MODEL_1 = "gemini-3.1-flash-lite"    # Variante A: eficiencia
+MODEL_2 = "gemini-3.5-flash"  # Variante b: calidad
 
 # Modelo por defecto del asistente
 MODEL = MODEL_1
@@ -109,7 +141,7 @@ BENCHMARK_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
 # Nivel de razonamiento común para los dos modelos del benchmark
 # (ver gemini_client.py: los modelos 3.x usan thinking_level, no el
 # thinking_budget numérico de Gemini 2.x).
-BENCHMARK_THINKING_LEVEL = "low"
+BENCHMARK_THINKING_LEVEL = "minimal"
 
 
 # ============================================================
@@ -278,7 +310,8 @@ Reglas del formato:
 
 # Número máximo de fuentes que context.py puede seleccionar
 # para una interacción.
-# Necesitan estar antes de ASSISTANT_CONFIG_DEFAULT
+# Se definen antes de ASSISTANT_CONFIG_DEFAULT porque dicho diccionario
+# utiliza ambas constantes.
 MAX_CONTEXT_DOCUMENTS = 3
 MAX_CONTEXT_FAQS = 2
 
@@ -613,7 +646,6 @@ DOMAIN_KEYWORDS = {
 }
 
 # Para peticiones sobre días concretos
-# Podría estar dentro de DOMAIN_KEYWORDS["onboarding"]
 PATRONES_DOMINIO_ADICIONALES = (
     r"\bdia\s+[1-5]\b", r"\bprimeros(?:\s+(?:cinco|5))?\s+dias\b",)
 
@@ -635,37 +667,8 @@ ESCALATION_DEPARTMENT_BY_CATEGORY = {
     "out_of_scope": None
 }
 
-
 # ============================================================
-# ROBUSTEZ — ELIMINADO DE LA ARQUITECTURA BASE
-# ============================================================
-
-# Este bloque conserva los puntos previstos para integrar las
-# validaciones y defensas responsabilidad del área de Robustez.
-
-# MAX_INPUT_CHARS = 2_000
-
-# SUSPICIOUS_PATTERNS = (
-#     "ignora las instrucciones",
-#     "ignore previous instructions",
-#     "jailbreak",
-#     "prompt injection",
-# )
-
-# PATRONES_SOSPECHOSOS = SUSPICIOUS_PATTERNS
-
-# El área de Robustez deberá incorporar:
-#
-# - Validación avanzada de entradas.
-# - Detección de prompt injection.
-# - Detección de jailbreak.
-# - Protección de instrucciones internas.
-# - Variantes segura y vulnerable del flujo.
-
-# **************************************************************
-
-# ============================================================
-# ROBUSTEZ — CONFIGURACIÓN ACTIVA (Alex)
+# ROBUSTEZ — CONFIGURACIÓN ACTIVA
 # ============================================================
 
 # El producto opera siempre en modo seguro. El pipeline vulnerable

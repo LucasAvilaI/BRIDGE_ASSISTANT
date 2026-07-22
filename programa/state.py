@@ -1,3 +1,37 @@
+"""
+Gestión del estado y del historial de conversación del asistente.
+
+Responsabilidades de este módulo:
+- Inicializar el estado de una nueva sesión.
+- Mantener el perfil del empleado asociado a la conversación.
+- Registrar los mensajes enviados por el usuario.
+- Registrar las respuestas generadas por el asistente.
+- Mantener el contador de turnos conversacionales.
+- Recuperar los últimos turnos del historial para su reutilización
+  durante la preparación de nuevas interacciones.
+
+El estado se representa mediante un diccionario que contiene el perfil
+del usuario, el historial de mensajes y el número de turnos completados.
+Un turno conversacional está formado por un mensaje del usuario y una
+respuesta del asistente.
+
+Este módulo NO:
+- valida las consultas del usuario;
+- selecciona documentos o FAQ;
+- construye el contexto documental;
+- clasifica consultas ni selecciona perfiles funcionales;
+- construye prompts;
+- realiza llamadas al modelo;
+- valida las respuestas generadas por el LLM.
+
+Notas para el equipo:
+- logic.py utiliza este módulo para consultar y actualizar el estado
+  durante el procesamiento de cada turno.
+- prompts.py puede recibir el historial recuperado para incorporarlo
+  al contenido enviado al modelo.
+- El perfil del empleado procede de los datos de la aplicación y no
+  se infiere automáticamente a partir de los mensajes del usuario.
+"""
 
 def inicializar_estado(user_profile: dict | None = None) -> dict:
     """Crea el dict de sesión. Ya implementada; no necesitas modificarla."""
