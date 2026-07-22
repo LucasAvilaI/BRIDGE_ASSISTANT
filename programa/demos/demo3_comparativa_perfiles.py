@@ -21,16 +21,16 @@ dataset de demo mantenga siempre el mismo orden o los mismos IDs.
 """
 
 from __future__ import annotations
-from state import inicializar_estado
-from prompts import build_secure_system_instruction, build_secure_turn_contents
-from logic import finalizar_turno_seguro, preparar_turno_seguro
-from gemini_client import (
+from programa.state import inicializar_estado
+from programa.prompts import build_secure_system_instruction, build_secure_turn_contents
+from programa.logic import finalizar_turno_seguro, preparar_turno_seguro
+from programa.gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from context import cargar_json, normalizar_texto
-from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from programa.context import cargar_json, normalizar_texto
+from programa.config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
 
 import sys
 import os

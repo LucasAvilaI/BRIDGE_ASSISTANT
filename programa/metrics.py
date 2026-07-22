@@ -29,11 +29,11 @@ import statistics
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from model_utils import obtener_modelo
+from programa.model_utils import obtener_modelo
 
 try:
     # Solo se usa para anotar tipos; metrics.py no importa el SDK.
-    from gemini_client import MetricasLlamada
+    from programa.gemini_client import MetricasLlamada
 except ImportError:  # pragma: no cover
     MetricasLlamada = Any  # type: ignore[assignment,misc]
 

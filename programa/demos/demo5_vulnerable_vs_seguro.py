@@ -9,18 +9,18 @@ para comparar ambos comportamientos con exactamente el mismo escenario.
 """
 
 from __future__ import annotations
-from logic import (
+from programa.logic import (
     finalizar_turno,
     preparar_turno,
     finalizar_turno_seguro,
     preparar_turno_seguro,
 )
-from gemini_client import (
+from programa.gemini_client import (
     parsear_json,
     safe_generate,
     safe_generate_with_system_instruction,
 )
-from config import JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
+from programa.config import JSON_SCHEMA_HINT, REGLAS_SISTEMA_SEGURAS, SYSTEM_PROMPT
 from typing import Any
 from copy import deepcopy
 import json

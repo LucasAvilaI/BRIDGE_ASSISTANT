@@ -15,19 +15,19 @@ de abrir el menú de demostraciones fallaba con ImportError.
 """
 
 from __future__ import annotations
-from state import inicializar_estado
-from prompts import (
+from programa.state import inicializar_estado
+from programa.prompts import (
     build_checklist_system_instruction,
     build_checklist_turno_contents,
 )
-from logic import finalizar_checklist_seguro, preparar_checklist_seguro
-from gemini_client import (
+from programa.logic import finalizar_checklist_seguro, preparar_checklist_seguro
+from programa.gemini_client import (
     GeminiClientError,
     parsear_json,
     safe_generate_with_system_instruction,
 )
-from context import buscar_empleado, cargar_json
-from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from programa.context import buscar_empleado, cargar_json
+from programa.config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
 from typing import Any
 
 import sys

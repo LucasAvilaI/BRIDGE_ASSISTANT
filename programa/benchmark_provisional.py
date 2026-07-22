@@ -31,14 +31,14 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
-from config import MAX_OUTPUT_TOKENS, TEMPERATURE_DEFAULT
-from gemini_client import GeminiClientError, ejecutar_caso_benchmark
-from metrics import (
+from programa.config import MAX_OUTPUT_TOKENS, TEMPERATURE_DEFAULT
+from programa.gemini_client import GeminiClientError, ejecutar_caso_benchmark
+from programa.metrics import (
     calcular_costo,
     proyectar_trafico,
     resumir_resultados_benchmark,
 )
-from model_utils import listar_modelos_benchmark, validar_modelos_benchmark
+from programa.model_utils import listar_modelos_benchmark, validar_modelos_benchmark
 
 
 # ============================================================

@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from typing import Any
 
-from config import (
+from programa.config import (
     ASSISTANT_CONFIG_DEFAULT,
     CHAT_RESPONSE_SCHEMA,
     DOCS_PATH,
@@ -23,14 +23,14 @@ from config import (
     EMPRESA_PATH,
     FAQ_PATH,
 )
-from context import buscar_empleado, cargar_json
-from gemini_auth import GeminiAuthError, configurar_gemini_api_key
-from gemini_client import GeminiClientError, parsear_json, safe_generate_with_system_instruction
-from logic import finalizar_turno_seguro, preparar_turno_seguro
-from menu import ejecutar_menu
-from metrics import formatear_metricas_turno
-from prompts import build_secure_system_instruction, build_secure_turn_contents
-from state import inicializar_estado
+from programa.context import buscar_empleado, cargar_json
+from programa.gemini_auth import GeminiAuthError, configurar_gemini_api_key
+from programa.gemini_client import GeminiClientError, parsear_json, safe_generate_with_system_instruction
+from programa.logic import finalizar_turno_seguro, preparar_turno_seguro
+from programa.menu import ejecutar_menu
+from programa.metrics import formatear_metricas_turno
+from programa.prompts import build_secure_system_instruction, build_secure_turn_contents
+from programa.state import inicializar_estado
 
 
 # ============================================================

@@ -38,7 +38,7 @@ from typing import Any
 from google import genai
 from google.genai import types
 
-from config import (
+from programa.config import (
     GEMINI_RETRY_ATTEMPTS,
     GEMINI_TIMEOUT_MS,
     MAX_OUTPUT_TOKENS,
@@ -50,7 +50,7 @@ from config import (
 #    THINKING_BUDGET_CHAT  # esto es para gemini 2.5
 )
 
-from gemini_auth import configurar_gemini_api_key
+from programa.gemini_auth import configurar_gemini_api_key
 
 
 # ============================================================

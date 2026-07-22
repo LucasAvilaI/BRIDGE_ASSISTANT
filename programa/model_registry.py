@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Final, TypedDict
 
-from config import MODEL, MODEL_1, MODEL_2
+from programa.config import MODEL, MODEL_1, MODEL_2
 
 
 PROVIDER_GEMINI: Final[str] = "gemini"

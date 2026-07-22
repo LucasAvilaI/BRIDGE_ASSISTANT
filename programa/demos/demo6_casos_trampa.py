@@ -24,10 +24,10 @@ dataset de demo puede acabar en 'out_of_scope' en su lugar, y seguiría
 siendo un bloqueo correcto).
 """
 from __future__ import annotations
-from state import inicializar_estado
-from logic import preparar_turno_seguro
-from context import buscar_empleado, cargar_json
-from config import ASSISTANT_CONFIG_DEFAULT, CASOS_TRAMPA_PATH, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from programa.state import inicializar_estado
+from programa.logic import preparar_turno_seguro
+from programa.context import buscar_empleado, cargar_json
+from programa.config import ASSISTANT_CONFIG_DEFAULT, CASOS_TRAMPA_PATH, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
 
 import sys
 import os

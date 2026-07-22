@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from config import (
+from programa.config import (
     BENCHMARK_MAX_CASES,
     BENCHMARK_MAX_OUTPUT_TOKENS,
     BENCHMARK_MIN_CASES,
@@ -19,20 +19,20 @@ from config import (
     PREGUNTAS_BENCHMARK_PATH,
     RESULTADOS_BENCHMARK_PATH,
 )
-from gemini_auth import configurar_gemini_api_key, GeminiAuthError
-from gemini_client import (
+from programa.gemini_auth import configurar_gemini_api_key, GeminiAuthError
+from programa.gemini_client import (
     GeminiClientError,
     ejecutar_caso_benchmark,
     parsear_json,
 )
-from model_utils import (
+from programa.model_utils import (
     listar_modelos_benchmark,
     obtener_modelo,
     validar_modelos_benchmark,
 )
-from metrics import calcular_costo, resumir_resultados_benchmark
-from prompts import build_secure_system_instruction
-from validators import validar_respuesta_estructurada
+from programa.metrics import calcular_costo, resumir_resultados_benchmark
+from programa.prompts import build_secure_system_instruction
+from programa.validators import validar_respuesta_estructurada
 
 
 CSV_RESULTADOS_PATH = RESULTADOS_BENCHMARK_PATH.with_suffix(".csv")
