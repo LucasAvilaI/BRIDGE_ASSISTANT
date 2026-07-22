@@ -1,3 +1,42 @@
+"""
+Validación, robustez y seguridad del asistente.
+
+Responsabilidades de este módulo:
+- Normalizar textos para realizar comprobaciones de seguridad consistentes.
+- Validar la entrada del usuario antes de procesar una consulta.
+- Detectar intentos de prompt injection y otras entradas no permitidas.
+- Detectar solicitudes de credenciales, secretos e información sensible.
+- Identificar consultas fuera del dominio permitido.
+- Detectar consultas ambiguas que no puedan procesarse de forma segura.
+- Validar que exista respaldo documental suficiente antes de llamar al modelo.
+- Validar las respuestas generadas antes de incorporarlas al flujo.
+- Comprobar los contratos estructurados de las respuestas de chat y checklist.
+- Proporcionar resultados de validación homogéneos para que logic.py pueda
+  decidir si el pipeline continúa o debe bloquearse.
+
+Las validaciones se organizan como distintas puertas de seguridad del
+pipeline: entrada, contexto y salida. Cada una puede detener el flujo antes
+de que información no válida, no autorizada o insuficientemente respaldada
+avance hacia la siguiente fase.
+
+Este módulo NO:
+- carga las fuentes de datos del proyecto;
+- selecciona documentos o FAQ;
+- construye el contexto documental;
+- clasifica funcionalmente las consultas;
+- construye prompts;
+- realiza llamadas al modelo;
+- modifica directamente el estado de la conversación.
+
+Notas para el equipo:
+- config.py contiene los límites, patrones y mensajes utilizados por las
+  validaciones.
+- context.py selecciona y construye el contexto documental que posteriormente
+  puede ser comprobado por este módulo.
+- logic.py coordina las validaciones y decide si el pipeline puede continuar.
+- gemini_client.py solo debe recibir una petición cuando las validaciones
+  previas hayan autorizado la llamada.
+"""
 
 import re
 import unicodedata

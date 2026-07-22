@@ -15,13 +15,11 @@ from demos.demo5_vulnerable_vs_seguro import (
     ejecutar_demo_vulnerable_vs_seguro,
 )
 from demos.demo6_casos_trampa import ejecutar_demo_casos_trampa
+
+# Importaciones reales de tu infraestructura de datos y contexto
 from config import EMPLEADOS_PATH, EMPRESA_PATH, DOCS_PATH, FAQ_PATH
 from context import cargar_json, buscar_empleado
 from utils.console import registrar_salida_demo
-
-# Importaciones de las demostraciones del proyecto
-
-# Importaciones reales de tu infraestructura de datos y contexto
 
 AccionMenu = Callable[[], Any]
 
