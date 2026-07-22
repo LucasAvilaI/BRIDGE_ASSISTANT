@@ -114,9 +114,15 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
     )
 
     if preparacion.get("status") != "ok":
-        return preparacion
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
-    datos = preparacion["data"]
+    datos = preparacion.get("data", {})
 
     if not datos.get("llamar_modelo", False):
         return {
@@ -127,7 +133,28 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
             "metricas": None,
         }
 
-    turno_preparado = datos["turno_preparado"]
+    turno_preparado = datos.get("turno_preparado")
+
+    if not isinstance(turno_preparado, dict):
+        resultado_error = {
+            "status": "error",
+            "mensaje": (
+                "No se recibió un turno preparado válido."
+            ),
+            "data": {
+                "errores": [
+                    "turno_preparado no es un diccionario."
+                ]
+            },
+        }
+
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
     try:
         texto_modelo, metricas = safe_generate_with_system_instruction(
@@ -138,10 +165,24 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:
-        return {
+        resultado_error = {
             "status": "error",
-            "mensaje": "No se pudo completar la llamada al modelo.",
-            "data": {"errores": [str(error)]},
+            "mensaje": (
+                "No se pudo completar la llamada al modelo."
+            ),
+            "data": {
+                "errores": [
+                    str(error)
+                ]
+            },
+        }
+
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
         }
 
     resultado_final = finalizar_turno_seguro(
@@ -159,32 +200,33 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
     }
 
 
-def _mostrar_resultado(titulo: str, empleado: dict, resultado: dict) -> None:
+def _mostrar_resultado(titulo: str, empleado: dict, resultado_demo: dict) -> None:
     print(f"=== {titulo}: {empleado.get('nombre', '(sin nombre)')} "
           f"({empleado.get('perfil', '(sin perfil)')}) ===")
 
-    if resultado.get("status") != "ok":
-        print("[ERROR]", resultado.get("mensaje"))
-        for error in resultado.get("data", {}).get("errores", []):
-            print("-", error)
-        print()
-        return
-    
     mostrar_respuesta_demo(
-        respuesta=resultado.get("respuesta", ""),
-        json_respuesta=resultado.get("json_respuesta", {}),
-        llamo_modelo=resultado.get("llamo_modelo", False),
-        metricas=resultado.get("metricas"),
+        respuesta=resultado_demo.get("respuesta", ""),
+        json_respuesta=resultado_demo.get("json_respuesta", {}),
+        llamo_modelo=resultado_demo.get("llamo_modelo", False),
+        metricas=resultado_demo.get("metricas"),
     )
 
-    print()
+    resultado_final = resultado_demo.get("resultado_final", {})
 
-    datos = resultado["data"]
+    if resultado_final.get("status") != "ok":
+        print("\n[AVISO] El pipeline no aceptó el resultado:")
 
-    if "motivo_bloqueo" in datos:
-        print("(respuesta controlada, sin llamar al modelo)")
+        errores = resultado_final.get("data", {}).get("errores", [])
 
-    print(datos.get("respuesta", ""))
+        if errores:
+            for error in errores:
+                print(f"- {error}")
+        else:
+            print(
+                "-",
+                resultado_final.get("mensaje", "Error desconocido."),
+            )
+
     print()
 
 
