@@ -455,7 +455,7 @@ def _mostrar_resultado(resultado: ResultadoDemo) -> None:
         )
     )
 
-    resultado_pipeline = resultado.get("resultado_pipeline")
+    resultado_pipeline = resultado.get("resultado_pipeline", {})
 
     # Si el modelo responde pero posteriormente el contrato rechaza la respuesta
     # interesa mostrarla como información adicional.
