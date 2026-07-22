@@ -25,6 +25,7 @@ from datetime import date
 from state import inicializar_estado
 from prompts import build_secure_system_instruction, build_secure_turn_contents
 from logic import finalizar_turno_seguro, preparar_turno_seguro
+from utils.console import mostrar_respuesta_demo
 from gemini_client import (
     GeminiClientError,
     parsear_json,
@@ -118,12 +119,18 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
     datos = preparacion["data"]
 
     if not datos.get("llamar_modelo", False):
-        return preparacion
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": datos.get("respuesta", ""),
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
     turno_preparado = datos["turno_preparado"]
 
     try:
-        texto_modelo, _ = safe_generate_with_system_instruction(
+        texto_modelo, metricas = safe_generate_with_system_instruction(
             build_secure_turn_contents(turno_preparado),
             system_instruction=build_secure_system_instruction(),
             json_mode=True,
@@ -137,11 +144,19 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
             "data": {"errores": [str(error)]},
         }
 
-    return finalizar_turno_seguro(
+    resultado_final = finalizar_turno_seguro(
         estado=estado,
         turno_preparado=turno_preparado,
         resultado_externo=resultado_externo,
     )
+
+    return {
+        "resultado_final": resultado_final,
+        "json_respuesta": resultado_externo,
+        "respuesta": resultado_externo.get("answer", ""),
+        "llamo_modelo": True,
+        "metricas": metricas,
+    }
 
 
 def _mostrar_resultado(titulo: str, empleado: dict, resultado: dict) -> None:
@@ -154,6 +169,15 @@ def _mostrar_resultado(titulo: str, empleado: dict, resultado: dict) -> None:
             print("-", error)
         print()
         return
+    
+    mostrar_respuesta_demo(
+        respuesta=resultado.get("respuesta", ""),
+        json_respuesta=resultado.get("json_respuesta", {}),
+        llamo_modelo=resultado.get("llamo_modelo", False),
+        metricas=resultado.get("metricas"),
+    )
+
+    print()
 
     datos = resultado["data"]
 
@@ -173,7 +197,9 @@ def ejecutar_demo_comparativa_perfiles() -> None:
     empleado_comercial, empleado_remoto_ue = obtener_perfiles_demo()
     consulta = obtener_consulta_demo()
 
-    print(f"Consulta común: {consulta}\n")
+    print("\n=== ENTRADA COMÚN DEL USUARIO ===")
+    print(consulta)
+    print()
 
     resultado_comercial = _ejecutar_consulta(
         empleado=empleado_comercial,
