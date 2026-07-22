@@ -1,3 +1,36 @@
+"""
+Construcción de prompts y contenidos enviados al modelo.
+
+Responsabilidades de este módulo:
+- Resolver la configuración del perfil funcional del asistente.
+- Construir las instrucciones de sistema utilizadas por el LLM.
+- Separar las instrucciones privilegiadas del contenido no confiable.
+- Serializar el contexto seleccionado para cada turno.
+- Incorporar empleado, perfil, documentación, FAQ e historial al contenido.
+- Definir los prompts específicos del chat y del checklist de onboarding.
+- Mantener el prompt vulnerable utilizado exclusivamente para demostración.
+
+En el pipeline seguro, las instrucciones del sistema y los datos del turno
+se construyen por separado. Los mensajes del usuario, historial, documentos
+y FAQ se consideran contenido no privilegiado y se envían como datos,
+evitando que puedan modificar las instrucciones principales del asistente.
+
+Este módulo NO:
+- carga ni selecciona documentos o FAQ;
+- construye el contexto documental;
+- valida la entrada, el contexto o la salida;
+- decide si una llamada al modelo está autorizada;
+- ejecuta llamadas al proveedor LLM;
+- modifica el estado de la conversación.
+
+Notas para el equipo:
+- config.py define las instrucciones, perfiles y contratos de salida.
+- context.py selecciona y construye el contexto documental.
+- logic.py prepara el turno y coordina el flujo de la aplicación.
+- validators.py aplica las validaciones de seguridad.
+- gemini_client.py recibe las instrucciones y contenidos construidos aquí
+  y realiza la llamada al modelo.
+"""
 
 import json
 from config import (

@@ -434,26 +434,15 @@ def ejecutar_benchmark() -> dict[str, Any]:
                     f"think={fila['thinking_tokens']}"
                 )
             else:
-                print(
-                    f"  [ERROR] {fila['error']}"
-                )
+                print(f"  [ERROR] {fila['error']}")
 
-    guardar_json(
-        RESULTADOS_JSON_PATH,
-        resultados,
-    )
+    guardar_json(RESULTADOS_JSON_PATH, resultados)
 
-    guardar_csv(
-        RESULTADOS_CSV_PATH,
-        resultados,
-    )
+    guardar_csv(RESULTADOS_CSV_PATH, resultados)
 
     resumen = resumir_resultados_benchmark(resultados)
 
-    guardar_json(
-        RESUMEN_JSON_PATH,
-        resumen,
-    )
+    guardar_json(RESUMEN_JSON_PATH, resumen)
 
     proyecciones = {
         model_id: proyectar_trafico(
@@ -464,10 +453,7 @@ def ejecutar_benchmark() -> dict[str, Any]:
         in resumen.items()
     }
 
-    guardar_json(
-        PROYECCION_JSON_PATH,
-        proyecciones,
-    )
+    guardar_json(PROYECCION_JSON_PATH, proyecciones)
 
     print("\n[benchmark] Archivos generados:")
     print(f"- {RESULTADOS_JSON_PATH}")
