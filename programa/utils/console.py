@@ -1,4 +1,38 @@
-# utils/console.py
+"""
+Utilidades de presentación y salida por consola.
+
+Responsabilidades de este módulo:
+- Centralizar el formato de los mensajes mostrados en la terminal.
+- Mostrar cabeceras y resultados de pruebas de forma homogénea.
+- Presentar las respuestas obtenidas durante la ejecución de las demos.
+- Indicar si una ejecución ha realizado una llamada al modelo.
+- Mostrar de forma legible las respuestas y sus datos estructurados.
+- Mostrar las métricas asociadas a las llamadas al LLM cuando estén
+  disponibles.
+- Evitar que cada demo implemente su propio formato de salida.
+
+Este módulo actúa únicamente como capa de presentación. Recibe resultados
+ya procesados por otros componentes y los transforma en una salida legible
+para facilitar la ejecución, demostración y revisión del proyecto.
+
+Este módulo NO:
+- ejecuta la lógica de negocio del asistente;
+- valida entradas, contexto o respuestas;
+- construye prompts ni contexto documental;
+- realiza llamadas al modelo;
+- calcula métricas;
+- modifica el estado de la conversación;
+- decide si una llamada al LLM está autorizada.
+
+Notas para el equipo:
+- Las demos utilizan este módulo para mantener una salida consistente.
+- logic.py proporciona los resultados funcionales que posteriormente
+  pueden mostrarse por consola.
+- gemini_client.py proporciona las métricas de las llamadas al modelo.
+- Cualquier cambio exclusivamente relacionado con la presentación en
+  terminal debería centralizarse aquí siempre que sea posible.
+"""
+
 import json
 from typing import Any
 
