@@ -33,7 +33,7 @@ class ModelMetadata(TypedDict):
 MODELS: Final[dict[str, ModelMetadata]] = {
     MODEL_1: {
         "provider": PROVIDER_GEMINI,
-        "model_id": MODEL_2,
+        "model_id": MODEL_1,
         "enabled": True,
         "benchmark_role": "efficiency_candidate",
         "display_name": "Gemini 3.1 Flash-Lite",
@@ -48,7 +48,7 @@ MODELS: Final[dict[str, ModelMetadata]] = {
     },
     MODEL_2: {
         "provider": PROVIDER_GEMINI,
-        "model_id": MODEL_1,
+        "model_id": MODEL_2,
         "enabled": True,
         "benchmark_role": "quality_candidate",
         "display_name": "Gemini 3.5 Flash",

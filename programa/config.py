@@ -115,7 +115,7 @@ MAX_OUTPUT_TOKENS = 800
 # ============================================================
 
 # Tiempo máximo de espera de una petición HTTP.
-GEMINI_TIMEOUT_MS = 10000
+GEMINI_TIMEOUT_MS = 30_000
 
 # Número máximo de intentos ante errores HTTP temporales.
 GEMINI_RETRY_ATTEMPTS = 1
