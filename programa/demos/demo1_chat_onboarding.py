@@ -35,6 +35,7 @@ from state import inicializar_estado
 from prompts import build_secure_system_instruction, build_secure_turn_contents
 from metrics import formatear_metricas_turno
 from logic import finalizar_turno_seguro, preparar_turno_seguro
+from utils.console import mostrar_respuesta_demo
 from gemini_client import (
     GeminiClientError,
     parsear_json,
@@ -100,7 +101,9 @@ def ejecutar_demo_chat_onboarding() -> None:
 
     print(
         f"Empleado: {empleado.get('nombre', '(sin nombre)')} ({empleado.get('id')})")
-    print(f"Consulta: {consulta}\n")
+    print("\n=== ENTRADA DEL USUARIO ===")
+    print(consulta)
+    print()
 
     preparacion = preparar_turno_seguro(
         estado=estado,
@@ -128,8 +131,11 @@ def ejecutar_demo_chat_onboarding() -> None:
     datos = preparacion["data"]
 
     if not datos.get("llamar_modelo", False):
-        print("Asistente (respuesta controlada, sin llamar al modelo):")
-        print(datos.get("respuesta", ""))
+        mostrar_respuesta_demo(
+            respuesta=datos.get("respuesta", ""),
+            json_respuesta=preparacion,
+            llamo_modelo=False,
+        )
         return
 
     turno_preparado = datos["turno_preparado"]
@@ -158,10 +164,12 @@ def ejecutar_demo_chat_onboarding() -> None:
             print("-", error)
         return
 
-    print("Asistente:")
-    print(resultado_final["data"]["respuesta"])
-    print()
-    print(formatear_metricas_turno(metricas))
+    mostrar_respuesta_demo(
+        respuesta=resultado_externo.get("answer", ""),
+        json_respuesta=resultado_externo,
+        llamo_modelo=True,
+        metricas=metricas,
+    )
 
 
 if __name__ == "__main__":

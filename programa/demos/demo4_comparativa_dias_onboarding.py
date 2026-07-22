@@ -27,6 +27,7 @@ from gemini_client import (
     safe_generate_with_system_instruction,
 )
 from context import buscar_empleado, cargar_json
+from utils.console import mostrar_respuesta_demo
 from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH, FALLBACK_MODEL
 from typing import Any
 
@@ -96,12 +97,18 @@ def _generar_checklist_para_dia(
     datos = preparacion["data"]
 
     if not datos.get("llamar_modelo", False):
-        return preparacion
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": datos.get("respuesta", ""),
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
     turno_preparado = datos["turno_preparado"]
 
     try:
-        texto_modelo, _ = safe_generate_with_system_instruction(
+        texto_modelo, metricas = safe_generate_with_system_instruction(
             build_checklist_turno_contents(turno_preparado),
             system_instruction=build_checklist_system_instruction(),
             json_mode=True,
@@ -115,11 +122,18 @@ def _generar_checklist_para_dia(
             "data": {"errores": [str(error)]},
         }
 
-    return finalizar_checklist_seguro(
+    resultado_final = finalizar_checklist_seguro(
         estado=estado,
         turno_preparado=turno_preparado,
         resultado_externo=resultado_externo,
     )
+
+    return {
+        "resultado_final": resultado_final,
+        "json_respuesta": resultado_externo,
+        "llamo_modelo": True,
+        "metricas": metricas,
+    }
 
 
 def ejecutar_demo_comparativa_dias_onboarding() -> None:
@@ -134,8 +148,16 @@ def ejecutar_demo_comparativa_dias_onboarding() -> None:
 
     for dia in obtener_dias_demo():
         print(f"=== DÍA {dia} ===")
+        print("Entrada de la demo:")
+        print(
+            f"- Empleado: "
+            f"{empleado.get('nombre', '(sin nombre)')} "
+            f"({empleado.get('id')})"
+        )
+        print(f"- Día de onboarding solicitado: {dia}")
+        print()
 
-        resultado = _generar_checklist_para_dia(
+        resultado_demo = _generar_checklist_para_dia(
             empleado=empleado,
             empresa=empresa,
             documentos=documentos,
@@ -143,14 +165,28 @@ def ejecutar_demo_comparativa_dias_onboarding() -> None:
             dia=dia,
         )
 
-        if resultado.get("status") != "ok":
-            print("[ERROR]", resultado.get("mensaje"))
-            for error in resultado.get("data", {}).get("errores", []):
+        resultado_final = resultado_demo.get("resultado_final", {})
+
+        if resultado_final.get("status") != "ok":
+            print("[ERROR]", resultado_final.get("mensaje"))
+
+            for error in resultado_final.get("data", {}).get("errores", []):
                 print("-", error)
+
             print()
             continue
 
-        datos = resultado["data"]
+        datos = resultado_final.get("data", {})
+
+        if not resultado_demo.get("llamo_modelo", False):
+            mostrar_respuesta_demo(
+                respuesta=resultado_demo.get("respuesta", ""),
+                json_respuesta=resultado_demo.get("json_respuesta", {}),
+                llamo_modelo=False,
+            )
+
+            print()
+            continue
 
         if "checklist" not in datos:
             print("No se ha podido generar el checklist (respuesta controlada):")
@@ -159,11 +195,21 @@ def ejecutar_demo_comparativa_dias_onboarding() -> None:
             continue
 
         checklist = datos["checklist"]
-        print(f"Resumen: {checklist.get('mensaje_resumen')}")
+
+        respuesta_legible = f"{checklist.get('mensaje_resumen', '')}"
 
         for tarea in checklist.get("tareas", []):
-            print(
-                f"  [ ] {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
+            respuesta_legible += (
+                f"\n[ ] {tarea.get('titulo')} "
+                f"(fuente: {tarea.get('fuente_doc')})"
+            )
+
+        mostrar_respuesta_demo(
+            respuesta=respuesta_legible,
+            json_respuesta=resultado_demo.get("json_respuesta", {}),
+            llamo_modelo=True,
+            metricas=resultado_demo.get("metricas"),
+        )
 
         print()
 

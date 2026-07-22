@@ -25,6 +25,7 @@ from datetime import date
 from state import inicializar_estado
 from prompts import build_secure_system_instruction, build_secure_turn_contents
 from logic import finalizar_turno_seguro, preparar_turno_seguro
+from utils.console import mostrar_respuesta_demo
 from gemini_client import (
     GeminiClientError,
     parsear_json,
@@ -113,17 +114,50 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
     )
 
     if preparacion.get("status") != "ok":
-        return preparacion
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
-    datos = preparacion["data"]
+    datos = preparacion.get("data", {})
 
     if not datos.get("llamar_modelo", False):
-        return preparacion
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": datos.get("respuesta", ""),
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
-    turno_preparado = datos["turno_preparado"]
+    turno_preparado = datos.get("turno_preparado")
+
+    if not isinstance(turno_preparado, dict):
+        resultado_error = {
+            "status": "error",
+            "mensaje": (
+                "No se recibió un turno preparado válido."
+            ),
+            "data": {
+                "errores": [
+                    "turno_preparado no es un diccionario."
+                ]
+            },
+        }
+
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
 
     try:
-        texto_modelo, _ = safe_generate_with_system_instruction(
+        texto_modelo, metricas = safe_generate_with_system_instruction(
             build_secure_turn_contents(turno_preparado),
             system_instruction=build_secure_system_instruction(),
             json_mode=True,
@@ -131,36 +165,68 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:
-        return {
+        resultado_error = {
             "status": "error",
-            "mensaje": "No se pudo completar la llamada al modelo.",
-            "data": {"errores": [str(error)]},
+            "mensaje": (
+                "No se pudo completar la llamada al modelo."
+            ),
+            "data": {
+                "errores": [
+                    str(error)
+                ]
+            },
         }
 
-    return finalizar_turno_seguro(
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
+
+    resultado_final = finalizar_turno_seguro(
         estado=estado,
         turno_preparado=turno_preparado,
         resultado_externo=resultado_externo,
     )
 
+    return {
+        "resultado_final": resultado_final,
+        "json_respuesta": resultado_externo,
+        "respuesta": resultado_externo.get("answer", ""),
+        "llamo_modelo": True,
+        "metricas": metricas,
+    }
 
-def _mostrar_resultado(titulo: str, empleado: dict, resultado: dict) -> None:
+
+def _mostrar_resultado(titulo: str, empleado: dict, resultado_demo: dict) -> None:
     print(f"=== {titulo}: {empleado.get('nombre', '(sin nombre)')} "
           f"({empleado.get('perfil', '(sin perfil)')}) ===")
 
-    if resultado.get("status") != "ok":
-        print("[ERROR]", resultado.get("mensaje"))
-        for error in resultado.get("data", {}).get("errores", []):
-            print("-", error)
-        print()
-        return
+    mostrar_respuesta_demo(
+        respuesta=resultado_demo.get("respuesta", ""),
+        json_respuesta=resultado_demo.get("json_respuesta", {}),
+        llamo_modelo=resultado_demo.get("llamo_modelo", False),
+        metricas=resultado_demo.get("metricas"),
+    )
 
-    datos = resultado["data"]
+    resultado_final = resultado_demo.get("resultado_final", {})
 
-    if "motivo_bloqueo" in datos:
-        print("(respuesta controlada, sin llamar al modelo)")
+    if resultado_final.get("status") != "ok":
+        print("\n[AVISO] El pipeline no aceptó el resultado:")
 
-    print(datos.get("respuesta", ""))
+        errores = resultado_final.get("data", {}).get("errores", [])
+
+        if errores:
+            for error in errores:
+                print(f"- {error}")
+        else:
+            print(
+                "-",
+                resultado_final.get("mensaje", "Error desconocido."),
+            )
+
     print()
 
 
@@ -173,7 +239,9 @@ def ejecutar_demo_comparativa_perfiles() -> None:
     empleado_comercial, empleado_remoto_ue = obtener_perfiles_demo()
     consulta = obtener_consulta_demo()
 
-    print(f"Consulta común: {consulta}\n")
+    print("\n=== ENTRADA COMÚN DEL USUARIO ===")
+    print(consulta)
+    print()
 
     resultado_comercial = _ejecutar_consulta(
         empleado=empleado_comercial,

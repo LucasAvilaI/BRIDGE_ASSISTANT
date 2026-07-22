@@ -29,6 +29,7 @@ from prompts import (
 )
 from metrics import formatear_metricas_turno
 from logic import finalizar_checklist_seguro, preparar_checklist_seguro
+from utils.console import mostrar_respuesta_demo
 from gemini_client import (
     GeminiClientError,
     parsear_json,
@@ -104,8 +105,11 @@ def ejecutar_demo_checklist_dia_1() -> None:
     datos = preparacion["data"]
 
     if not datos.get("llamar_modelo", False):
-        print("No se ha podido generar el checklist (respuesta controlada):")
-        print(datos.get("respuesta", ""))
+        mostrar_respuesta_demo(
+            respuesta=datos.get("respuesta", ""),
+            json_respuesta=preparacion,
+            llamo_modelo=False,
+        )
         return
 
     turno_preparado = datos["turno_preparado"]
@@ -136,16 +140,25 @@ def ejecutar_demo_checklist_dia_1() -> None:
 
     checklist = resultado_final["data"]["checklist"]
 
-    print(
-        f"Checklist día {checklist.get('dia')} — {checklist.get('empleado_id')}")
-    print(f"Resumen: {checklist.get('mensaje_resumen')}\n")
+    respuesta_legible = (
+        f"Checklist día {checklist.get('dia')} — "
+        f"{checklist.get('empleado_id')}\n"
+        f"{checklist.get('mensaje_resumen', '')}"
+    )
 
     for tarea in checklist.get("tareas", []):
-        print(
-            f"[ ] {tarea.get('id')}: {tarea.get('titulo')} (fuente: {tarea.get('fuente_doc')})")
+        respuesta_legible += (
+            f"\n[ ] {tarea.get('id')}: "
+            f"{tarea.get('titulo')} "
+            f"(fuente: {tarea.get('fuente_doc')})"
+        )
 
-    print()
-    print(formatear_metricas_turno(metricas))
+    mostrar_respuesta_demo(
+        respuesta=respuesta_legible,
+        json_respuesta=resultado_externo,
+        llamo_modelo=True,
+        metricas=metricas,
+    )
 
 
 if __name__ == "__main__":

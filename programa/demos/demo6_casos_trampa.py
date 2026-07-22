@@ -29,6 +29,7 @@ from state import inicializar_estado
 from logic import preparar_turno_seguro
 from context import buscar_empleado, cargar_json
 from config import ASSISTANT_CONFIG_DEFAULT, CASOS_TRAMPA_PATH, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from utils.console import mostrar_respuesta_demo
 
 import sys
 import os
@@ -95,15 +96,13 @@ def ejecutar_demo_casos_trampa() -> None:
             fecha_referencia=date.fromisoformat(empleado["fecha_inicio"]),
         )
 
-        datos = resultado.get("data", {}) if isinstance(
-            resultado, dict) else {}
-        llamo_al_modelo = bool(datos.get("llamar_modelo", False))
+        datos = resultado.get("data", {}) if isinstance(resultado, dict) else {}
+        llamada_modelo_autorizada = bool(datos.get("llamar_modelo", False))
         codigo_obtenido = datos.get("motivo_bloqueo")
 
         coincide_codigo = codigo_obtenido == codigo_esperado
         
-
-        coincide_llamada_modelo = llamo_al_modelo == llamada_modelo_esperada
+        coincide_llamada_modelo = llamada_modelo_autorizada == llamada_modelo_esperada
 
         caso_correcto = (
             resultado.get("status") == "ok"
@@ -118,26 +117,40 @@ def ejecutar_demo_casos_trampa() -> None:
             fallidos += 1
             estado_caso = "FALLO"
 
+        print("=" * 60)
         print(f"[{estado_caso}] {caso_id} · {tipo}")
-        print(f"    Consulta: {consulta}")
+        print("=" * 60)
+
+        print("\n=== ENTRADA DEL USUARIO ===")
+        print(consulta)
+
+        print("\n=== RESULTADO DE SEGURIDAD ===")
         print(
-            f"    Llamó al modelo: {llamo_al_modelo} "
-            f"(esperado: {llamada_modelo_esperada}, "
-            f"coincide: {coincide_llamada_modelo})"
+            f"Llamada al modelo autorizada: "
+            f"{llamada_modelo_autorizada}"
         )
         print(
-            f"    Código obtenido: {codigo_obtenido} "
-            f"(esperado: {codigo_esperado}, "
-            f"coincide: {coincide_codigo})"
+            f"Esperado: {llamada_modelo_esperada} "
+            f"| Coincide: {coincide_llamada_modelo}"
         )
 
-        if caso_correcto:
-            print(f"    Mensaje mostrado: {datos.get('respuesta')}")
+        print(
+            f"Motivo de bloqueo: {codigo_obtenido}"
+        )
+        print(
+            f"Esperado: {codigo_esperado} "
+            f"| Coincide: {coincide_codigo}"
+        )
 
         print()
 
+        mostrar_respuesta_demo(
+            respuesta=datos.get("respuesta", ""),
+            json_respuesta=resultado,
+            llamo_modelo=False,
+        )
 
-        
+        print()
 
     print(
         f"Resumen: {aprobados} bloqueados correctamente / "
