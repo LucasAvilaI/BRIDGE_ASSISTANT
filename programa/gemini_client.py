@@ -46,8 +46,7 @@ from config import (
     MODEL,
     TEMPERATURE_DEFAULT,
     TEMPERATURE_SAFE,
-    THINKING_LEVEL_CHAT, # esto para los modelos 3.x
-#    THINKING_BUDGET_CHAT  # esto es para gemini 2.5
+    THINKING_LEVEL_CHAT,
 )
 
 from gemini_auth import configurar_gemini_api_key
@@ -106,6 +105,7 @@ class MetricasLlamada:
 # - producir efectos secundarios por una simple importación.
 _client_instance: genai.Client | Any | None = None
 
+
 def _obtener_cliente() -> genai.Client | Any:
     """Obtiene el cliente Gemini y lo crea solo cuando se necesita."""
 
@@ -113,6 +113,11 @@ def _obtener_cliente() -> genai.Client | Any:
 
     if _client_instance is None:
         api_key = configurar_gemini_api_key(interactivo=False)
+
+        print(
+            f"[DEBUG CONFIG] timeout={GEMINI_TIMEOUT_MS} ms | "
+            f"intentos={GEMINI_RETRY_ATTEMPTS}"
+        )
 
         _client_instance = genai.Client(
             api_key=api_key,
@@ -147,10 +152,12 @@ def _obtener_cliente() -> genai.Client | Any:
                 for modelo in _client_instance.models.list():
                     acciones = getattr(modelo, "supported_actions", []) or []
 
-                    print(f"ID exacto: {modelo.name} | generateContent: {'generateContent' in acciones}")
+                    print(
+                        f"ID exacto: {modelo.name} | generateContent: {'generateContent' in acciones}")
 
             except Exception as error:
-                print(f"No se pudieron listar los modelos: {type(error).__name__}: {error}")
+                print(
+                    f"No se pudieron listar los modelos: {type(error).__name__}: {error}")
 
             print("--------------------------------------\n")
 
@@ -237,7 +244,9 @@ def _validar_max_output_tokens(valor: int | None) -> int:
     return valor
 
 # función para los modelos gemini 3.x
-# esto sustituye _validar_tinking_budged 
+# esto sustituye _validar_tinking_budged
+
+
 def _validar_thinking_level(valor: str | None,) -> str:
     """
     Valida el nivel de razonamiento utilizado por Gemini 3.x.
@@ -275,67 +284,13 @@ def _validar_thinking_level(valor: str | None,) -> str:
 
     return nivel
 
-# función para los modelos 2.x
-# def _validar_thinking_budget(
-#     valor: int | None,
-#     *,
-#     model_id: str,
-# ) -> int:
-#     """Valida el presupuesto de razonamiento para Gemini 2.5.
-
-#     Valores relevantes:
-#     - -1: pensamiento dinámico.
-#     - 0: pensamiento desactivado cuando el modelo lo permite.
-#     - Valor positivo: presupuesto máximo solicitado.
-
-#     Restricción del proyecto:
-#     - Gemini 2.5 Pro no admite presupuesto 0.
-#     - Gemini 2.5 Flash sí permite usar 0.
-#     """
-
-#     if valor is None:
-#         valor = THINKING_BUDGET_CHAT
-
-#     if isinstance(valor, bool) or not isinstance(valor, int):
-#         raise TypeError(
-#             "'thinking_budget' debe ser un entero."
-#         )
-
-#     if valor < -1:
-#         raise ValueError(
-#             "'thinking_budget' debe ser -1, 0 o un entero positivo."
-#         )
-
-#     modelo = model_id.lower()
-
-#     if "gemini-2.5-pro" in modelo:
-#         if valor == 0:
-#             raise ValueError(
-#                 "Gemini 2.5 Pro no permite desactivar completamente "
-#                 "el razonamiento con thinking_budget=0."
-#             )
-
-#         if valor != -1 and not 128 <= valor <= 32_768:
-#             raise ValueError(
-#                 "Para Gemini 2.5 Pro, thinking_budget debe ser -1 "
-#                 "o estar entre 128 y 32768."
-#             )
-
-#     elif "gemini-2.5-flash" in modelo:
-#         if valor != -1 and not 0 <= valor <= 24_576:
-#             raise ValueError(
-#                 "Para Gemini 2.5 Flash, thinking_budget debe ser -1 "
-#                 "o estar entre 0 y 24576."
-#             )
-
-#     return valor
-
-
 # ============================================================
 # CONSTRUCCIÓN DE LA CONFIGURACIÓN DEL SDK
 # ============================================================
 
 # modelos gemini 3.x
+
+
 def _construir_configuracion(
     *,
     model_id: str,
@@ -361,11 +316,15 @@ def _construir_configuracion(
     kwargs: dict[str, Any] = {
         "temperature": _validar_temperature(temperature),
         "max_output_tokens": _validar_max_output_tokens(max_output_tokens),
-        "thinking_config": types.ThinkingConfig(thinking_level="minimal", include_thoughts=False)
+        "thinking_config": types.ThinkingConfig(
+            thinking_level=_validar_thinking_level(thinking_level),
+            include_thoughts=False,
+        ),
     }
 
     if system_instruction is not None:
-        kwargs["system_instruction"] = _validar_texto(system_instruction, "system_instruction")
+        kwargs["system_instruction"] = _validar_texto(
+            system_instruction, "system_instruction")
 
     if json_mode:
         kwargs["response_mime_type"] = "application/json"
@@ -375,58 +334,10 @@ def _construir_configuracion(
 
     return types.GenerateContentConfig(**kwargs)
 
-# modelos gemini 2.x
-# def _construir_configuracion(
-#     *,
-#     model_id: str,
-#     temperature: float,
-#     system_instruction: str | None,
-#     json_mode: bool,
-#     response_schema: Any | None,
-#     max_output_tokens: int | None,
-#     thinking_budget: int | None,
-# ) -> types.GenerateContentConfig:
-#     """Construye GenerateContentConfig de forma centralizada.
-
-#     Toda opción específica del SDK debe añadirse aquí para evitar
-#     configuraciones distintas entre chat, JSON y benchmark.
-#     """
-
-#     modelo = _validar_modelo(model_id)
-
-#     kwargs: dict[str, Any] = {
-#         "temperature": _validar_temperature(temperature),
-#         "max_output_tokens": _validar_max_output_tokens(
-#             max_output_tokens
-#         ),
-#         "thinking_config": types.ThinkingConfig(
-#             thinking_budget=_validar_thinking_budget(
-#                 thinking_budget,
-#                 model_id=modelo,
-#             ),
-#             # No se solicita que Gemini devuelva sus pensamientos.
-#             include_thoughts=False,
-#         ),
-#     }
-
-#     if system_instruction is not None:
-#         kwargs["system_instruction"] = _validar_texto(
-#             system_instruction,
-#             "system_instruction",
-#         )
-
-#     if json_mode:
-#         kwargs["response_mime_type"] = "application/json"
-
-#         if response_schema is not None:
-#             kwargs["response_json_schema"] = response_schema
-
-#     return types.GenerateContentConfig(**kwargs)
-
-
 # ============================================================
 # RECUENTO DE TOKENS
 # ============================================================
+
 
 def count_tokens(
     contents: str,
@@ -435,7 +346,7 @@ def count_tokens(
     system_instruction: str | None = None,
 ) -> int:
     """Cuenta los tokens de entrada para un modelo concreto.
-    
+
     Incluye manejo de errores para evitar detenciones si el modelo no 
     soporta el método count_tokens o no es encontrado.
     """
@@ -444,7 +355,8 @@ def count_tokens(
     modelo = _validar_modelo(model_id)
 
     if system_instruction is not None:
-        instruccion_limpia = _validar_texto(system_instruction, "system_instruction")
+        instruccion_limpia = _validar_texto(
+            system_instruction, "system_instruction")
         entrada_recuento = f"{instruccion_limpia}\n\n{contents_limpio}"
     else:
         entrada_recuento = contents_limpio
@@ -459,8 +371,8 @@ def count_tokens(
     except Exception as error:
         # Mantenemos estructura, pero añadimos visibilidad y resiliencia
         print(f"DEBUG: Fallo al contar tokens con {modelo}: {error}")
-        
-        # Opcional: Si queremos que el código no falle en el benchmark o chat, 
+
+        # Opcional: Si queremos que el código no falle en el benchmark o chat,
         # se puede devolver una estimación segura en lugar de lanzar la excepción.
         # Si se prefiere seguir lanzando el error como antes, borrar las siguientes 2 líneas:
         estimacion = len(entrada_recuento) // 4
@@ -482,7 +394,8 @@ def _extraer_texto(response: Any) -> str:
     texto = getattr(response, "text", None)
 
     if not isinstance(texto, str) or not texto.strip():
-        raise GeminiEmptyResponseError("Gemini no devolvió una respuesta utilizable.")
+        raise GeminiEmptyResponseError(
+            "Gemini no devolvió una respuesta utilizable.")
 
     return texto.strip()
 
@@ -540,6 +453,7 @@ def _estimar_tokens_entrada(
     # Estimación conservadora aproximada.
     return max(1, len(texto_total) // 3)
 
+
 def _generar_una_vez(
     contents: str,
     *,
@@ -549,8 +463,7 @@ def _generar_una_vez(
     json_mode: bool = False,
     response_schema: Any | None = None,
     max_output_tokens: int | None = None,
-    thinking_level: str | None = None, # modelos 3.x
-    # thinking_budget: int | None = None, # modelos 2.x
+    thinking_level: str | None = None,
     fallback_used: bool = False,
 ) -> tuple[str, MetricasLlamada]:
     """Ejecuta una única generación con un modelo exacto.
@@ -569,8 +482,8 @@ def _generar_una_vez(
     contents_limpio = _validar_texto(contents, "contents")
     modelo = _validar_modelo(model_id)
 
-    # modelos 3.x
-    tokens_entrada_estimados = _estimar_tokens_entrada(contents_limpio, system_instruction)
+    tokens_entrada_estimados = _estimar_tokens_entrada(
+        contents_limpio, system_instruction)
 
     if tokens_entrada_estimados > MAX_TOKENS_INPUT:
         raise ValueError(
@@ -579,19 +492,6 @@ def _generar_una_vez(
             f"(máximo permitido: {MAX_TOKENS_INPUT})."
         )
 
-    # modelos 2.x
-    # tokens_entrada = count_tokens(
-    #     contents_limpio,
-    #     model_id=modelo,
-    #     system_instruction=system_instruction
-    # )
-
-    # if tokens_entrada > MAX_TOKENS_INPUT:
-    #     raise ValueError(
-    #         f"Entrada demasiado grande: {tokens_entrada} tokens "
-    #         f"(máximo {MAX_TOKENS_INPUT})."
-    #     )
-
     config = _construir_configuracion(
         model_id=modelo,
         temperature=temperature,
@@ -599,8 +499,7 @@ def _generar_una_vez(
         json_mode=json_mode,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )
 
     started = perf_counter()
@@ -611,10 +510,6 @@ def _generar_una_vez(
             contents=contents_limpio,
             config=config
         )
-#    except Exception as error:
-#        raise GeminiClientError(
-#            f"Ha fallado la generación con el modelo {modelo}."
-#        ) from error
     except Exception as error:
         raise GeminiClientError(
             f"Ha fallado la generación con el modelo {modelo}. "
@@ -649,7 +544,6 @@ def _generar_con_fallback(
     response_schema: Any | None,
     max_output_tokens: int | None,
     thinking_level: str | None = None,
-    # thinking_budget: int | None,
 ) -> tuple[str, MetricasLlamada]:
     """Ejecuta el modelo principal y, opcionalmente, un fallback.
 
@@ -669,8 +563,7 @@ def _generar_con_fallback(
             json_mode=json_mode,
             response_schema=response_schema,
             max_output_tokens=max_output_tokens,
-            thinking_level=thinking_level
-            # thinking_budget=thinking_budget,
+            thinking_level=thinking_level,
         )
 
     except GeminiClientError:
@@ -686,7 +579,6 @@ def _generar_con_fallback(
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
         thinking_level=thinking_level,
-        # thinking_budget=thinking_budget,
         fallback_used=True
     )
 
@@ -703,12 +595,11 @@ def llamar_gemini(
     system_instruction: str | None = None,
     max_output_tokens: int | None = None,
     thinking_level: str | None = None,
-    # thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
     """Genera texto con un modelo exacto y sin fallback.
 
-    Cuando max_output_tokens o thinking_budget son None, se toman
-    MAX_OUTPUT_TOKENS y THINKING_BUDGET_CHAT desde config.py.
+    Cuando max_output_tokens o thinking_level son None, se toman
+    MAX_OUTPUT_TOKENS y THINKING_LEVEL_CHAT desde config.py.
     """
 
     return _generar_una_vez(
@@ -717,8 +608,7 @@ def llamar_gemini(
         temperature=temperature,
         system_instruction=system_instruction,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )
 
 
@@ -731,7 +621,6 @@ def llamar_gemini_json(
     response_schema: Any | None = None,
     max_output_tokens: int | None = None,
     thinking_level: str | None = None,
-    # thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
     """Genera una respuesta JSON con un modelo exacto y sin fallback."""
 
@@ -743,8 +632,7 @@ def llamar_gemini_json(
         json_mode=True,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )
 
 
@@ -762,7 +650,6 @@ def safe_generate(
     response_schema: Any | None = None,
     max_output_tokens: int | None = None,
     thinking_level: str | None = None,
-    # thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
     """Wrapper compatible para prompts sin canal de sistema separado.
 
@@ -784,8 +671,7 @@ def safe_generate(
         json_mode=json_mode,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )
 
 
@@ -804,7 +690,6 @@ def safe_generate_with_system_instruction(
     response_schema: Any | None = None,
     max_output_tokens: int | None = None,
     thinking_level: str | None = None,
-    # thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
     """Genera contenido separando system_instruction de contents.
     No valida la seguridad de la entrada, el contexto ni la salida.
@@ -826,8 +711,7 @@ def safe_generate_with_system_instruction(
         json_mode=json_mode,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )
 
 
@@ -852,13 +736,18 @@ def parsear_json(texto: str) -> dict[str, Any]:
     texto_limpio = _validar_texto(texto, "texto")
 
     try:
+        print("\n========== JSON DEVUELTO POR GEMINI ==========")
+        print(texto_limpio)
+        print("=============================================\n")
         resultado = json.loads(texto_limpio)
 
     except json.JSONDecodeError as error:
-        raise GeminiStructuredOutputError("Gemini no devolvió un JSON válido.") from error
+        raise GeminiStructuredOutputError(
+            "Gemini no devolvió un JSON válido.") from error
 
     if not isinstance(resultado, dict):
-        raise GeminiStructuredOutputError("La respuesta JSON debe tener un objeto como raíz.")
+        raise GeminiStructuredOutputError(
+            "La respuesta JSON debe tener un objeto como raíz.")
 
     return resultado
 
@@ -877,7 +766,6 @@ def ejecutar_caso_benchmark(
     response_schema: Any | None = None,
     max_output_tokens: int | None = None,
     thinking_level: str | None = None
-    # thinking_budget: int | None = None,
 ) -> tuple[str, MetricasLlamada]:
     """Ejecuta un caso de benchmark con un modelo exacto.
 
@@ -889,7 +777,7 @@ def ejecutar_caso_benchmark(
     benchmark.py debería pasar:
     - BENCHMARK_TEMPERATURE;
     - BENCHMARK_MAX_OUTPUT_TOKENS;
-    - BENCHMARK_THINKING_BUDGET.
+    - BENCHMARK_THINKING_LEVEL.
     """
 
     return _generar_una_vez(
@@ -900,6 +788,5 @@ def ejecutar_caso_benchmark(
         json_mode=json_mode,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
-        thinking_level=thinking_level
-        # thinking_budget=thinking_budget,
+        thinking_level=thinking_level,
     )

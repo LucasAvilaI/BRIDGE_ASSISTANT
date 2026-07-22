@@ -27,7 +27,7 @@ from gemini_client import (
     safe_generate_with_system_instruction,
 )
 from context import buscar_empleado, cargar_json
-from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from config import DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH, FALLBACK_MODEL
 from typing import Any
 
 import sys
@@ -105,6 +105,7 @@ def _generar_checklist_para_dia(
             build_checklist_turno_contents(turno_preparado),
             system_instruction=build_checklist_system_instruction(),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:

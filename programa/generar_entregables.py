@@ -26,12 +26,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-
-_THIS_DIR = Path(__file__).resolve().parent
-BASE_DIR = _THIS_DIR.parent if _THIS_DIR.name == "programa" else _THIS_DIR
-
-OUTPUT_DIR = BASE_DIR / "output"
-ENTREGABLES_DIR = BASE_DIR / "entregables"
+from config import ENTREGABLES_DIR, OUTPUT_DIR
 
 CSV_PATH = OUTPUT_DIR / "resultados_benchmark.csv"
 RESUMEN_PATH = OUTPUT_DIR / "resumen_benchmark.json"
@@ -60,19 +55,6 @@ def es_fila_valida(fila: dict[str, str]) -> bool:
         .casefold()
         == "ok"
     )
-
-# def cargar_csv() -> list[dict[str, str]]:
-#     if not CSV_PATH.exists():
-#         raise FileNotFoundError(
-#             f"No existe {CSV_PATH}. Ejecuta primero el benchmark."
-#         )
-
-#     with CSV_PATH.open(
-#         "r",
-#         encoding="utf-8",
-#         newline="",
-#     ) as archivo:
-#         return list(csv.DictReader(archivo))
 
 def cargar_csv() -> list[dict[str, str]]:
     """
@@ -226,12 +208,6 @@ def elegir_ganador_caso(
     3. si sigue el empate, orden estable.
     """
 
-    # validas = [
-    #     fila
-    #     for fila in filas_caso
-    #     if fila.get("status") == "ok"
-    # ]
-
     validas = [
         fila
         for fila in filas_caso
@@ -336,12 +312,6 @@ def agregar_calidad_por_modelo(
         str,
         list[dict[str, str]],
     ] = defaultdict(list)
-
-    # for fila in filas:
-    #     if fila.get("status") == "ok":
-    #         por_modelo[
-    #             fila["model_id"]
-    #         ].append(fila)
 
     for fila in filas:
         if es_fila_valida(fila):
@@ -539,54 +509,13 @@ No se desplegaría el modelo sin mantener las validaciones fail-closed, la separ
 """
 
 
-# def main() -> None:
-#     filas = cargar_csv()
-
-#     if not filas:
-#         raise ValueError(
-#             "El CSV de resultados está vacío."
-#         )
-
-#     validar_puntuaciones(filas)
-
 def main() -> None:
     filas = cargar_csv()
-
-# bloque provisional --> eliminar después de DEBUG
-    print(
-        "[DEBUG] Columnas reconocidas:",
-        list(filas[0].keys()) if filas else [],
-    )
-
-    print(
-        "[DEBUG] Estados encontrados:",
-        sorted(
-            {
-                repr(fila.get("status"))
-                for fila in filas
-            }
-        ),
-    )
-
-    print(
-        "[DEBUG] Filas válidas:",
-        sum(
-            es_fila_valida(fila)
-            for fila in filas
-        ),
-    )
-# fin bloque provisional --> eliminar bloque completo
 
     if not filas:
         raise ValueError(
             "El CSV de resultados está vacío."
         )
-
-    # filas_validas = [
-    #     fila
-    #     for fila in filas
-    #     if fila.get("status") == "ok"
-    # ]
 
     filas_validas = [
         fila
@@ -611,7 +540,7 @@ def main() -> None:
         raise ValueError(
             "El benchmark no contiene ninguna ejecución válida.\n"
             "Corrige los errores y vuelve a ejecutar "
-            "benchmark_provisional.py antes de generar "
+            "benchmark.py antes de generar "
             "los entregables."
             + (
                 f"\n\nErrores detectados:\n{detalle}"

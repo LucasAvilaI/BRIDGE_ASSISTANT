@@ -21,6 +21,7 @@ dataset de demo mantenga siempre el mismo orden o los mismos IDs.
 """
 
 from __future__ import annotations
+from datetime import date
 from state import inicializar_estado
 from prompts import build_secure_system_instruction, build_secure_turn_contents
 from logic import finalizar_turno_seguro, preparar_turno_seguro
@@ -30,7 +31,7 @@ from gemini_client import (
     safe_generate_with_system_instruction,
 )
 from context import cargar_json, normalizar_texto
-from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH
+from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH, FALLBACK_MODEL
 
 import sys
 import os
@@ -104,6 +105,11 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
         documentos=documentos,
         faqs=faqs,
         configuracion=ASSISTANT_CONFIG_DEFAULT,
+        # Fuerza día 1 (ver mismo comentario en demo1_chat_onboarding.py):
+        # la consulta habla de "primera semana", así que sin esto la
+        # comparación dependería de cuán vieja esté fecha_inicio en
+        # empleados_demo.json en el momento de ejecutar la demo.
+        fecha_referencia=date.fromisoformat(empleado["fecha_inicio"]),
     )
 
     if preparacion.get("status") != "ok":
@@ -121,6 +127,7 @@ def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict],
             build_secure_turn_contents(turno_preparado),
             system_instruction=build_secure_system_instruction(),
             json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
         )
         resultado_externo = parsear_json(texto_modelo)
     except (GeminiClientError, ValueError, TypeError) as error:

@@ -50,8 +50,8 @@ ENTREGABLES_DIR = BASE_DIR / "entregables"
 # ============================================================
 
 # Modelos disponibles
-MODEL_1 = "gemini-3.1-flash-lite"    # Variante A: calidad
-MODEL_2 = "gemini-3.5-flash"  # Variante b: eficiencia
+MODEL_1 = "gemini-3.5-flash"  # Variante A: eficiencia
+MODEL_2 = "gemini-3.1-flash-lite"    # Variante B: calidad
 
 # Modelo por defecto del asistente
 MODEL = MODEL_1
@@ -1061,3 +1061,4 @@ MENSAJES_SEGURIDAD = {
         "autorizada. Consulta con el departamento correspondiente."
     )
 }
+# test-escritura

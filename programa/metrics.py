@@ -212,6 +212,13 @@ def formatear_metricas_turno(metricas: "MetricasLlamada") -> str:
         f"{rendimiento} tok/s" if rendimiento is not None else "n/d"
     )
 
+    aviso_fallback = (
+        " [FALLBACK: el modelo principal falló, respondió el modelo "
+        "de respaldo]"
+        if resumen["fallback_used"]
+        else ""
+    )
+
     return (
         f"[métricas] modelo={resumen['model_id']} "
         f"latencia={resumen['latencia_ms']} ms "
@@ -220,6 +227,7 @@ def formatear_metricas_turno(metricas: "MetricasLlamada") -> str:
         f"{resumen['thinking_tokens']} "
         f"coste≈{coste_texto} "
         f"rendimiento={rendimiento_texto}"
+        f"{aviso_fallback}"
     )
 
 
