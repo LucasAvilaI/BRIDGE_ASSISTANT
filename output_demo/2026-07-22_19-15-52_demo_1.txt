@@ -1,0 +1,44 @@
+🚀 Ejecutando: ⚙️  Chat de onboarding funcional
+────────────────────────────────────────────────────────
+
+Empleado: Laura Méndez (emp_01)
+
+=== ENTRADA DEL USUARIO ===
+¿A qué canales de Slack tengo que unirme en mi primera semana?
+
+[DEBUG CONFIG] timeout=10000 ms | intentos=1
+
+========== JSON DEVUELTO POR GEMINI ==========
+{
+  "in_scope": true,
+  "category": "it",
+  "answer": "¡Bienvenida al equipo de Engineering, Laura! Como parte de tu primer día, es obligatorio que te unas a los siguientes canales de Slack: #general, #anuncios, #random y el canal específico de tu departamento, #engineering. Recuerda que para cualquier incidencia técnica, debes utilizar el canal #help-it.",
+  "document_ids": ["doc_it_02"],
+  "faq_ids": ["faq_03"],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+=============================================
+
+LLM invocado: SÍ
+
+Respuesta:
+¡Bienvenida al equipo de Engineering, Laura! Como parte de tu primer día, es obligatorio que te unas a los siguientes canales de Slack: #general, #anuncios, #random y el canal específico de tu departamento, #engineering. Recuerda que para cualquier incidencia técnica, debes utilizar el canal #help-it.
+
+JSON de la respuesta:
+{
+  "in_scope": true,
+  "category": "it",
+  "answer": "¡Bienvenida al equipo de Engineering, Laura! Como parte de tu primer día, es obligatorio que te unas a los siguientes canales de Slack: #general, #anuncios, #random y el canal específico de tu departamento, #engineering. Recuerda que para cualquier incidencia técnica, debes utilizar el canal #help-it.",
+  "document_ids": [
+    "doc_it_02"
+  ],
+  "faq_ids": [
+    "faq_03"
+  ],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+
+Métricas LLM:
+"MetricasLlamada(elapsed_ms=1324, prompt_tokens=1412, output_tokens=140, thinking_tokens=None, total_tokens=1552, model_id='gemini-3.1-flash-lite', fallback_used=False)"

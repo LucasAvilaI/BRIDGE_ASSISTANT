@@ -1,0 +1,83 @@
+🚀 Ejecutando: ⚙️  Comparativa de perfiles del asistente
+────────────────────────────────────────────────────────
+
+
+=== ENTRADA COMÚN DEL USUARIO ===
+¿Qué debo tener preparado durante mi primera semana?
+
+
+========== JSON DEVUELTO POR GEMINI ==========
+{
+  "in_scope": true,
+  "category": "sales",
+  "answer": "¡Bienvenido a Bridge SA, Pablo! Para tu primera semana en el equipo de Sales, el plan es el siguiente: el Día 1 recibirás la bienvenida y acceso a HubSpot. El Día 2 realizarás la formación en el catálogo de programas. El Día 3 harás shadowing de una llamada comercial, el Día 4 practicarás el pitch interno y el Día 5 revisarás el pipeline con tu manager. Recuerda que, según nuestra política, no debes enviar propuestas a clientes sin utilizar la plantilla aprobada en Notion. Además, asegúrate de tener activos Slack, tu correo corporativo y acceso a Notion antes de las 9:00 de tu primer día.",
+  "document_ids": ["doc_sales_01", "doc_bienvenida_01"],
+  "faq_ids": ["faq_10"],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+=============================================
+
+=== PERFIL COMERCIAL: Pablo Navarro (comercial) ===
+LLM invocado: SÍ
+
+Respuesta:
+¡Bienvenido a Bridge SA, Pablo! Para tu primera semana en el equipo de Sales, el plan es el siguiente: el Día 1 recibirás la bienvenida y acceso a HubSpot. El Día 2 realizarás la formación en el catálogo de programas. El Día 3 harás shadowing de una llamada comercial, el Día 4 practicarás el pitch interno y el Día 5 revisarás el pipeline con tu manager. Recuerda que, según nuestra política, no debes enviar propuestas a clientes sin utilizar la plantilla aprobada en Notion. Además, asegúrate de tener activos Slack, tu correo corporativo y acceso a Notion antes de las 9:00 de tu primer día.
+
+JSON de la respuesta:
+{
+  "in_scope": true,
+  "category": "sales",
+  "answer": "¡Bienvenido a Bridge SA, Pablo! Para tu primera semana en el equipo de Sales, el plan es el siguiente: el Día 1 recibirás la bienvenida y acceso a HubSpot. El Día 2 realizarás la formación en el catálogo de programas. El Día 3 harás shadowing de una llamada comercial, el Día 4 practicarás el pitch interno y el Día 5 revisarás el pipeline con tu manager. Recuerda que, según nuestra política, no debes enviar propuestas a clientes sin utilizar la plantilla aprobada en Notion. Además, asegúrate de tener activos Slack, tu correo corporativo y acceso a Notion antes de las 9:00 de tu primer día.",
+  "document_ids": [
+    "doc_sales_01",
+    "doc_bienvenida_01"
+  ],
+  "faq_ids": [
+    "faq_10"
+  ],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+
+Métricas LLM:
+"MetricasLlamada(elapsed_ms=1101, prompt_tokens=1425, output_tokens=221, thinking_tokens=None, total_tokens=1646, model_id='gemini-3.1-flash-lite', fallback_used=False)"
+
+
+========== JSON DEVUELTO POR GEMINI ==========
+{
+  "in_scope": true,
+  "category": "engineering",
+  "answer": "¡Bienvenida al equipo de Engineering, Sofia! Para tu primera semana, el plan establecido es el siguiente: Día 1: Bienvenida, configuración de Slack, activación de GitHub 2FA y lectura de la arquitectura en Notion. Día 2: Setup local (Python 3.10+, Docker opcional) y acceso a staging. Día 3: Sesión de pair programming con tu buddy. Día 4: Asignación de tu primera issue en Jira. Día 5: Retrospectiva de onboarding con tu manager, Carlos Ruiz. Recuerda que, según nuestra cultura, es importante documentar antes de escalar dudas.",
+  "document_ids": ["doc_eng_01", "doc_bienvenida_01"],
+  "faq_ids": ["faq_09"],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+=============================================
+
+=== PERFIL REMOTO EU: Sofia Costa (remoto_eu) ===
+LLM invocado: SÍ
+
+Respuesta:
+¡Bienvenida al equipo de Engineering, Sofia! Para tu primera semana, el plan establecido es el siguiente: Día 1: Bienvenida, configuración de Slack, activación de GitHub 2FA y lectura de la arquitectura en Notion. Día 2: Setup local (Python 3.10+, Docker opcional) y acceso a staging. Día 3: Sesión de pair programming con tu buddy. Día 4: Asignación de tu primera issue en Jira. Día 5: Retrospectiva de onboarding con tu manager, Carlos Ruiz. Recuerda que, según nuestra cultura, es importante documentar antes de escalar dudas.
+
+JSON de la respuesta:
+{
+  "in_scope": true,
+  "category": "engineering",
+  "answer": "¡Bienvenida al equipo de Engineering, Sofia! Para tu primera semana, el plan establecido es el siguiente: Día 1: Bienvenida, configuración de Slack, activación de GitHub 2FA y lectura de la arquitectura en Notion. Día 2: Setup local (Python 3.10+, Docker opcional) y acceso a staging. Día 3: Sesión de pair programming con tu buddy. Día 4: Asignación de tu primera issue en Jira. Día 5: Retrospectiva de onboarding con tu manager, Carlos Ruiz. Recuerda que, según nuestra cultura, es importante documentar antes de escalar dudas.",
+  "document_ids": [
+    "doc_eng_01",
+    "doc_bienvenida_01"
+  ],
+  "faq_ids": [
+    "faq_09"
+  ],
+  "needs_escalation": false,
+  "escalation_department": null
+}
+
+Métricas LLM:
+"MetricasLlamada(elapsed_ms=1658, prompt_tokens=1427, output_tokens=213, thinking_tokens=None, total_tokens=1640, model_id='gemini-3.1-flash-lite', fallback_used=False)"
+
