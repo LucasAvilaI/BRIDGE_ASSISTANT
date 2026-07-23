@@ -6,23 +6,27 @@ El Employee Onboarding Assistant acompaña a empleados nuevos de Bridge SA duran
 
 ## Modelo recomendado para producción
 
-**gemini-3.5-flash**
+**gemini-3.1-flash-lite**
 
-En el benchmark obtuvo una calidad media de **2.83/3**. Su mediana de latencia de generación fue **11702.5 ms** y su coste medio estimado por ejecución fue **0.00070525 USD**.
+En el benchmark obtuvo una calidad media de 2.95/3 y completó correctamente el 100 % de las ejecuciones, sin errores técnicos. Su mediana de latencia de generación fue de 1193.0 ms y su coste medio estimado por ejecución fue de 0.00036847 USD.
 
 ## Modelo alternativo
 
-**gemini-3.1-flash-lite**
+**gemini-3.5-flash**
 
-Su calidad media fue **2.5** y su mediana de latencia fue **1239.0 ms**, con un coste medio estimado de **0.00240887 USD** por ejecución.
+Obtuvo una calidad media de 3.00/3 en las ejecuciones válidas, pero registró tres errores técnicos 503/504 en diez casos. Su mediana de latencia de generación fue de 11209.0 ms y su coste medio estimado por ejecución fue de 0.0023595 USD.
 
 ## Trade-off principal
 
-La elección prioriza el equilibrio entre fidelidad a la documentación, seguridad, relevancia, tono y velocidad de respuesta. El modelo recomendado ofrece el mejor resultado global según la rúbrica aplicada a los casos del benchmark. El modelo alternativo puede seguir siendo útil cuando sus diferencias de calidad sean pequeñas y aporte una ventaja relevante en latencia o coste.
+La elección prioriza el equilibrio entre calidad, disponibilidad, velocidad y coste. Aunque gemini-3.5-flash obtuvo una calidad media ligeramente superior en las respuestas completadas, la diferencia fue únicamente de 0.05 puntos. Esta mejora no compensa su 70 % de disponibilidad observada, una latencia aproximadamente 9.4 veces mayor y un coste medio unas 6.4 veces superior.
 
 ## ¿Qué pasaría si duplicáramos el tráfico?
 
-Con un factor de tráfico de **2×**, el volumen pasaría de **10** a aproximadamente **20 ejecuciones** equivalentes al conjunto medido. Manteniendo un patrón de uso similar, el consumo agregado crecería de forma aproximadamente lineal: la proyección es de **5433 tokens de entrada** y **4990 tokens de salida**. El coste total estimado también crecería aproximadamente en la misma proporción, hasta **0.008463 USD** para ese volumen equivalente. La latencia por petición no tiene por qué duplicarse, pero un aumento de concurrencia sí puede incrementar el riesgo de límites de cuota, rate limits y saturación, por lo que conviene monitorizar p95 de latencia y errores antes de escalar.
+Con un factor de tráfico de 2×, el volumen pasaría de 10 a aproximadamente 20 ejecuciones equivalentes al conjunto medido. Manteniendo un patrón de uso similar, el consumo agregado crecería de forma aproximadamente lineal: la proyección es de **5166 tokens de entrada** y **4052 tokens de salida**.
+
+El coste total estimado también crecería aproximadamente en la misma proporción, **pasando de 0.00368475 USD a 0.00737 USD** para ese volumen equivalente.
+
+La latencia por petición no tiene por qué duplicarse, pero un aumento de concurrencia sí puede incrementar el riesgo de límites de cuota, rate limits y saturación. Por ello, conviene monitorizar el p95 de latencia, la tasa de errores y la disponibilidad antes de escalar.
 
 ## Riesgo o condición
 
