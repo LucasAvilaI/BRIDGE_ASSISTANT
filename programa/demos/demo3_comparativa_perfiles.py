@@ -1,0 +1,268 @@
+"""
+Demo 3 · Comparativa de perfiles.
+
+Objetivo
+--------
+- Ejecutar exactamente la misma consulta con dos perfiles diferentes.
+- Comparar una persona Comercial con una persona Remoto UE.
+- Demostrar cambios de tono, contexto, ejemplos y prioridades.
+- Mantener el mismo modelo y la misma configuración.
+
+Caso recomendado
+-----------------
+- Consulta común: "¿Qué debo tener preparado durante mi primera semana?"
+- Perfil 1: Comercial.
+- Perfil 2: Remoto UE.
+
+Los empleados se localizan por el campo 'perfil' de
+empleados_demo.json (búsqueda por palabra clave, sin acentos ni
+mayúsculas) en lugar de un ID fijo, para no depender de que el
+dataset de demo mantenga siempre el mismo orden o los mismos IDs.
+"""
+
+from __future__ import annotations
+from datetime import date
+from state import inicializar_estado
+from prompts import build_secure_system_instruction, build_secure_turn_contents
+from logic import finalizar_turno_seguro, preparar_turno_seguro
+from utils.console import mostrar_respuesta_demo
+from gemini_client import (
+    GeminiClientError,
+    parsear_json,
+    safe_generate_with_system_instruction,
+)
+from context import cargar_json, normalizar_texto
+from config import ASSISTANT_CONFIG_DEFAULT, DOCS_PATH, EMPLEADOS_PATH, EMPRESA_PATH, FAQ_PATH, FALLBACK_MODEL
+
+import sys
+import os
+
+# Esto añade la carpeta 'programa' al PATH de forma automática al ejecutar el script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+# ============================================================
+# CONFIGURACIÓN
+# ============================================================
+
+CONSULTA_DEMO = "¿Qué debo tener preparado durante mi primera semana?"
+PALABRA_CLAVE_PERFIL_1 = "comercial"
+PALABRA_CLAVE_PERFIL_2 = "remoto"
+
+
+# ============================================================
+# DATOS DE DEMOSTRACIÓN
+# ============================================================
+
+def _buscar_empleado_por_perfil(empleados: list[dict], palabra_clave: str) -> dict | None:
+    """Busca el primer empleado cuyo campo 'perfil' contenga la palabra clave."""
+    palabra_normalizada = normalizar_texto(palabra_clave)
+
+    for empleado in empleados:
+        perfil = normalizar_texto(empleado.get("perfil", ""))
+
+        if palabra_normalizada in perfil:
+            return empleado
+
+    return None
+
+
+def obtener_perfiles_demo() -> tuple[dict, dict]:
+    """Devuelve un empleado Comercial y un empleado Remoto EU de la demo."""
+    empleados = cargar_json(EMPLEADOS_PATH)
+
+    empleado_comercial = _buscar_empleado_por_perfil(
+        empleados, PALABRA_CLAVE_PERFIL_1)
+    empleado_remoto_ue = _buscar_empleado_por_perfil(
+        empleados, PALABRA_CLAVE_PERFIL_2)
+
+    if empleado_comercial is None or empleado_remoto_ue is None:
+        raise ValueError(
+            "No se han encontrado en empleados_demo.json un empleado con "
+            "perfil 'Comercial' y otro con perfil 'Remoto EU' para la "
+            "comparativa."
+        )
+
+    return empleado_comercial, empleado_remoto_ue
+
+
+def obtener_consulta_demo() -> str:
+    return CONSULTA_DEMO
+
+
+# ============================================================
+# EJECUCIÓN
+# ============================================================
+
+def _ejecutar_consulta(*, empleado: dict, empresa: dict, documentos: list[dict], faqs: list[dict], consulta: str) -> dict:
+    """Ejecuta el pipeline seguro completo para un empleado y devuelve el resultado final."""
+    estado = inicializar_estado()
+
+    preparacion = preparar_turno_seguro(
+        estado=estado,
+        consulta=consulta,
+        empleado=empleado,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        configuracion=ASSISTANT_CONFIG_DEFAULT,
+        # Fuerza día 1 (ver mismo comentario en demo1_chat_onboarding.py):
+        # la consulta habla de "primera semana", así que sin esto la
+        # comparación dependería de cuán vieja esté fecha_inicio en
+        # empleados_demo.json en el momento de ejecutar la demo.
+        fecha_referencia=date.fromisoformat(empleado["fecha_inicio"]),
+    )
+
+    if preparacion.get("status") != "ok":
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
+
+    datos = preparacion.get("data", {})
+
+    if not datos.get("llamar_modelo", False):
+        return {
+            "resultado_final": preparacion,
+            "json_respuesta": preparacion,
+            "respuesta": datos.get("respuesta", ""),
+            "llamo_modelo": False,
+            "metricas": None,
+        }
+
+    turno_preparado = datos.get("turno_preparado")
+
+    if not isinstance(turno_preparado, dict):
+        resultado_error = {
+            "status": "error",
+            "mensaje": (
+                "No se recibió un turno preparado válido."
+            ),
+            "data": {
+                "errores": [
+                    "turno_preparado no es un diccionario."
+                ]
+            },
+        }
+
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
+
+    try:
+        texto_modelo, metricas = safe_generate_with_system_instruction(
+            build_secure_turn_contents(turno_preparado),
+            system_instruction=build_secure_system_instruction(),
+            json_mode=True,
+            fallback_model_id=FALLBACK_MODEL,
+        )
+        resultado_externo = parsear_json(texto_modelo)
+    except (GeminiClientError, ValueError, TypeError) as error:
+        resultado_error = {
+            "status": "error",
+            "mensaje": (
+                "No se pudo completar la llamada al modelo."
+            ),
+            "data": {
+                "errores": [
+                    str(error)
+                ]
+            },
+        }
+
+        return {
+            "resultado_final": resultado_error,
+            "json_respuesta": resultado_error,
+            "respuesta": "",
+            "llamo_modelo": False,
+            "metricas": None,
+        }
+
+    resultado_final = finalizar_turno_seguro(
+        estado=estado,
+        turno_preparado=turno_preparado,
+        resultado_externo=resultado_externo,
+    )
+
+    return {
+        "resultado_final": resultado_final,
+        "json_respuesta": resultado_externo,
+        "respuesta": resultado_externo.get("answer", ""),
+        "llamo_modelo": True,
+        "metricas": metricas,
+    }
+
+
+def _mostrar_resultado(titulo: str, empleado: dict, resultado_demo: dict) -> None:
+    print(f"=== {titulo}: {empleado.get('nombre', '(sin nombre)')} "
+          f"({empleado.get('perfil', '(sin perfil)')}) ===")
+
+    mostrar_respuesta_demo(
+        respuesta=resultado_demo.get("respuesta", ""),
+        json_respuesta=resultado_demo.get("json_respuesta", {}),
+        llamo_modelo=resultado_demo.get("llamo_modelo", False),
+        metricas=resultado_demo.get("metricas"),
+    )
+
+    resultado_final = resultado_demo.get("resultado_final", {})
+
+    if resultado_final.get("status") != "ok":
+        print("\n[AVISO] El pipeline no aceptó el resultado:")
+
+        errores = resultado_final.get("data", {}).get("errores", [])
+
+        if errores:
+            for error in errores:
+                print(f"- {error}")
+        else:
+            print(
+                "-",
+                resultado_final.get("mensaje", "Error desconocido."),
+            )
+
+    print()
+
+
+def ejecutar_demo_comparativa_perfiles() -> None:
+    """Compara la respuesta del asistente para distintos perfiles."""
+    empresa = cargar_json(EMPRESA_PATH)
+    documentos = cargar_json(DOCS_PATH)
+    faqs = cargar_json(FAQ_PATH)
+
+    empleado_comercial, empleado_remoto_ue = obtener_perfiles_demo()
+    consulta = obtener_consulta_demo()
+
+    print("\n=== ENTRADA COMÚN DEL USUARIO ===")
+    print(consulta)
+    print()
+
+    resultado_comercial = _ejecutar_consulta(
+        empleado=empleado_comercial,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        consulta=consulta,
+    )
+    _mostrar_resultado("PERFIL COMERCIAL",
+                       empleado_comercial, resultado_comercial)
+
+    resultado_remoto_ue = _ejecutar_consulta(
+        empleado=empleado_remoto_ue,
+        empresa=empresa,
+        documentos=documentos,
+        faqs=faqs,
+        consulta=consulta,
+    )
+    _mostrar_resultado("PERFIL REMOTO EU",
+                       empleado_remoto_ue, resultado_remoto_ue)
+
+
+if __name__ == "__main__":
+    ejecutar_demo_comparativa_perfiles()

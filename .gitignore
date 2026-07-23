@@ -2,4 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
-output/
+
+programa/logic_anterior_convulnerable.py
+
+.DS_Store

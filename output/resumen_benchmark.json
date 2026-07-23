@@ -1,0 +1,98 @@
+{
+  "gemini-3.1-flash-lite": {
+    "model_key": "gemini-3.1-flash-lite",
+    "ejecuciones": 10,
+    "tasa_exito_schema": 1.0,
+    "latencia_total_ms": {
+      "n": 10,
+      "media": 1242.1,
+      "mediana": 1193.0,
+      "p95": 1674.8,
+      "minimo": 819.0,
+      "maximo": 1952.0
+    },
+    "latencia_modelo_ms": {
+      "n": 10,
+      "media": 1241.9,
+      "mediana": 1193.0,
+      "p95": 1674.8,
+      "minimo": 818.0,
+      "maximo": 1952.0
+    },
+    "tokens_input": {
+      "n": 10,
+      "media": 258.3,
+      "mediana": 244.0,
+      "p95": 340.1,
+      "minimo": 227.0,
+      "maximo": 386.0
+    },
+    "tokens_output": {
+      "n": 10,
+      "media": 202.6,
+      "mediana": 204.5,
+      "p95": 290.45,
+      "minimo": 110.0,
+      "maximo": 317.0
+    },
+    "thinking_tokens": {
+      "n": 0,
+      "media": null,
+      "mediana": null,
+      "p95": null,
+      "minimo": null,
+      "maximo": null
+    },
+    "coste_total_usd": 0.00368475,
+    "coste_medio_usd": 0.00036847,
+    "ratio_thinking_medio": 0.0
+  },
+  "gemini-3.5-flash": {
+    "model_key": "gemini-3.5-flash",
+    "ejecuciones": 10,
+    "tasa_exito_schema": 0.7,
+    "latencia_total_ms": {
+      "n": 10,
+      "media": 15371.2,
+      "mediana": 11222.5,
+      "p95": 28616.3,
+      "minimo": 3198.0,
+      "maximo": 29627.0
+    },
+    "latencia_modelo_ms": {
+      "n": 7,
+      "media": 13357.86,
+      "mediana": 11209.0,
+      "p95": 24886.4,
+      "minimo": 4665.0,
+      "maximo": 26546.0
+    },
+    "tokens_input": {
+      "n": 7,
+      "media": 266.71,
+      "mediana": 245.0,
+      "p95": 355.4,
+      "minimo": 227.0,
+      "maximo": 386.0
+    },
+    "tokens_output": {
+      "n": 7,
+      "media": 217.71,
+      "mediana": 196.0,
+      "p95": 352.2,
+      "minimo": 89.0,
+      "maximo": 399.0
+    },
+    "thinking_tokens": {
+      "n": 0,
+      "media": null,
+      "mediana": null,
+      "p95": null,
+      "minimo": null,
+      "maximo": null
+    },
+    "coste_total_usd": 0.0165165,
+    "coste_medio_usd": 0.0023595,
+    "ratio_thinking_medio": 0.0
+  }
+}

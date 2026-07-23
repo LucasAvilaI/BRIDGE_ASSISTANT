@@ -1,5 +1,45 @@
+"""
+Construcción de prompts y contenidos enviados al modelo.
 
-from config import JSON_SCHEMA_HINT, PERFILES, SYSTEM_PROMPT
+Responsabilidades de este módulo:
+- Resolver la configuración del perfil funcional del asistente.
+- Construir las instrucciones de sistema utilizadas por el LLM.
+- Separar las instrucciones privilegiadas del contenido no confiable.
+- Serializar el contexto seleccionado para cada turno.
+- Incorporar empleado, perfil, documentación, FAQ e historial al contenido.
+- Definir los prompts específicos del chat y del checklist de onboarding.
+- Mantener el prompt vulnerable utilizado exclusivamente para demostración.
+
+En el pipeline seguro, las instrucciones del sistema y los datos del turno
+se construyen por separado. Los mensajes del usuario, historial, documentos
+y FAQ se consideran contenido no privilegiado y se envían como datos,
+evitando que puedan modificar las instrucciones principales del asistente.
+
+Este módulo NO:
+- carga ni selecciona documentos o FAQ;
+- construye el contexto documental;
+- valida la entrada, el contexto o la salida;
+- decide si una llamada al modelo está autorizada;
+- ejecuta llamadas al proveedor LLM;
+- modifica el estado de la conversación.
+
+Notas para el equipo:
+- config.py define las instrucciones, perfiles y contratos de salida.
+- context.py selecciona y construye el contexto documental.
+- logic.py prepara el turno y coordina el flujo de la aplicación.
+- validators.py aplica las validaciones de seguridad.
+- gemini_client.py recibe las instrucciones y contenidos construidos aquí
+  y realiza la llamada al modelo.
+"""
+
+import json
+from config import (
+    PERFILES,
+    SYSTEM_PROMPT,
+    JSON_SCHEMA_HINT,
+    CHECKLIST_JSON_SCHEMA_HINT,
+    REGLAS_SISTEMA_SEGURAS
+)
 
 
 def resolver_perfil(assistant_config: dict) -> dict:
@@ -68,11 +108,18 @@ Mensaje actual del usuario:
 
 
 def build_vulnerable_prompt(user_message: str) -> str:
-    """Anti-patrón: mezcla instrucciones y mensaje del usuario (Fase 2)."""
-    return f"""
-Eres un tutor de Python amable. Responde en español.
+    """
+    Anti-patrón: mezcla instrucciones del asistente y contenido del usuario
+    en un único prompt.
 
-Usuario: {user_message.strip()}
+    Uso exclusivo de la Demo 5.
+    """
+
+    return f"""{SYSTEM_PROMPT}
+
+Consulta la información disponible y responde a la siguiente solicitud:
+
+{user_message.strip()}
 """.strip()
 
 
@@ -86,3 +133,105 @@ def build_secure_prompt(user_message: str) -> str:
 {user_message.strip()}
 --- FIN MENSAJE USUARIO ---
 """.strip()
+
+
+def build_secure_system_instruction() -> str:
+    """
+    Construye la instrucción privilegiada que se enviará mediante
+    system_instruction, separada de contents.
+    """
+    return f"""
+{SYSTEM_PROMPT}
+
+{REGLAS_SISTEMA_SEGURAS}
+
+Reglas para el campo "category":
+- Debe contener exactamente uno de estos valores:
+  onboarding
+  it
+  rrhh
+  people
+  engineering
+  sales
+  operations
+  general
+  out_of_scope
+- No inventes nuevas categorías.
+- Para Slack, accesos, cuentas, GitHub, software o herramientas
+  técnicas utiliza "it".
+
+Contrato de salida:
+{JSON_SCHEMA_HINT}
+""".strip()
+
+
+def build_secure_turn_contents(turno_preparado: dict) -> str:
+    """
+    Serializa únicamente el contexto seleccionado para el turno.
+
+    Todo este payload se trata como datos no privilegiados.
+    """
+
+    payload = {
+        "empleado": turno_preparado["empleado"],
+        "perfil_empleado": turno_preparado["perfil_empleado"],
+        "perfil_funcional": turno_preparado["perfil_funcional"],
+        "dia_onboarding": turno_preparado["dia_onboarding"],
+        "documentos_autorizados": turno_preparado["contexto"]["documentos"],
+        "faqs_autorizadas": turno_preparado["contexto"]["faqs"],
+        "historial_no_confiable": turno_preparado["historial"],
+        "pregunta_usuario_no_confiable": turno_preparado["consulta"]
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+# ============================================================
+# CHECKLIST DE LA SEMANA 1 (Capacidad 2 del producto)
+# ============================================================
+#
+# Estas dos funciones son el equivalente, para el checklist, de
+# build_secure_system_instruction() / build_secure_turn_contents().
+# No existían en el módulo: el checklist es una capacidad obligatoria
+# del producto (ver InstruccionesTeamChallenge.md) que no tenía ningún
+# soporte de prompt propio.
+
+def build_checklist_system_instruction() -> str:
+    """
+    Construye la instrucción privilegiada para generar el checklist
+    estructurado de un día de onboarding concreto.
+
+    Reutiliza las mismas reglas funcionales y de seguridad que el
+    chat; solo cambia el contrato de salida (CHECKLIST_JSON_SCHEMA_HINT
+    en lugar de JSON_SCHEMA_HINT).
+    """
+    return f"""
+{SYSTEM_PROMPT}
+
+{REGLAS_SISTEMA_SEGURAS}
+
+No mantienes una conversación libre: debes generar el plan de tareas
+del día de onboarding indicado, basado exclusivamente en los
+documentos autorizados incluidos en este turno.
+
+Contrato de salida:
+{CHECKLIST_JSON_SCHEMA_HINT}
+""".strip()
+
+
+def build_checklist_turno_contents(turno_preparado: dict) -> str:
+    """
+    Serializa el turno de checklist como datos no privilegiados.
+
+    Mismo criterio que build_secure_turn_contents(): todo el payload
+    se trata como datos, nunca como instrucciones.
+    """
+    payload = {
+        "empleado": turno_preparado["empleado"],
+        "empleado_id": turno_preparado["empleado"].get("id"),
+        "perfil_empleado": turno_preparado["perfil_empleado"],
+        "perfil_funcional": turno_preparado["perfil_funcional"],
+        "dia_onboarding": turno_preparado["dia_onboarding"],
+        "documentos_autorizados": turno_preparado["contexto"]["documentos"],
+        "faqs_autorizadas": turno_preparado["contexto"]["faqs"],
+    }
+    return json.dumps(payload, ensure_ascii=False)
