@@ -2,11 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
-output/
-output_demo/
 
 programa/logic_anterior_convulnerable.py
-
-output/resultadosconsola.md
 
 .DS_Store

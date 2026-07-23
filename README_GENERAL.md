@@ -16,12 +16,9 @@ El equipo está compuesto por los siguientes programadores, todos con el mismo n
 *   **Lucas Ávila Nebreda**
 
 ##### Scrum Master
-El Scrum Master, responsable de la creación del repositorio original y de la validación final de las *Pull Requests*, es:
-*   **Lucas Ávila Nebreda**
+El Scrum Master, responsable de la creación del repositorio original y de la validación final de las *Pull Requests*, fue:
+*   **Lucas Ávila Nebreda** luego fueron todos los miebros del equipo
 
-##### Trello Master
-La responsable de la organización del tablero de tareas y el seguimiento del flujo de trabajo en Trello es:
-*   **Alejandra del Carme Eng Broca**
 
 --------------------------------------------------------------------------------
 
@@ -36,8 +33,8 @@ El **12 de julio de 2026**
 Para garantizar un aprendizaje profundo de Git y evitar conflictos en el código modular, se ha decidido seguir la siguiente estrategia basada en el flujo del trabajo anterior:
 
 *   Se mantendrán las ramas de integración constantes: **main** (código estable) y **develop** (integración).
-*   El trabajo individual o por bloques se distribuirá mediante **ramas por nombre de programador** (ej. `lucas`, `alejandra`, `alex`, `enric`) para el desarrollo inicial de las funcionalidades.
-*   **Flujo de trabajo:** Cada vez que un programador avance en una tarea, realizará un *pull* de `develop` en local, mergeará con su rama, hará *push* a GitHub y abrirá un **Pull Request (PR)** hacia `develop` para que sea revisado por el Scrum Master.
+*   El trabajo individual o por bloques se distribuirá mediante **ramas por nombre de programador** (ej. `alejandra`, `alex`, `enric`) o con el nombre las funcionalidades desarolladas.
+*   **Flujo de trabajo:** Cada vez que un programador avance en una tarea, realizará un *pull* de `develop` en local, mergeará con su rama, hará *push* a GitHub y abrirá un **Pull Request (PR)** hacia `develop` para que sea revisado por otro miembro del equipo.
 *   Se prohíbe trabajar directamente sobre la rama `main`.
 
 --------------------------------------------------------------------------------
@@ -45,12 +42,11 @@ Para garantizar un aprendizaje profundo de Git y evitar conflictos en el código
 #### 5. Ramas: Estructura y su responsable
 | Nombre de la rama | Programador responsable |
 | ------ | ------ |
-| lucas | Lucas Ávila Nebreda |
 | alejandra | Alejandra del Carme Eng Broca |
 | alex | Alex Bometon |
 | enric | Enric Parella |
 
-*(Nota: Se podrán crear ramas secundarias tipo `feature/` o `fix/` según la necesidad del bloque de trabajo, siempre naciendo desde `develop`)*
+*(Nota: Se han creado ramas secundarias según la necesidad del bloque de trabajo, siempre nacidas desde `develop`)*
 
 --------------------------------------------------------------------------------
 
@@ -95,26 +91,26 @@ pip install -r requirements.txt
 ```
 
 #### 9. Workflow push rama
-Para subir tus cambios de forma segura siguiendo la estrategia de ramas del equipo, utiliza los siguientes comandos en tu terminal:
+Para subir tus cambios de forma segura siguiendo la estrategia de ramas del equipo, utilizamos los siguientes comandos:
 
 ```bash
-# 1. Asegúrate de estar en tu rama personal
+# 1. Asegurarse de estar en la rama personal
 git checkout <tu_nombre_de_rama>
 
-# 2. Trae los últimos cambios de la rama de integración
+# 2. Traer los últimos cambios de la rama de integración
 git pull origin develop
 
-# 3. Mezcla los cambios de develop en tu rama (resuelve conflictos si aparecen)
+# 3. Mezclar/merge los cambios de develop en tu rama (resolviendo conflictos si aparecen)
 git merge develop
 
-# 4. Añade tus archivos y realiza el commit siguiendo la sintaxis oficial
+# 4. Añadir los archivos y realizar el commit siguiendo la sintaxis oficial
 git add .
 git commit -m "feat: descripción breve de lo que has hecho"
 
-# 5. Sube tus cambios a GitHub
+# 5. Subir tus cambios a GitHub
 git push origin <tu_nombre_de_rama>
 
-# 6. Abre un Pull Request (PR) en GitHub desde tu rama hacia 'develop'
+# 6. Abrir una Pull Request (PR) en GitHub desde la rama trabajada hacia 'develop'
 ```
 
 #### 10. Sintaxis commits
@@ -126,6 +122,3 @@ git push origin <tu_nombre_de_rama>
 |docs:|Documentación|docs: añadir instrucciones de claves en README|
 |refactor:|Refactorización sin cambio funcional|refactor: extraer groupby a función separada|
 |chore:|Tareas de mantenimiento|chore: actualizar requirements.txt|
-
-
-

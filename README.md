@@ -1,1938 +1,667 @@
-# Arquitectura de config.py
+# Employee Onboarding Assistant
+
+Asistente interno de onboarding para empleados de **Bridge SA**, desarrollado en Python y conectado a la API de Gemini. El programa responde preguntas usando únicamente documentación autorizada, genera checklists estructurados de la primera semana y permite comparar modelos mediante un benchmark reproducible.
+
+El proyecto incluye dos formas de uso:
+
+1. Un chat interactivo que siempre utiliza el pipeline seguro.
+2. Un menú con siete demostraciones funcionales, de robustez y de rendimiento.
+
+> La variante vulnerable existe únicamente con fines comparativos dentro de la Demo 5. No es un modo seleccionable del producto ni debe usarse como interfaz de producción.
+
+## Índice
+
+- [Funcionalidades principales](#funcionalidades-principales)
+- [Cómo funciona](#cómo-funciona)
+- [Requisitos](#requisitos)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Instalación](#instalación)
+- [Configuración de Gemini](#configuración-de-gemini)
+- [Inicio rápido](#inicio-rápido)
+- [Chat interactivo](#chat-interactivo)
+- [Menú de demostraciones](#menú-de-demostraciones)
+- [Benchmark de modelos](#benchmark-de-modelos)
+- [Generación de entregables](#generación-de-entregables)
+- [Archivos de datos](#archivos-de-datos)
+- [Archivos generados](#archivos-generados)
+- [Configuración principal](#configuración-principal)
+- [Seguridad y robustez](#seguridad-y-robustez)
+- [Arquitectura técnica](#arquitectura-técnica)
+- [Solución de problemas](#solución-de-problemas)
+- [Limitaciones conocidas](#limitaciones-conocidas)
+- [Documentación ampliada](#documentación-ampliada)
+
+## Funcionalidades principales
+
+- Chat personalizado según el empleado, su departamento, su perfil y su día de onboarding.
+- Recuperación limitada de documentos y preguntas frecuentes relevantes.
+- Respuestas fundamentadas únicamente en fuentes internas seleccionadas.
+- Generación de checklist JSON para los días 1 a 5 de onboarding.
+- Historial conversacional limitado a los últimos cuatro turnos.
+- Respuestas estructuradas y validadas antes de mostrarse al usuario.
+- Bloqueo previo de prompt injection, secretos, datos personales de terceros y consultas fuera de dominio.
+- Bloqueo de respuestas que citen fuentes no autorizadas o presenten indicios de fuga.
+- Comparación aislada entre un flujo seguro y otro deliberadamente vulnerable.
+- Benchmark de dos modelos con latencia, tokens, coste estimado y rúbrica manual.
+- Proyección automática del impacto de duplicar el tráfico.
+- Registro en texto de la salida completa de cada demo.
+
+## Cómo funciona
+
+El chat utiliza tres puertas de seguridad. El modelo solo se invoca si la entrada es admisible y existe contexto documental suficiente.
+
+```mermaid
+flowchart TD
+    A[Consulta del empleado] --> B{Validación de entrada}
+    B -->|Bloqueada| R[Respuesta controlada sin LLM]
+    B -->|Permitida| C[Selección de documentos y FAQ]
+    C --> D{Validación de contexto}
+    D -->|Sin respaldo| R
+    D -->|Documentado| E[Llamada a Gemini]
+    E --> F{Validación de salida}
+    F -->|Insegura| S[Respuesta controlada tras el LLM]
+    F -->|Válida| G[Respuesta e historial]
+```
+
+Una consulta bloqueada por seguridad se devuelve como una respuesta funcional con `status="ok"`, pero incluye `llamar_modelo=False` y el motivo del bloqueo. Esto permite distinguir un rechazo controlado de un fallo técnico.
+
+## Requisitos
+
+- Python **3.10 o superior**.
+- Una clave válida para la API de Gemini.
+- Acceso a Internet durante las llamadas al modelo.
+- Dependencias externas:
+  - `google-genai`
+  - `python-dotenv`
+
+El resto de módulos utilizados pertenece a la biblioteca estándar de Python.
+
+## Estructura del proyecto
+
+```text
+bridge_assistant/
+├── assets/
+├── data/
+│   ├── empresa.json
+│   ├── empleados_demo.json
+│   ├── onboarding_docs.json
+│   ├── faq_onboarding.json
+│   ├── casos_trampa.json
+│   └── preguntas_benchmark.json
+├── docs/
+│   └── MANUAL_DE_USO.md
+├── entregables/
+│   ├── matriz_decision.md              # generado
+│   └── recomendacion.md                 # generado
+├── output/
+│   ├── resultados_benchmark.json        # generado
+│   ├── resultados_benchmark.csv         # generado
+│   ├── resumen_benchmark.json           # generado
+│   └── proyeccion_trafico_x2.json       # generado
+├── output_demo/                          # generado automáticamente
+├── programa/
+│   ├── demos/
+│   │   ├── demo1_chat_onboarding.py
+│   │   ├── demo2_checklist_dia_1.py
+│   │   ├── demo3_comparativa_perfiles.py
+│   │   ├── demo4_comparativa_dias_onboarding.py
+│   │   ├── demo5_vulnerable_vs_seguro.py
+│   │   └── demo6_casos_trampa.py
+│   ├── utils/
+│   │   └── console.py
+│   ├── benchmark.py
+│   ├── config.py
+│   ├── context.py
+│   ├── gemini_auth.py
+│   ├── gemini_client.py
+│   ├── generar_entregables.py
+│   ├── logic.py
+│   ├── main.py
+│   ├── menu.py
+│   ├── metrics.py
+│   ├── model_registry.py
+│   ├── model_utils.py
+│   ├── prompts.py
+│   ├── state.py
+│   └── validators.py
+└── README.md
+```
 
-## Objetivo
+Las carpetas `output/`, `output_demo/` y `entregables/` se crean cuando resultan necesarias. Los archivos ya existentes con los mismos nombres en `output/` y `entregables/` se sobrescriben.
 
-Centralizar toda la configuración estática utilizada por la
-arquitectura base del Employee Onboarding Assistant.
+## Instalación
 
-config.py no implementa lógica de negocio.
-No realiza llamadas al modelo.
-No procesa información.
-No valida entradas.
+Ejecuta todos los comandos desde la raíz del repositorio, es decir, desde la carpeta que contiene `programa/`, `data/` y este `README.md`.
 
-Su única responsabilidad es actuar como contrato compartido
-entre context.py, logic.py y main.py.
+### macOS o Linux
 
----
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install google-genai python-dotenv
+```
 
-## Módulos consumidores
+### Windows PowerShell
 
-context.py
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install google-genai python-dotenv
+```
 
-- rutas
-- pesos
-- límites
-- documentos transversales
+Si el repositorio incorpora un `requirements.txt`, puede utilizarse en su lugar:
 
-logic.py
+```bash
+python -m pip install -r requirements.txt
+```
 
-- perfiles
-- categorías
-- escalación
-- configuración general
+### Seleccionar el entorno en VS Code
 
-main.py
+1. Abre la raíz del proyecto en VS Code.
+2. Pulsa `Cmd + Shift + P` en macOS o `Ctrl + Shift + P` en Windows/Linux.
+3. Ejecuta `Python: Select Interpreter`.
+4. Selecciona el intérprete de `.venv`.
 
-- rutas
+## Configuración de Gemini
 
----
+El programa busca exclusivamente la variable `GEMINI_API_KEY`. Puede obtenerse y administrarse desde [Google AI Studio](https://aistudio.google.com/app/apikey). La documentación oficial sobre claves se encuentra en [Using Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key).
 
-## Decisiones de diseño
+### Opción recomendada: archivo `.env`
 
-Toda decisión dinámica pertenece a logic.py.
+Crea un archivo llamado `.env` en la raíz:
 
-Toda selección documental pertenece a context.py.
+```dotenv
+GEMINI_API_KEY=tu_clave_real
+```
 
-Toda interacción con el modelo pertenece al área LLM.
+No añadas comillas salvo que formen parte de la clave. El archivo debe permanecer fuera del control de versiones:
 
-Toda validación avanzada pertenece al área Robustez.
+```gitignore
+.env
+```
 
----
+### Opción temporal: variable de entorno
 
-## Integraciones pendientes
+macOS o Linux:
 
-### LLM & Benchmark
+```bash
+export GEMINI_API_KEY="tu_clave_real"
+```
 
-Pendiente de integrar:
+Windows PowerShell:
 
-- modelo
-- temperaturas
-- generación JSON
-- métricas
-- benchmarking
+```powershell
+$env:GEMINI_API_KEY="tu_clave_real"
+```
 
-### Robustez
+### Entrada interactiva
 
-Pendiente de integrar:
+Si se ejecuta `programa/main.py` sin una clave disponible, el programa la solicita con entrada oculta. La clave solo se conserva en el proceso actual y no se escribe en `.env`.
 
-- patrones sospechosos
-- validaciones avanzadas
-- prompt defensivo
-- variantes segura/vulnerable
+La ejecución directa de `benchmark.py` es no interactiva: en ese caso la clave debe existir previamente en `.env` o en el entorno.
 
----
+> No escribas la clave dentro de archivos `.py`, notebooks, JSON, logs ni capturas de pantalla.
 
-## Filosofía
+## Inicio rápido
 
-config.py debe permanecer estable durante todo el ciclo
-de vida del proyecto.
+Desde la raíz del proyecto:
 
-Los cambios funcionales deben producirse en logic.py o
-context.py, evitando modificar la configuración salvo que
-aparezcan nuevos requisitos del dominio.
+```bash
+python programa/main.py
+```
 
--------------------------------------------------------------------------------------------------------------------------------------
+La primera pantalla permite elegir:
 
-# Arquitectura de `logic.py`
+```text
+1. Aplicación principal (chat interactivo seguro)
+2. Menú de demostraciones del sprint
+0. Salir
+```
 
-## Objetivo
+Con la estructura actual de imports, este es el comando recomendado. No es necesario ejecutar el programa desde dentro de `programa/` ni modificar `PYTHONPATH`.
 
-`logic.py` actúa como orquestador de la arquitectura base del Employee Onboarding Assistant.
+## Chat interactivo
 
-Su responsabilidad es coordinar los datos del empleado, la configuración, el contexto documental y el estado conversacional para construir un contrato estable entre la lógica de negocio y el área encargada del modelo de lenguaje.
+1. Ejecuta `python programa/main.py`.
+2. Selecciona `1`.
+3. Elige uno de los identificadores mostrados desde `empleados_demo.json`.
+4. Escribe consultas relacionadas con onboarding o procedimientos internos.
+5. Escribe `salir`, `exit` o `quit` para finalizar.
 
-`logic.py` no implementa la selección documental, no construye prompts definitivos, no llama directamente a un proveedor LLM y no aplica defensas avanzadas de seguridad.
+Ejemplos de consultas válidas, siempre que exista documentación relacionada:
 
----
+```text
+¿Cómo solicito acceso a GitHub?
+¿Qué debo preparar durante mi primer día?
+¿En qué canales de Slack debo estar?
+He olvidado mi contraseña, ¿cómo contacto con IT?
+```
 
-## Responsabilidades
+El programa muestra después de cada llamada:
 
-`logic.py` es responsable de:
+- modelo utilizado;
+- si se activó el fallback;
+- latencia;
+- tokens de entrada, salida y razonamiento;
+- coste estimado;
+- rendimiento aproximado en tokens por segundo.
 
-- Validar la estructura mínima de los datos recibidos.
-- Calcular el día de onboarding del empleado.
-- Clasificar preliminarmente la consulta.
-- Seleccionar el perfil funcional adecuado.
-- Solicitar el contexto documental a `context.py`.
-- Recuperar el historial reciente desde `state.py`.
-- Construir un paquete de interacción independiente del proveedor LLM.
-- Recibir una respuesta externa ya generada.
-- Validar el contrato mínimo de esa respuesta.
-- Actualizar el estado conversacional.
-- Devolver una respuesta estándar a `main.py`.
+El chat usa `gemini-3.1-flash-lite` como modelo principal y `gemini-3.5-flash` como respaldo técnico. El fallback solo se activa si el modelo principal produce un `GeminiClientError`.
 
----
+## Menú de demostraciones
 
-## Qué no hace
+Ejecuta `python programa/main.py`, selecciona `2` y después una opción del 1 al 7.
 
-`logic.py` no debe:
-
-- Construir el prompt definitivo.
-- Elegir modelo o proveedor.
-- Definir temperaturas.
-- Contar tokens.
-- Ejecutar llamadas a Gemini, OpenAI o Hugging Face.
-- Implementar JSON Mode.
-- Registrar benchmarks.
-- Detectar prompt injection.
-- Detectar jailbreaks.
-- Aplicar listas de bloqueo.
-- Implementar flujos seguro o vulnerable.
-- Puntuar documentos o FAQ.
-- Duplicar datos permanentes del empleado dentro del estado.
-
-Estas responsabilidades pertenecen a otros módulos o áreas del proyecto.
-
----
+| Opción | Demostración | Objetivo |
+|---:|---|---|
+| 1 | Chat de onboarding funcional | Ejecutar una interacción completa con recuperación de contexto, Gemini, validación y métricas. |
+| 2 | Checklist estructurado — Día 1 | Generar y validar el plan JSON de tareas del primer día. |
+| 3 | Comparativa de perfiles | Enviar una entrada equivalente para perfiles de empleado distintos y observar la personalización. |
+| 4 | Comparativa dinámica de días | Comparar cómo cambia la orientación o el checklist según el día de onboarding. |
+| 5 | Seguro frente a vulnerable | Mostrar la diferencia entre el pipeline protegido y un flujo deliberadamente inseguro. |
+| 6 | Inyección y casos trampa | Comprobar que los casos de seguridad se bloquean y que no llaman al modelo cuando no deben. |
+| 7 | Benchmark de modelos | Ejecutar la misma batería con los dos modelos configurados y exportar métricas. |
 
-# Separación del procesamiento en dos fases
+La salida estándar y los errores de cada demo se muestran en la terminal y se copian simultáneamente a:
 
-## Problema detectado
+```text
+output_demo/AAAA-MM-DD_HH-MM-SS_demo_X.txt
+```
 
-El esqueleto heredado del Sprint 6 mezclaba en una misma función:
+El log se crea incluso si la demo termina con una excepción controlada por el menú. Solo las demos lanzadas desde este menú quedan envueltas por el registrador general.
 
-- lógica de negocio;
-- construcción de prompts;
-- selección de perfil;
-- llamada al modelo;
-- seguridad;
-- parseo de respuesta;
-- actualización del estado.
+## Benchmark de modelos
 
-Ese diseño acoplaba `logic.py` a:
+El benchmark compara exactamente los dos modelos activos de `BENCHMARK_MODELS` usando los mismos casos, temperatura, límite de salida y nivel de razonamiento.
 
-- un proveedor concreto;
-- unas firmas concretas de `prompts.py`;
-- unas constantes concretas de `config.py`;
-- el dominio antiguo del tutor de Python;
-- las decisiones de Robustez;
-- las decisiones de LLM y Benchmark.
+### Alcance
 
-Cualquier cambio de modelo, prompt o estrategia de seguridad obligaba a modificar el orquestador central.
+El benchmark **no es end-to-end**. Cada caso de `preguntas_benchmark.json` ya contiene un prompt completo con el contexto preparado. No ejecuta la recuperación documental ni las tres puertas del pipeline seguro. Su objetivo es aislar la variable **modelo** y comparar calidad, latencia, tokens y coste con entradas idénticas.
 
----
+Tampoco utiliza fallback: una ejecución de `gemini-3.5-flash` nunca puede terminar silenciosamente respondida por `gemini-3.1-flash-lite`, ni al contrario.
 
-## Solución adoptada
+### Número de llamadas
 
-El procesamiento del turno se divide en dos fases independientes:
+El dataset admite de 10 a 14 casos. Al ejecutarse contra dos modelos, cada benchmark realiza entre **20 y 28 llamadas reales** a Gemini. Estas llamadas pueden consumir cuota y generar coste.
 
-preparar_turno()
-        ↓
-adaptador LLM pendiente
-        ↓
-finalizar_turno()
+### Ejecución desde el menú
 
-Fase 1: preparar_turno()
-Responsabilidad
+```text
+python programa/main.py
+→ 2. Menú de demostraciones
+→ 7. Benchmark de rendimiento de modelos
+```
 
-Transforma los datos de entrada en un paquete de interacción estable e independiente del proveedor LLM.
+### Ejecución directa
 
-Operaciones
+```bash
+python programa/benchmark.py
+```
 
-La función:
+Para la ejecución directa, `GEMINI_API_KEY` debe estar configurada de antemano.
 
-Valida el contrato mínimo de entrada.
-Calcula el día de onboarding.
-Clasifica preliminarmente la consulta.
-Selecciona el perfil funcional.
-Solicita el contexto documental a context.py.
-Obtiene el historial reciente.
-Construye el paquete de interacción.
-Devuelve el resultado mediante la envolvente estándar.
-No conoce
+### Archivos producidos
 
-preparar_turno() no conoce:
+```text
+output/resultados_benchmark.json
+output/resultados_benchmark.csv
+output/resumen_benchmark.json
+output/proyeccion_trafico_x2.json
+```
 
-Gemini;
-OpenAI;
-Hugging Face;
-temperaturas;
-prompts;
-JSON Mode;
-métricas;
-benchmarks;
-estrategias seguras o vulnerables.
-Fase 2: finalizar_turno()
-Responsabilidad
+El benchmark continúa aunque falle un caso: registra la excepción en la fila correspondiente y pasa a la siguiente combinación de caso y modelo.
 
-Recibe el turno preparado y la respuesta externa generada por el área LLM.
+Los cuatro nombres son fijos. Una ejecución nueva sobrescribe los resultados de la anterior; guarda una copia antes de repetirla si necesitas conservar el histórico.
 
-Operaciones
+### Evaluación automática y manual
 
-La función:
+`cumple_schema` realiza una comprobación automática mínima:
 
-Valida la estructura mínima del turno preparado.
-Valida el contrato mínimo de la respuesta externa.
-Añade la consulta al historial.
-Añade la respuesta del asistente.
-Incrementa el número de turnos mediante state.py.
-Devuelve la respuesta estándar del proyecto.
-Independencia del proveedor
+- En casos cuyo ID contiene `checklist`, exige el contrato JSON del checklist.
+- En el resto de casos confirma únicamente que exista una respuesta textual no vacía.
 
-La función no necesita conocer:
+La calidad semántica no se puntúa automáticamente. Debe evaluarse manualmente en `resultados_benchmark.csv` mediante estas columnas:
 
-cómo se construyó el prompt;
-qué modelo respondió;
-qué proveedor se utilizó;
-qué temperatura se aplicó;
-si hubo JSON Mode;
-qué estrategia de seguridad se ejecutó.
+| Columna | Qué evalúa | Escala |
+|---|---|---:|
+| `fidelidad_1_3` | Ajuste a las fuentes proporcionadas y ausencia de invenciones. | 1–3 |
+| `relevancia_1_3` | Utilidad y relación directa con la consulta. | 1–3 |
+| `tono_1_3` | Adecuación al empleado y claridad. | 1–3 |
+| `seguridad_1_3` | Respeto de límites, datos sensibles y reglas del caso. | 1–3 |
 
-Funciones públicas
-respuesta_ok()
+Solo deben puntuarse las filas con `status=ok`. Los valores admitidos son exclusivamente `1`, `2` o `3`.
 
-Construye la envolvente estándar de éxito.
+## Generación de entregables
 
-Contrato
+Después de ejecutar el benchmark:
+
+1. Abre `output/resultados_benchmark.csv`.
+2. Rellena los cuatro criterios manuales de todas las filas con `status=ok`.
+3. Guarda el CSV manteniendo sus nombres de columnas.
+4. Ejecuta:
+
+```bash
+python programa/generar_entregables.py
+```
+
+El lector acepta CSV separado por comas o por punto y coma, incluida la marca BOM que pueden añadir Excel o Numbers.
+
+Se generan:
+
+```text
+entregables/matriz_decision.md
+entregables/recomendacion.md
+```
+
+La matriz elige un ganador por caso mediante esta prioridad:
+
+1. Mayor media de los cuatro criterios de calidad.
+2. Menor latencia del modelo en caso de empate.
+3. Orden estable si el empate continúa.
+
+La recomendación global elige la mayor calidad media agregada y utiliza la mediana de latencia como desempate. También incorpora coste y la proyección 2×.
+
+## Archivos de datos
+
+Todos los datos se leen desde `data/`. Las rutas están centralizadas en `programa/config.py`.
+
+### `empresa.json`
+
+Debe contener un objeto JSON. Se envía como información de la empresa durante la preparación del turno.
+
+### `empleados_demo.json`
+
+Debe contener una lista de objetos. Para el funcionamiento completo, cada empleado necesita al menos:
+
+```json
 {
-    "status": "ok",
-    "mensaje": str,
-    "data": dict,
+  "id": "emp_01",
+  "nombre": "Nombre del empleado",
+  "departamento": "engineering",
+  "perfil": "junior",
+  "fecha_inicio": "2026-07-22"
 }
-respuesta_error()
+```
 
-Construye la envolvente estándar de error.
+- `id` identifica al empleado y se valida en los checklists.
+- `perfil` debe ser un texto no vacío.
+- `fecha_inicio` debe usar `AAAA-MM-DD` y determina el día de onboarding.
+- `departamento` se utiliza para personalizar y puntuar documentos.
+- `nombre` se usa en la interfaz.
 
-Contrato
+El día de incorporación es el día 1. Una fecha futura también se trata como día 1.
+
+### `onboarding_docs.json`
+
+Debe contener una lista de documentos. Estructura funcional recomendada:
+
+```json
 {
-    "status": "error",
-    "mensaje": str,
-    "data": {
-        "errores": list[str],
+  "id": "doc_it_01",
+  "titulo": "Accesos técnicos",
+  "departamento": "it",
+  "tags": ["acceso", "github", "primer día"],
+  "cuerpo": "Procedimiento interno documentado..."
+}
+```
+
+El `id` es necesario para verificar que el modelo cita únicamente fuentes autorizadas.
+
+### `faq_onboarding.json`
+
+Debe contener una lista de preguntas frecuentes:
+
+```json
+{
+  "id": "faq_it_01",
+  "pregunta": "¿Cómo solicito acceso a GitHub?",
+  "respuesta_corta": "Sigue el procedimiento de accesos técnicos.",
+  "tags": ["github", "acceso"],
+  "doc_id": "doc_it_01"
+}
+```
+
+`doc_id` enlaza la FAQ con el documento principal. Los documentos referenciados por una FAQ relevante tienen prioridad al formar el contexto.
+
+### `casos_trampa.json`
+
+Contiene los escenarios utilizados por la Demo 6. Debe mantenerse coordinado con el cargador y las expectativas definidas en `demo6_casos_trampa.py`.
+
+### `preguntas_benchmark.json`
+
+Debe contener una lista de 10 a 14 casos con IDs únicos:
+
+```json
+[
+  {
+    "id": "bench_01_engineering_acceso_github",
+    "prompt": "Prompt completo y fijo utilizado por ambos modelos"
+  }
+]
+```
+
+Los casos de checklist deben incluir la palabra `checklist` en el `id`; esa convención activa el modo JSON y su validación específica.
+
+## Archivos generados
+
+| Ruta | Contenido | Persistencia |
+|---|---|---|
+| `output_demo/*.txt` | Copia de `stdout` y `stderr` de cada demo del menú. | Se acumula con fecha y hora. |
+| `output/resultados_benchmark.json` | Todas las filas del último benchmark. | Se sobrescribe. |
+| `output/resultados_benchmark.csv` | Resultados editables y rúbrica manual. | Se sobrescribe. |
+| `output/resumen_benchmark.json` | Estadísticos agregados por modelo. | Se sobrescribe. |
+| `output/proyeccion_trafico_x2.json` | Coste, tokens y ejecuciones proyectados al doble. | Se sobrescribe. |
+| `entregables/matriz_decision.md` | Ganador y justificación por caso. | Se sobrescribe. |
+| `entregables/recomendacion.md` | Recomendación global para producción. | Se sobrescribe. |
+
+Los logs y resultados pueden contener preguntas, respuestas o datos de demostración. No ejecutes el proyecto con información personal real sin aplicar las medidas de almacenamiento y acceso adecuadas.
+
+## Configuración principal
+
+Los valores compartidos viven en `programa/config.py`.
+
+| Parámetro | Valor actual | Función |
+|---|---:|---|
+| `MODEL` | `gemini-3.1-flash-lite` | Modelo principal del chat. |
+| `FALLBACK_MODEL` | `gemini-3.5-flash` | Respaldo exclusivo del chat. |
+| `BENCHMARK_MODELS` | ambos modelos | Orden de comparación. |
+| `TEMPERATURE_DEFAULT` | `0.2` | Aleatoriedad de generación. |
+| `MAX_TOKENS_INPUT` | `8000` | Límite técnico estimado de entrada. |
+| `MAX_OUTPUT_TOKENS` | `800` | Límite de salida del SDK. |
+| `MAX_OUTPUT_WORDS` | `200` | Objetivo funcional de longitud. |
+| `MAX_INPUT_CHARS` | `2500` | Máximo de la consulta del usuario. |
+| `MAX_SAFE_OUTPUT_CHARS` | `4000` | Máximo aceptado por el validador de salida. |
+| `MAX_CONTEXT_DOCUMENTS` | `3` | Máximo de documentos por turno. |
+| `MAX_CONTEXT_FAQS` | `2` | Máximo de FAQ por turno. |
+| `WINDOW` | `4` | Turnos recientes incluidos, hasta 8 mensajes. |
+| `GEMINI_TIMEOUT_MS` | `10000` | Tiempo máximo HTTP configurado. |
+| `GEMINI_RETRY_ATTEMPTS` | `1` | Máximo de intentos configurado. |
+| `THINKING_LEVEL_CHAT` | `minimal` | Nivel de razonamiento de Gemini 3.x. |
+
+Los costes por millón de tokens y la ventana de contexto están en `programa/model_registry.py`. Son valores de configuración utilizados para estimaciones, no una factura ni una fuente contractual. Verifica los precios vigentes en la [página oficial de precios de Gemini](https://ai.google.dev/gemini-api/docs/pricing) antes de tomar una decisión.
+
+## Seguridad y robustez
+
+### Puerta 1: entrada
+
+Antes de construir contexto, el programa comprueba:
+
+- tipo y contenido de la entrada;
+- longitud máxima;
+- caracteres de control;
+- intentos de prompt injection y firmas fragmentadas;
+- solicitudes de contraseñas, tokens o secretos;
+- salarios, bonus y datos personales de terceros;
+- uso académico o fuera del ámbito del asistente;
+- ambigüedad entre tipos de baja.
+
+### Puerta 2: contexto
+
+Se seleccionan como máximo tres documentos y dos FAQ. La llamada solo se autoriza cuando la consulta queda respaldada por las fuentes recuperadas. Una pregunta interna sin documentación se clasifica como `undocumented`; una pregunta ajena al dominio, como `out_of_scope`.
+
+### Puerta 3: salida
+
+Después de Gemini se comprueba:
+
+- contrato JSON exacto;
+- tipos y coherencia de los campos;
+- categoría válida;
+- presencia de una fuente para respuestas dentro de dominio;
+- uso exclusivo de IDs de documentos y FAQ autorizados;
+- longitud máxima;
+- indicios de prompt interno, credenciales o claves.
+
+El historial solo se actualiza si la salida supera la tercera puerta. El estado de seguridad conserva como máximo 20 eventos con fase, código y longitud de consulta; no guarda el texto del ataque en ese registro.
+
+## Arquitectura técnica
+
+| Módulo | Responsabilidad principal |
+|---|---|
+| `main.py` | Punto de entrada, autenticación, selección de interfaz y chat. |
+| `menu.py` | Registro y ejecución de las siete demos. |
+| `config.py` | Rutas, límites, modelos, contratos, perfiles y reglas. |
+| `context.py` | Carga, normalización, puntuación y selección de fuentes. |
+| `logic.py` | Orquestación del turno, perfiles, día de onboarding y pipeline seguro. |
+| `validators.py` | Validaciones de entrada, contexto, chat y checklist. |
+| `prompts.py` | Instrucciones de sistema y serialización del contenido no confiable. |
+| `gemini_auth.py` | Carga segura de `GEMINI_API_KEY`. |
+| `gemini_client.py` | Único adaptador del SDK, llamadas, JSON, fallback y métricas. |
+| `model_registry.py` | Metadatos y costes estimados de modelos. |
+| `model_utils.py` | Consulta y validación de coherencia del registro. |
+| `metrics.py` | Costes, rendimiento, agregados y proyecciones. |
+| `benchmark.py` | Ejecución reproducible y exportación del benchmark. |
+| `generar_entregables.py` | Matriz y recomendación tras la rúbrica manual. |
+| `state.py` | Historial y contador de turnos. |
+| `utils/console.py` | Presentación homogénea y registro de salidas. |
+
+## Solución de problemas
+
+### `ModuleNotFoundError: No module named 'config'`
+
+Se está ejecutando un módulo con una ruta incompatible con los imports absolutos actuales. Sitúate en la raíz y utiliza:
+
+```bash
+python programa/main.py
+```
+
+Para el benchmark:
+
+```bash
+python programa/benchmark.py
+```
+
+### `No se ha configurado GEMINI_API_KEY`
+
+Comprueba que `.env` está en la raíz y contiene:
+
+```dotenv
+GEMINI_API_KEY=tu_clave
+```
+
+Activa el entorno virtual y vuelve a ejecutar desde la raíz. El benchmark directo no solicita la clave de forma interactiva.
+
+### `La clave '...' no coincide con model_id '...'`
+
+`model_utils.py` ha detectado que las claves del registro y los identificadores internos están cruzados. En `model_registry.py`, cada entrada debe apuntar a sí misma:
+
+```python
+MODELS = {
+    MODEL_1: {
+        "model_id": MODEL_1,
+        # ...
+    },
+    MODEL_2: {
+        "model_id": MODEL_2,
+        # ...
     },
 }
-preparar_turno()
-
-Entrada principal de la arquitectura base antes de invocar el modelo.
-
-Entrada prevista
-preparar_turno(
-    estado: dict,
-    consulta: str,
-    empleado: dict,
-    empresa: dict,
-    documentos: list[dict],
-    faqs: list[dict],
-    configuracion: dict | None = None,
-    fecha_referencia: date | None = None,
-) -> dict
-Salida
-
-Devuelve una envolvente estándar.
-
-Cuando el turno se prepara correctamente:
-
-{
-    "status": "ok",
-    "mensaje": "Turno preparado",
-    "data": {
-        "turno_preparado": {
-            ...
-        }
-    },
-}
-finalizar_turno()
-
-Entrada pública utilizada después de recibir la respuesta externa.
-
-Entrada prevista
-finalizar_turno(
-    estado: dict,
-    turno_preparado: dict,
-    resultado_externo: dict,
-) -> dict
-Salida
-{
-    "status": "ok",
-    "mensaje": "Turno finalizado",
-    "data": {
-        "respuesta": str,
-        "resultado": dict,
-        "perfil_activo": str,
-        "categoria": str,
-        "dia_onboarding": int,
-    },
-}
-Contrato del paquete de interacción
-
-El paquete construido por preparar_turno() representa la frontera entre la Arquitectura Base y el área LLM.
-
-Estructura
-{
-    "consulta": str,
-    "empleado": dict,
-    "empresa": dict,
-    "perfil_activo": str,
-    "perfil": dict,
-    "categoria_preliminar": str,
-    "dia_onboarding": int,
-    "contexto": {
-        "empleado": dict,
-        "documentos": list[dict],
-        "faqs": list[dict],
-        "document_ids": list[str],
-        "faq_ids": list[str],
-        "hay_contexto": bool,
-    },
-    "historial": list[dict],
-    "configuracion": dict,
-}
-Motivo del contrato
-
-Este objeto no es un prompt ni una petición de proveedor.
-
-Es un contrato de dominio.
-
-El área LLM podrá convertirlo después en:
-
-un prompt de texto;
-mensajes de chat;
-una petición JSON;
-una entrada para Gemini;
-una entrada para otro proveedor.
-
-La Arquitectura Base no necesita cambiar si cambia la tecnología utilizada para generar la respuesta.
-
-Validaciones de arquitectura
-Validaciones realizadas por logic.py
-
-logic.py valida únicamente las precondiciones necesarias para ejecutar el flujo:
-
-estado debe ser un diccionario.
-consulta debe ser un string no vacío.
-empleado debe ser un diccionario.
-empresa debe ser un diccionario.
-documentos debe ser una lista.
-faqs debe ser una lista.
-configuracion, si se proporciona, debe ser un diccionario.
-El perfil configurado debe existir.
-Los límites de historial y contexto deben ser enteros no negativos.
-La respuesta externa debe ser un diccionario.
-La respuesta externa debe contener el contrato mínimo requerido.
-Validaciones delegadas a context.py
-
-context.py mantiene la responsabilidad sobre:
-
-listas de documentos;
-listas de FAQ;
-estructura general de sus entradas;
-puntuación;
-selección;
-combinación;
-construcción del contexto documental.
-
-logic.py no duplica esas validaciones.
-
-Validaciones excluidas
-
-No se implementan en logic.py:
-
-longitud máxima del mensaje;
-patrones sospechosos;
-prompt injection;
-jailbreak;
-sanitización avanzada;
-sensibilidad documental;
-permisos;
-ataques adversariales.
-
-Estas validaciones pertenecen al área de Robustez.
-
-Estado conversacional
-Decisión
-
-Los datos permanentes del empleado no se almacenan dentro del estado.
-
-El empleado ya existe en empleados_demo.json y se recibe como argumento.
-
-Duplicarlo dentro del estado produciría:
-
-riesgo de desincronización;
-duplicación de responsabilidades;
-inconsistencias entre sesiones;
-mayor acoplamiento.
-Contenido esperado del estado
-{
-    "messages": list[dict],
-    "turnos": int,
-}
-
-El estado almacena únicamente información conversacional.
-
-No almacena:
-
-empleado;
-empresa;
-documentos;
-FAQ;
-perfil funcional;
-categoría;
-configuración.
-Cálculo del día de onboarding
-Formato esperado
-
-El campo del empleado debe llamarse:
-
-fecha_inicio
-
-El valor debe estar en formato ISO:
-
-AAAA-MM-DD
-Regla
-día de onboarding = días transcurridos desde fecha_inicio + 1
-
-Ejemplos:
-
-fecha de incorporación = hoy
-día de onboarding = 1
-fecha de incorporación = ayer
-día de onboarding = 2
-Fechas futuras
-
-Cuando fecha_inicio es posterior a la fecha de referencia, se utiliza el día 1.
-
-Esto evita valores negativos y permite preparar el onboarding antes de la incorporación.
-
-Fecha ausente o inválida
-
-Se considera un error estructural.
-
-La arquitectura no debe seleccionar perfiles temporales utilizando una fecha desconocida o mal formada.
-
-Fecha de referencia
-
-Por defecto se utiliza la fecha actual.
-
-La función acepta opcionalmente una fecha de referencia para:
-
-pruebas;
-demos;
-benchmarks;
-resultados deterministas.
-Clasificación preliminar
-Función
-clasificar_consulta(consulta: str) -> str
-Fuente
-
-Utiliza:
-
-DOMAIN_KEYWORDS
-
-definido en config.py.
-
-Proceso
-Normaliza la consulta.
-Compara las palabras y expresiones de cada categoría.
-Cuenta las coincidencias.
-Selecciona la categoría con mayor puntuación.
-Resuelve empates de forma determinista.
-Devuelve "general" cuando no existen coincidencias.
-Alcance
-
-La clasificación es preliminar.
-
-No representa necesariamente la categoría final de la respuesta externa.
-
-Su finalidad es:
-
-seleccionar el perfil funcional;
-aportar una señal al área LLM;
-facilitar la escalación;
-mantener trazabilidad del proceso.
-out_of_scope
-
-logic.py no clasifica automáticamente una consulta como out_of_scope usando únicamente palabras clave.
-
-Esa decisión requiere contexto adicional y puede corresponder al área LLM o Robustez.
-
-Selección del perfil funcional
-Prioridad
-
-La selección sigue este orden:
-
-1. Consulta IT
-   → perfil "it"
-
-2. Consulta RRHH
-   → perfil "administrativo_rrhh"
-
-3. Resto de consultas durante los días 1 a 7
-   → perfil "onboarding"
-
-4. Resto de consultas desde el día 8
-   → perfil "administrativo_rrhh"
-Motivo
-
-La categoría funcional tiene prioridad sobre la antigüedad.
-
-Un empleado en su primer día que pregunta por VPN o credenciales necesita una respuesta técnica accesible.
-
-Un empleado en su segundo día que pregunta por vacaciones necesita una respuesta administrativa.
-
-El perfil temporal de onboarding se aplica cuando no existe un dominio funcional más específico.
-
-Día 30
-
-MAX_ONBOARDING_DAYS describe el periodo inicial del producto, pero no bloquea el acceso al asistente después de ese límite.
-
-Desde el día 31 se sigue utilizando:
-
-perfil IT para consultas técnicas;
-perfil administrativo para el resto.
-Relación con context.py
-
-logic.py trata context.py como un servicio independiente.
-
-La única operación de alto nivel necesaria es:
-
-construir_contexto(...)
-
-logic.py no conoce ni replica:
-
-puntuación de FAQ;
-puntuación documental;
-normalización de tags;
-selección directa;
-prioridad de documentos asociados;
-desduplicación;
-límites internos.
-
-Esto preserva la responsabilidad única de cada módulo.
-
-Relación con state.py
-
-logic.py puede reutilizar:
-
-append_user()
-append_assistant()
-ultimos_n()
-
-Estas funciones son compatibles con el estado conversacional previsto.
-
-No se utilizará:
-
-actualizar_perfil_desde_mensaje()
-
-Motivo:
-
-pertenece al tutor antiguo;
-intenta inferir datos permanentes desde el mensaje;
-duplica información del empleado;
-mezcla conversación con perfil de dominio.
-
-No es necesario modificar state.py.
-
-Puntos descartados del esqueleto del Sprint 6
-
-Se descartan:
-
-crear_estado_demo()
-demo_seleccion_faq()
-parsear_respuesta_tutor()
-procesar_turno_seguro()
-procesar_turno_vulnerable()
-actualizar_perfil_desde_mensaje()
-parece_dominio_python()
-rechazo_fuera_de_dominio()
-validate_input()
-build_secure_prompt()
-build_vulnerable_prompt()
-build_assistant_prompt()
-safe_generate()
-MetricasLlamada
-Motivo
-
-Estas piezas están vinculadas a:
-
-el tutor de Python;
-el esquema antiguo de FAQ;
-perfiles junior, senior y mentor;
-prompts heredados;
-llamadas directas a Gemini;
-seguridad;
-benchmarking;
-contratos externos todavía no integrados.
-
-No forman parte de la Arquitectura Base actual.
-
-Integración pendiente: área LLM y Benchmark
-Responsabilidad
-
-El área LLM deberá implementar un adaptador que reciba el paquete generado por:
-
-preparar_turno()
-
-y produzca un resultado externo compatible con:
-
-finalizar_turno()
-Entrada del adaptador
-turno_preparado: dict
-Salida mínima esperada
-{
-    "in_scope": bool,
-    "category": str,
-    "answer": str,
-}
-
-Podrá incluir además:
-
-{
-    "document_ids": list[str],
-    "faq_ids": list[str],
-    "needs_escalation": bool,
-    "escalation_department": str | None,
-    "metricas": dict | None,
-}
-Trabajo pendiente
-
-El área LLM deberá decidir:
-
-modelo;
-proveedor;
-temperatura;
-prompt;
-formato estructurado;
-control de tokens;
-métricas;
-benchmarking;
-validación completa del contrato generado.
-Integración pendiente: área de Robustez
-Responsabilidad
-
-El área de Robustez podrá intervenir entre:
-
-preparar_turno()
-        ↓
-adaptador LLM
-
-o envolver el flujo completo.
-
-Trabajo pendiente
-Validación avanzada de entrada.
-Longitud máxima.
-Detección de prompt injection.
-Detección de jailbreak.
-Protección del prompt.
-Control de contenido.
-Revisión de permisos.
-Flujo seguro.
-Flujo vulnerable.
-Comparativa entre variantes.
-Restricción arquitectónica
-
-No deben crearse duplicados como:
-
-logic_vulnerable.py
-logic_seguro.py
-context_vulnerable.py
-
-Las variantes deben reutilizar el mismo contrato de turno y aplicarse mediante:
-
-funciones específicas;
-adaptadores;
-estrategias;
-envoltorios del flujo común.
-Función futura de conveniencia
-
-Cuando las otras áreas estén integradas podrá añadirse:
-
-procesar_turno(...)
-
-Flujo previsto:
-
-preparar_turno()
-        ↓
-validación de Robustez
-        ↓
-adaptador LLM
-        ↓
-finalizar_turno()
-
-Esta función no forma parte de la implementación actual porque su comportamiento depende de componentes todavía no integrados dentro del proyecto (adaptador LLM y validaciones de Robustez).
-
-La separación actual evita introducir dependencias provisionales o contratos no acordados.
-
-Gestión de errores
-Errores previsibles
-
-Las funciones públicas convierten los errores previsibles en:
-
-respuesta_error(...)
-
-Ejemplos:
-
-consulta vacía;
-configuración inválida;
-empleado sin fecha;
-fecha inválida;
-perfil desconocido;
-documentos o FAQ mal formados;
-respuesta externa incompleta.
-Errores inesperados
-
-No se utiliza:
-
-except Exception
-
-de forma general.
-
-Los errores inesperados deben propagarse durante el desarrollo para facilitar su detección y corrección.
-
-Filosofía de diseño
-
-logic.py debe permanecer estable aunque cambie:
-
-el modelo;
-el proveedor;
-el prompt;
-el modo de respuesta;
-la temperatura;
-la estrategia de seguridad;
-el benchmark.
-
-La Arquitectura Base define el dominio y sus contratos.
-
-Las otras áreas se conectan a esos contratos sin modificar la lógica central.
-
-Esta separación:
-
-reduce acoplamiento;
-evita duplicación;
-facilita pruebas;
-permite integrar distintos proveedores;
-mantiene claras las responsabilidades del equipo;
-protege la arquitectura frente a cambios futuros.
-
-
--------------------------------------------------------------------------------------------------------------------------------------
-
-# Arquitectura de `context.py`
-
-## Objetivo
-
-`context.py` es el módulo responsable de la recuperación, selección y preparación del contexto documental utilizado por el Employee Onboarding Assistant.
-
-Su responsabilidad consiste en transformar una consulta y la información del empleado en un conjunto reducido de documentos y FAQ relevantes, minimizando el contexto que posteriormente consumirá el área LLM.
-
-El módulo no conoce el modelo de lenguaje, no construye prompts y no participa en la generación de respuestas.
-
----
-
-# Responsabilidades
-
-`context.py` es responsable de:
-
-- Cargar información desde los archivos JSON.
-- Validar la estructura general de las fuentes.
-- Normalizar texto y etiquetas.
-- Buscar empleados.
-- Calcular la relevancia de FAQ.
-- Seleccionar FAQ.
-- Calcular la relevancia documental.
-- Seleccionar documentos.
-- Resolver documentos asociados a FAQ.
-- Desduplicar información.
-- Construir el contexto documental final.
-
----
-
-# Qué no hace
-
-`context.py` no debe:
-
-- Llamar a Gemini, OpenAI o cualquier proveedor LLM.
-- Construir prompts.
-- Elegir modelos.
-- Seleccionar temperaturas.
-- Gestionar historial conversacional.
-- Decidir perfiles funcionales.
-- Clasificar definitivamente la consulta.
-- Aplicar estrategias de benchmarking.
-- Aplicar validaciones de Robustez.
-- Detectar prompt injection.
-- Detectar jailbreak.
-- Gestionar permisos avanzados.
-- Implementar variantes segura o vulnerable.
-
-Toda esa funcionalidad pertenece a otros módulos de la arquitectura.
-
----
-
-# Filosofía del módulo
-
-La finalidad de `context.py` no es responder preguntas.
-
-Su única misión consiste en responder una pregunta interna:
-
-> ¿Cuál es la información mínima necesaria para responder correctamente esta consulta?
-
-El resultado siempre será un contexto reducido, coherente y relevante.
-
-Nunca una respuesta al usuario.
-
----
-
-# API pública
-
-El módulo expone las siguientes funciones públicas.
-
-## `cargar_json()`
-
-Carga un archivo JSON desde disco.
-
-Responsabilidades:
-
-- comprobar existencia;
-- comprobar que sea un archivo;
-- validar el JSON;
-- devolver lista o diccionario.
-
-No interpreta el contenido.
-
----
-
-## `buscar_empleado()`
-
-Localiza un empleado mediante su identificador.
-
-La búsqueda:
-
-- ignora mayúsculas;
-- ignora acentos;
-- utiliza comparación normalizada.
-
----
-
-## `validar_lista_diccionarios()`
-
-Comprueba únicamente la estructura general de una fuente.
-
-No valida esquemas específicos.
-
----
-
-## `normalizar_texto()`
-
-Normaliza cadenas para facilitar las comparaciones.
-
-Operaciones:
-
-- minúsculas;
-- eliminación de acentos;
-- sustitución de separadores;
-- eliminación de espacios duplicados.
-
-Esta función puede reutilizarse desde otros módulos.
-
----
-
-## `seleccionar_faq()`
-
-Recupera las FAQ más relevantes para una consulta.
-
-Las FAQ funcionan como índice documental.
-
-No constituyen la fuente principal de información.
-
----
-
-## `seleccionar_documentos()`
-
-Recupera los documentos más relevantes.
-
-Los documentos representan la fuente autorizada del sistema.
-
----
-
-## `construir_contexto()`
-
-Es la puerta de entrada principal del módulo.
-
-Todo consumidor externo deberá utilizar esta función.
-
-No se recomienda construir contextos llamando directamente a las funciones internas.
-
----
-
-# Funciones auxiliares
-
-Las siguientes funciones forman parte del algoritmo interno de recuperación.
-
-No deben considerarse parte del contrato principal del módulo.
-
-- `puntuar_faq()`
-- `puntuar_documento()`
-- `normalizar_tags()`
-- `extraer_palabras()`
-- `extraer_palabras_tags()`
-- `obtener_documento_por_id()`
-- `combinar_documentos()`
-
-Se mantienen públicas únicamente para preservar compatibilidad entre ramas y facilitar pruebas unitarias.
-
----
-
-# Contrato de `construir_contexto()`
-
-## Entrada
-
-```python
-construir_contexto(
-    consulta,
-    empleado,
-    documentos,
-    faqs,
-    limite_documentos,
-    limite_faqs,
-)
 ```
 
----
+No elimines la validación de coherencia: está evitando medir un modelo bajo el nombre del otro.
 
-## Salida
+### `503 UNAVAILABLE` o `504 DEADLINE_EXCEEDED`
 
-```python
-{
-    "empleado": dict,
-    "documentos": list[dict],
-    "faqs": list[dict],
-    "document_ids": list[str],
-    "faq_ids": list[str],
-    "hay_contexto": bool,
-}
+Son errores del proveedor o de tiempo de espera. Acciones recomendadas:
+
+1. Repite la ejecución cuando el servicio esté disponible.
+2. Comprueba que el modelo figura entre los disponibles para tu clave.
+3. Aumenta `GEMINI_TIMEOUT_MS` en `config.py` si el modelo supera habitualmente 10 segundos.
+4. Mantén el mismo timeout para los dos modelos del benchmark.
+5. No añadas fallback al benchmark, porque invalidaría la comparación.
+
+Para listar los modelos accesibles durante la primera inicialización del cliente:
+
+macOS o Linux:
+
+```bash
+GEMINI_DEBUG_LIST_MODELS=1 python programa/main.py
 ```
 
-Este contrato debe permanecer estable.
+Windows PowerShell:
 
-Los módulos consumidores no necesitan conocer el algoritmo utilizado para generar dicho contexto.
+```powershell
+$env:GEMINI_DEBUG_LIST_MODELS="1"
+python programa/main.py
+```
 
----
+### El benchmark solo muestra filas con error
 
-# Flujo interno
+Revisa `output/resultados_benchmark.csv`, especialmente las columnas `status` y `error`. Comprueba:
 
-El algoritmo sigue siempre el mismo pipeline.
+- credencial y cuota;
+- IDs de modelo;
+- coherencia de `model_registry.py`;
+- timeout;
+- formato de `preguntas_benchmark.json`;
+- disponibilidad del modelo para el proyecto de Google asociado.
+
+### `Faltan puntuaciones manuales de la rúbrica`
+
+Abre `output/resultados_benchmark.csv` y rellena `fidelidad_1_3`, `relevancia_1_3`, `tono_1_3` y `seguridad_1_3` en cada fila con `status=ok`. Solo se admiten enteros del 1 al 3.
+
+### No se generan los entregables
+
+La secuencia correcta es:
 
 ```text
-consulta
-        │
-        ▼
-normalización
-        │
-        ▼
-selección FAQ
-        │
-        ▼
-selección documental
-        │
-        ▼
-resolución de documentos asociados
-        │
-        ▼
-desduplicación
-        │
-        ▼
-aplicación de límites
-        │
-        ▼
-contexto final
+benchmark → revisar resultados → puntuar CSV → generar_entregables.py
 ```
 
-Cada fase posee una responsabilidad única.
+Además de un CSV válido, deben existir `resumen_benchmark.json` y `proyeccion_trafico_x2.json`.
 
----
+### Una consulta válida se bloquea como `undocumented`
 
-# Recuperación documental
+La intención pertenece al dominio, pero no se ha encontrado suficiente respaldo en los documentos y FAQ seleccionados. Revisa:
 
-El algoritmo prioriza la intención del usuario frente al departamento.
+- términos de la pregunta;
+- `tags`, `titulo` y `cuerpo` de los documentos;
+- `pregunta`, `respuesta_corta` y `tags` de las FAQ;
+- relación `faq.doc_id`;
+- umbrales y pesos de selección de `config.py`.
 
-## Documentos
+### No aparece un archivo en `output_demo/`
 
-La puntuación combina:
+El registro automático general se aplica al ejecutar una demo desde el menú. La ejecución directa de `benchmark.py` crea los archivos de `output/`, pero no el log fechado de `output_demo/`.
 
-- coincidencias mediante tags;
-- coincidencias con el título;
-- coincidencias con el contenido;
-- departamento del empleado;
-- carácter transversal.
+## Limitaciones conocidas
 
-Los factores de departamento y transversal solo aportan puntuación cuando ya existe una coincidencia real con la intención de la consulta.
+- Es una aplicación de consola; no incluye interfaz web ni autenticación de usuarios finales.
+- Los datos de ejemplo se cargan desde JSON locales.
+- El benchmark compara modelos con prompts ya preparados, no el pipeline completo.
+- La validación automática de respuestas no sustituye la evaluación humana de fidelidad y calidad.
+- Los patrones de seguridad reducen riesgos, pero no constituyen una garantía absoluta frente a todas las variantes de ataque.
+- Los costes son estimaciones basadas en los valores configurados en el registro.
+- La disponibilidad, precios, cuotas e identificadores de Gemini pueden cambiar.
+- Los archivos principales de resultados no mantienen histórico por sí solos.
 
-Esto evita recuperar documentos únicamente por pertenecer al mismo departamento.
+## Documentación ampliada
 
----
+Consulta [docs/MANUAL_DE_USO.md](docs/MANUAL_DE_USO.md) para una guía paso a paso de instalación, operación, interpretación del benchmark, mantenimiento de datos y diagnóstico de errores.
 
-# Recuperación de FAQ
+Documentación externa:
 
-Las FAQ actúan como índice de navegación.
-
-No sustituyen al documento principal.
-
-Su función consiste en facilitar la localización de documentación relevante mediante:
-
-- formulaciones frecuentes;
-- preguntas habituales;
-- respuestas resumidas;
-- referencias documentales.
-
----
-
-# Relación FAQ → Documento
-
-Esta relación constituye una decisión arquitectónica importante.
-
-El flujo correcto es:
-
-```text
-consulta
-        │
-        ▼
-FAQ
-        │
-        ▼
-doc_id
-        │
-        ▼
-documento principal
-```
-
-No se realiza el proceso inverso.
-
-Motivo:
-
-La FAQ representa únicamente una puerta de acceso.
-
-La información autorizada siempre procede del documento asociado.
-
----
-
-# Desduplicación
-
-Los documentos pueden recuperarse desde dos orígenes distintos:
-
-- selección directa;
-- referencias desde FAQ.
-
-Antes de construir el contexto se eliminan duplicados utilizando los identificadores documentales.
-
-Esto garantiza:
-
-- una única copia de cada documento;
-- menor contexto;
-- menor consumo posterior por el modelo.
-
----
-
-# Aplicación de límites
-
-Los límites documentales se aplican únicamente al final del proceso.
-
-El flujo es:
-
-```text
-selección
-        │
-        ▼
-combinación
-        │
-        ▼
-desduplicación
-        │
-        ▼
-aplicación del límite
-```
-
-No se limita antes.
-
-Motivo:
-
-Un documento asociado a una FAQ nunca debe perder prioridad por haber aplicado el límite demasiado pronto.
-
----
-
-# Normalización
-
-Toda comparación textual utiliza el mismo proceso.
-
-El módulo elimina diferencias de:
-
-- mayúsculas;
-- acentos;
-- guiones;
-- barras;
-- guiones bajos;
-- espacios múltiples.
-
-Esto proporciona un comportamiento uniforme en todas las búsquedas.
-
----
-
-# Stopwords
-
-Las palabras vacías eliminan términos frecuentes que no representan intención.
-
-Ejemplos:
-
-- artículos;
-- preposiciones;
-- saludos;
-- expresiones de cortesía.
-
-Su objetivo es reducir ruido durante la recuperación.
-
-No modifican el contenido original de documentos ni FAQ.
-
----
-
-# Validaciones
-
-## Validaciones implementadas
-
-El módulo valida:
-
-- existencia de listas;
-- listas vacías cuando no están permitidas;
-- elementos tipo diccionario;
-- tipos básicos de entrada;
-- rutas;
-- JSON válido.
-
----
-
-## Validaciones deliberadamente excluidas
-
-No se implementan validadores específicos para:
-
-- FAQ;
-- documentos;
-- empleados.
-
-El módulo trabaja con esquemas flexibles.
-
-Los campos esperados se documentan, pero no se bloquea el procesamiento cuando una entrada contiene información adicional o algunos campos opcionales ausentes.
-
-Esta decisión favorece la integración entre ramas y evita imponer un esquema rígido durante el desarrollo colaborativo.
-
----
-
-# Campos esperados
-
-Aunque no se validan de forma estricta, la arquitectura espera que los datos contengan aproximadamente los siguientes campos.
-
-## Empleados
-
-```text
-id
-nombre
-departamento
-fecha_inicio
-```
-
----
-
-## FAQ
-
-```text
-id
-pregunta
-respuesta_corta
-tags
-doc_id
-```
-
----
-
-## Documentos
-
-```text
-id
-titulo
-cuerpo
-departamento
-tags
-```
-
----
-
-# Mutabilidad
-
-`context.py` no modifica ninguna de las estructuras recibidas.
-
-Las funciones devuelven referencias a los objetos originales.
-
-Los módulos consumidores deben tratar esos datos como información de solo lectura.
-
-Cuando sea necesario modificar el contexto, la copia deberá realizarse fuera del módulo.
-
----
-
-# Relación con `logic.py`
-
-`logic.py` trata `context.py` como un servicio independiente.
-
-Su única interacción de alto nivel consiste en:
-
-```python
-construir_contexto(...)
-```
-
-`logic.py` no conoce:
-
-- pesos;
-- puntuaciones;
-- algoritmo de selección;
-- proceso de desduplicación;
-- reglas de combinación.
-
-Esto permite modificar el algoritmo interno sin alterar el contrato entre módulos.
-
----
-
-# Relación con `config.py`
-
-Toda la configuración utilizada por `context.py` procede de `config.py`.
-
-Ejemplos:
-
-- pesos;
-- umbrales;
-- límites;
-- documentos transversales.
-
-El algoritmo nunca contiene valores mágicos.
-
----
-
-# Decisiones arquitectónicas
-
-Durante el diseño se adoptaron las siguientes decisiones.
-
-## La intención tiene prioridad sobre el departamento
-
-Un documento del mismo departamento no debe recuperarse si no guarda relación con la consulta.
-
----
-
-## Las FAQ son un índice
-
-La documentación principal siempre prevalece sobre la respuesta corta de una FAQ.
-
----
-
-## Los documentos globales no son obligatorios
-
-Un documento transversal solo recibe prioridad cuando ya es relevante por contenido.
-
----
-
-## El algoritmo permanece encapsulado
-
-Ningún consumidor necesita conocer cómo se calcula la puntuación.
-
-Únicamente necesita el contexto final.
-
----
-
-## El contrato permanece estable
-
-Aunque en el futuro cambie el algoritmo de recuperación (BM25, embeddings, RAG híbrido, etc.), el contrato de salida de `construir_contexto()` debe mantenerse.
-
-Esto protege la arquitectura frente a cambios tecnológicos.
-
----
-
-# Compatibilidad
-
-Se mantiene:
-
-
-cargar_JSON = cargar_json
-
-Como alias temporal para mantener compatibilidad con implementaciones anteriores durante el proceso de integración.
-
-No representa una segunda implementación.
-
----
-
-# Integración pendiente: Robustez
-
-La Arquitectura Base no implementa variantes vulnerables.
-
-En el futuro el área de Robustez podrá sustituir la estrategia de recuperación respetando siempre el mismo contrato de salida.
-
-No deben crearse módulos paralelos como:
-
-```text
-context_vulnerable.py
-context_seguro.py
-```
-
-Las variantes deberán reutilizar:
-
-```python
-construir_contexto(...)
-```
-
-mediante estrategias, adaptadores o funciones específicas.
-
----
-
-# Integración pendiente: LLM y Benchmark
-
-`context.py` no conoce modelos de lenguaje.
-
-El área LLM únicamente consumirá el contexto ya preparado para:
-
-- construir prompts;
-- seleccionar modelos;
-- registrar métricas;
-- realizar benchmarking.
-
-El algoritmo de recuperación documental permanecerá completamente independiente de esas decisiones.
-
----
-
-# Filosofía de diseño
-
-`context.py` debe permanecer estable aunque cambien:
-
-- el proveedor LLM;
-- el modelo;
-- el prompt;
-- la estrategia de seguridad;
-- el benchmark;
-- la forma de generar respuestas.
-
-Su única responsabilidad consiste en seleccionar el mejor contexto posible.
-
------------------------------------------------------------------------------------------------------------------------------
-
-# Arquitectura de `main.py`
-
-## Objetivo
-
-`main.py` constituye el punto de entrada de la aplicación.
-
-Su responsabilidad consiste exclusivamente en coordinar la ejecución de la Arquitectura Base.
-
-No contiene lógica de negocio, no construye contexto, no selecciona perfiles y no interactúa directamente con ningún proveedor de IA.
-
-Su función es conectar al usuario con la arquitectura diseñada en los módulos del proyecto.
-
----
-
-# Responsabilidades
-
-`main.py` es responsable de:
-
-- Cargar las fuentes de datos.
-- Verificar que la estructura mínima de dichas fuentes sea válida.
-- Mostrar los empleados disponibles.
-- Identificar al empleado que inicia la sesión.
-- Inicializar el estado conversacional.
-- Solicitar consultas al usuario.
-- Invocar la Arquitectura Base.
-- Mostrar por consola el resultado de la preparación del turno.
-- Gestionar los errores previsibles durante la ejecución.
-
----
-
-# Qué no hace
-
-`main.py` no debe:
-
-- Construir prompts.
-- Seleccionar perfiles.
-- Clasificar consultas.
-- Recuperar documentación.
-- Gestionar el estado internamente.
-- Llamar directamente a Gemini.
-- Llamar directamente a OpenAI.
-- Elegir modelos.
-- Elegir temperaturas.
-- Aplicar benchmarking.
-- Detectar ataques.
-- Ejecutar modos seguro o vulnerable.
-- Implementar lógica de negocio.
-
-Todas estas responsabilidades pertenecen a otros módulos.
-
----
-
-# Filosofía del módulo
-
-`main.py` debe ser el archivo más sencillo del proyecto.
-
-Toda decisión funcional pertenece a la arquitectura.
-
-`main.py` únicamente coordina el flujo general de ejecución.
-
----
-
-# Flujo general
-
-La ejecución prevista sigue el siguiente pipeline.
-
-```text
-Inicio
-        │
-        ▼
-Carga de datos
-        │
-        ▼
-Selección del empleado
-        │
-        ▼
-Inicialización del estado
-        │
-        ▼
-Solicitud de consulta
-        │
-        ▼
-preparar_turno()
-        │
-        ▼
-Mostrar resultado
-        │
-        ▼
-Nueva consulta
-```
-
-Mientras el área LLM no esté integrada el flujo termina tras preparar el turno.
-
----
-
-# Carga de datos
-
-## Responsabilidad
-
-Toda la carga de información se realiza mediante:
-
-```python
-cargar_json()
-```
-
-Las rutas utilizadas proceden exclusivamente de:
-
-```python
-config.py
-```
-
-`main.py` no construye rutas manualmente.
-
----
-
-## Fuentes cargadas
-
-La Arquitectura Base trabaja con cuatro fuentes principales.
-
-### Empresa
-
-```python
-empresa.json
-```
-
-Debe contener un diccionario.
-
----
-
-### Empleados
-
-```python
-empleados_demo.json
-```
-
-Debe contener una lista.
-
----
-
-### Documentación
-
-```python
-onboarding_docs.json
-```
-
-Debe contener una lista.
-
----
-
-### FAQ
-
-```python
-faq_onboarding.json
-```
-
-Debe contener una lista.
-
----
-
-## Validaciones
-
-`main.py` únicamente verifica el tipo raíz esperado.
-
-La validación detallada corresponde a `context.py`.
-
----
-
-# Selección del empleado
-
-La identificación del empleado reutiliza:
-
-```python
-buscar_empleado()
-```
-
-No se implementa una segunda búsqueda dentro de `main.py`.
-
----
-
-## Flujo
-
-```text
-mostrar empleados
-        │
-        ▼
-pedir ID
-        │
-        ▼
-buscar_empleado()
-        │
-        ├── encontrado
-        │         │
-        │         ▼
-        │   iniciar sesión
-        │
-        └── no encontrado
-                  │
-                  ▼
-           volver a solicitar ID
-```
-
----
-
-## Información mostrada
-
-Únicamente se presenta:
-
-- identificador;
-- nombre;
-- departamento;
-- fecha de incorporación.
-
-No se muestran estructuras completas.
-
----
-
-# Estado conversacional
-
-El estado se crea utilizando:
-
-```python
-inicializar_estado()
-```
-
-No se construye manualmente un diccionario equivalente.
-
-Esto garantiza que el contrato definido por `state.py` permanezca centralizado.
-
----
-
-# Ejecución de la sesión
-
-La sesión mantiene un único empleado activo.
-
-El flujo consiste en:
-
-```text
-consulta
-        │
-        ▼
-preparar_turno()
-        │
-        ▼
-mostrar resumen
-        │
-        ▼
-nueva consulta
-```
-
-La sesión termina cuando el usuario escribe:
-
-```text
-salir
-exit
-quit
-```
-
----
-
-# Preparación del turno
-
-`main.py` únicamente invoca:
-
-```python
-preparar_turno()
-```
-
-No realiza ninguna operación adicional sobre:
-
-- perfiles;
-- contexto;
-- documentos;
-- FAQ;
-- clasificación.
-
-Toda esa lógica pertenece a `logic.py`.
-
----
-
-# Resultado mostrado
-
-Mientras no exista integración con el área LLM, la aplicación mostrará únicamente información arquitectónica.
-
-Ejemplo:
-
-- estado;
-- mensaje;
-- perfil seleccionado;
-- categoría preliminar;
-- día de onboarding;
-- documentos recuperados;
-- FAQ recuperadas;
-- existencia de contexto.
-
-No se imprime:
-
-- documentación completa;
-- cuerpo de documentos;
-- prompts;
-- respuestas simuladas.
-
----
-
-# Estado conversacional durante la Arquitectura Base
-
-Existe una limitación intencionada.
-
-`preparar_turno()` no modifica el historial.
-
-Motivo:
-
-El turno todavía no ha recibido una respuesta del modelo.
-
-El historial únicamente debe actualizarse mediante:
-
-```python
-finalizar_turno()
-```
-
-Esto evita estados inconsistentes.
-
----
-
-# Gestión de errores
-
-## Errores previstos
-
-Durante la carga:
-
-- archivo inexistente;
-- JSON inválido;
-- error de lectura;
-- estructura raíz incorrecta.
-
-Durante la interacción:
-
-- empleado inexistente;
-- consulta inválida;
-- errores devueltos por `preparar_turno()`.
-
-Estos errores se muestran por consola sin finalizar necesariamente la sesión.
-
----
-
-## Errores inesperados
-
-No se utilizará:
-
-```python
-except Exception
-```
-
-como mecanismo general.
-
-Los errores inesperados deben propagarse durante el desarrollo para facilitar su depuración.
-
----
-
-# Funciones públicas
-
-La estructura prevista del archivo es la siguiente.
-
-## `cargar_datos()`
-
-Carga todas las fuentes del proyecto.
-
----
-
-## `mostrar_empleados()`
-
-Presenta la lista de empleados disponibles.
-
----
-
-## `seleccionar_empleado()`
-
-Solicita el identificador del empleado.
-
-Permite repetir la entrada hasta localizar un empleado válido.
-
----
-
-## `imprimir_errores()`
-
-Muestra por consola la envolvente estándar de error.
-
----
-
-## `imprimir_turno_preparado()`
-
-Presenta un resumen del turno preparado.
-
-No imprime información documental completa.
-
----
-
-## `ejecutar_sesion()`
-
-Coordina el ciclo principal de consultas.
-
----
-
-## `main()`
-
-Punto de entrada del programa.
-
----
-
-# Relación con `config.py`
-
-`main.py` reutiliza:
-
-- rutas;
-- configuración por defecto.
-
-No replica constantes.
-
----
-
-# Relación con `context.py`
-
-`main.py` únicamente consume:
-
-- `cargar_json()`;
-- `buscar_empleado()`.
-
-No realiza selección documental directa.
-
----
-
-# Relación con `logic.py`
-
-La única función invocada durante la Arquitectura Base es:
-
-
-preparar_turno()
-
-El resto del procesamiento pertenece a la integración posterior.
-
----
-
-# Relación con `state.py`
-
-`main.py` únicamente utiliza:
-
-inicializar_estado()
-
-No modifica directamente la estructura del estado.
-
----
-
-# Decisiones arquitectónicas
-
-## Toda la lógica pertenece a la arquitectura
-
-`main.py` no contiene reglas de negocio.
-
----
-
-## Una única fuente para las rutas
-
-Las rutas siempre proceden de `config.py`.
-
----
-
-## Un único punto para construir el contexto
-
-`main.py` nunca invoca directamente funciones internas de `context.py`.
-
-Toda recuperación documental pasa por:
-
-
-preparar_turno()
-
----
-
-## Una única fuente para el estado
-
-La creación del estado pertenece a `state.py`.
-
----
-
-## Preparar no significa responder
-
-
-Mientras el área LLM no esté integrada, el programa finaliza el flujo tras preparar el turno.
-
-Esta decisión evita implementar soluciones provisionales que posteriormente deban eliminarse cuando el área LLM complete su integración.
-
-No se simulan respuestas ni se generan respuestas ficticias y tampoco se implementan proveedores provisionales.
-
-
----
-
-# Integración pendiente: Área LLM y Benchmark
-
-Cuando el adaptador LLM esté disponible el flujo completo será:
-
-
-consulta
-        │
-        ▼
-preparar_turno()
-        │
-        ▼
-adaptador LLM
-        │
-        ▼
-finalizar_turno()
-        │
-        ▼
-mostrar respuesta
-
-
-## Responsabilidad del área LLM
-
-El área correspondiente deberá implementar:
-
-- construcción del prompt;
-- selección del proveedor;
-- selección del modelo;
-- temperatura;
-- llamada al modelo;
-- generación estructurada;
-- métricas;
-- benchmarking.
-
-`main.py` no conocerá ninguna de estas decisiones.
-
----
-
-# Integración pendiente: Área de Robustez
-
-La Arquitectura Base no implementa mecanismos de seguridad.
-
-El área de Robustez podrá intervenir:
-
-
-entrada usuario
-        │
-        ▼
-validación avanzada
-        │
-        ▼
-preparar_turno()
-
-
-o bien:
-
-
-preparar_turno()
-        │
-        ▼
-validación adicional
-        │
-        ▼
-adaptador LLM
-
-
-Las variantes deberán reutilizar el mismo flujo.
-
-No deben crearse archivos alternativos como:
-
-main_seguro.py
-main_vulnerable.py
-
----
-
-# Filosofía de diseño
-
-`main.py` debe permanecer estable aunque cambien:
-
-- el modelo;
-- el proveedor;
-- el prompt;
-- la estrategia de seguridad;
-- el benchmark;
-- la forma de generar respuestas.
-
-Su única responsabilidad consiste en coordinar la ejecución de la Arquitectura Base.
+- [Google Gen AI SDK para Python](https://googleapis.github.io/python-genai/)
+- [Gestión de claves de Gemini](https://ai.google.dev/gemini-api/docs/api-key)
+- [Precios de Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
